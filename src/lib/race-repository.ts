@@ -89,7 +89,7 @@ export async function getRaces(filters?: { date?: string | null; day?: string | 
   const races = await Promise.all(rows.map((row) => getRaceById(row.id, row)));
   const hydratedRaces = races.filter((race): race is RaceAnalysis => Boolean(race));
 
-  return hydratedRaces.length > 0 ? sortByProgramOrder(hydratedRaces) : raceCards;
+  return sortByProgramOrder(hydratedRaces);
 }
 
 export async function getRaceById(id?: string | null, baseRow?: RaceRow) {
