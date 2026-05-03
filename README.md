@@ -28,8 +28,15 @@ The app is ready for Neon Postgres through `DATABASE_URL`.
 - Schema: `db/schema.sql`
 - Demo seed placeholder: `db/seed-demo.sql`
 - Runtime data access: `src/lib/race-repository.ts`
+- Retention policy: `docs/DATA_RETENTION_POLICY.md`
 
 If `DATABASE_URL` is missing, the app falls back to the built-in mock dataset so development and Vercel previews keep working.
+
+Database stats:
+
+```bash
+npm run db:stats
+```
 
 ## Real Data Import
 

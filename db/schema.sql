@@ -124,6 +124,9 @@ create table if not exists value_bets (
 create index if not exists races_race_date_idx on races (race_date);
 create index if not exists races_relative_day_idx on races (relative_day);
 create index if not exists entries_race_id_idx on entries (race_id);
+create index if not exists odds_snapshots_race_horse_observed_idx on odds_snapshots (race_id, horse_id, observed_at desc);
+create index if not exists prediction_runs_generated_at_idx on prediction_runs (generated_at desc);
 create index if not exists predictions_race_id_idx on predictions (race_id);
+create index if not exists predictions_run_idx on predictions (prediction_run_id);
 create index if not exists value_bets_race_id_idx on value_bets (race_id);
 create unique index if not exists value_bets_race_horse_unique_idx on value_bets (race_id, horse_id);

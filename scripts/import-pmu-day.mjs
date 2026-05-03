@@ -196,6 +196,21 @@ async function importDate(sql, pmuDate, maxRaces) {
   const reunions = payload?.programme?.reunions ?? [];
   const isoDate = isoDateFromPmu(pmuDate);
   const relativeDay = relativeDayFromPmu(pmuDate);
+  const predictionRunRows = await sql`
+    insert into prediction_runs (model_version, data_cutoff_at, model_card)
+    values (
+      ${"kayzen-baseline-v0.1"},
+      now(),
+      ${JSON.stringify({
+        source: "PMU programme",
+        pmuDate,
+        objective: ["win_probability", "top3_probability", "top5_probability", "kz_score"],
+        note: "Baseline deterministic model used until trained ML models are promoted.",
+      })}
+    )
+    returning id
+  `;
+  const predictionRunId = predictionRunRows[0].id;
   let importedRaces = 0;
 
   for (const reunion of reunions) {
@@ -300,6 +315,25 @@ async function importDate(sql, pmuDate, maxRaces) {
             value_index = excluded.value_index,
             confidence = excluded.confidence,
             factors = excluded.factors
+        `;
+
+        if (prediction.odds > 1) {
+          await sql`
+            insert into odds_snapshots (race_id, horse_id, odds, source, observed_at)
+            values (${raceId}, ${id}, ${prediction.odds}, ${"PMU"}, now())
+          `;
+        }
+
+        await sql`
+          insert into predictions (
+            prediction_run_id, race_id, horse_id, win_probability, top3_probability,
+            top5_probability, kz_score, confidence, explanation
+          )
+          values (
+            ${predictionRunId}, ${raceId}, ${id}, ${prediction.winProbability},
+            ${prediction.top3Probability}, ${prediction.top5Probability}, ${prediction.kzScore},
+            ${prediction.confidence}, ${JSON.stringify(prediction.factors)}
+          )
         `;
 
         if (prediction.valueIndex > 10) {
