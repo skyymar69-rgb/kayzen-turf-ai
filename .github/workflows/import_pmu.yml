@@ -1,0 +1,43 @@
+name: Import PMU programme
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Optional PMU date in DDMMYYYY format"
+        required: false
+        type: string
+  schedule:
+    - cron: "30 4 * * *"
+    - cron: "30 10 * * *"
+    - cron: "30 17 * * *"
+
+jobs:
+  import-pmu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply database schema
+        run: npm run db:schema
+
+      - name: Import requested PMU date
+        if: ${{ inputs.date != '' }}
+        run: npm run data:import:pmu -- --date "${{ inputs.date }}"
+
+      - name: Import rolling PMU window
+        if: ${{ inputs.date == '' }}
+        run: npm run data:import:pmu

@@ -47,6 +47,24 @@ npm run data:import:pmu -- --date 03052026
 
 This connector uses the publicly reachable PMU JSON programme endpoint with a clear user agent, no bot evasion, and a short delay between race participant requests. For commercial scale, validate usage rights or replace it with an authorised PMU partner feed.
 
+## Cloud Automation
+
+The full PMU programme import runs from GitHub Actions, not from a local machine:
+
+- `04:30 UTC`: morning import for J-1/J/J+1
+- `10:30 UTC`: mid-day refresh
+- `17:30 UTC`: evening refresh and result catch-up
+
+Required GitHub secret:
+
+- `DATABASE_URL`
+
+Manual trigger:
+
+```bash
+gh workflow run import_pmu.yml -f date=03052026
+```
+
 ## MVP API
 
 - `GET /api/predictions`
