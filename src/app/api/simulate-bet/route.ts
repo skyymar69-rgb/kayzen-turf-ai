@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { simulateBet } from "@/lib/mock-data";
+import { simulateBet } from "@/lib/betting-engine";
 
 export async function POST(request: Request) {
   const body = (await request.json()) as {

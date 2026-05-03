@@ -30,7 +30,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { simulateBet, valueBets } from "@/lib/mock-data";
+import { modelCard, simulateBet } from "@/lib/betting-engine";
+import { valueBets } from "@/lib/mock-data";
 import type { HorsePrediction, RaceAnalysis } from "@/lib/types";
 
 type DashboardProps = {
@@ -275,6 +276,10 @@ export function Dashboard({ race }: DashboardProps) {
 
           <Panel title="Transparence IA" icon={Brain}>
             <div className="space-y-3">
+              <div className="rounded-md border border-white/10 bg-white/[0.03] p-3">
+                <p className="text-sm font-medium text-white">Calibration prudente</p>
+                <p className="mt-1 text-sm leading-5 text-[#93a39c]">{modelCard.calibration.rationale}</p>
+              </div>
               {selectedHorse.factors.map((factor) => (
                 <div className="flex gap-3 rounded-md border border-white/10 bg-white/[0.03] p-3" key={factor}>
                   <Sparkles className="mt-0.5 shrink-0 text-emerald-300" size={17} />
@@ -311,7 +316,13 @@ export function Dashboard({ race }: DashboardProps) {
 
           <Panel title="API et MCP" icon={Database}>
             <div className="grid gap-3 sm:grid-cols-2">
-              {["GET /api/predictions", "GET /api/race-analysis", "GET /api/value-bets", "POST /api/simulate-bet"].map(
+              {[
+                "GET /api/predictions",
+                "GET /api/race-analysis",
+                "GET /api/value-bets",
+                "POST /api/simulate-bet",
+                "GET /api/model-card",
+              ].map(
                 (endpoint) => (
                   <div className="rounded-md border border-white/10 bg-[#081310] p-4" key={endpoint}>
                     <p className="font-mono text-sm text-emerald-200">{endpoint}</p>

@@ -26,6 +26,15 @@ npm run dev
 - `GET /api/race-analysis`
 - `GET /api/value-bets`
 - `POST /api/simulate-bet`
+- `GET /api/model-card`
+
+## Product Principles Borrowed From Research
+
+- Separate race pre-filtering from horse-level prediction.
+- Use fair odds and market edge instead of raw rankings.
+- Use fractional Kelly sizing with drawdown throttling.
+- Validate models with temporal splits and leakage checks before using live data.
+- Keep responsible gaming and uncertainty visible in the product.
 
 ## Responsible Gaming
 

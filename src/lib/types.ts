@@ -47,3 +47,25 @@ export type BetSimulation = {
   marketEdge: number;
   recommendation: "Eviter" | "Observer" | "Miser prudemment" | "Value bet";
 };
+
+export type ModelCard = {
+  version: string;
+  purpose: string;
+  modelStack: string[];
+  featureFamilies: string[];
+  calibration: {
+    method: string;
+    rationale: string;
+  };
+  leakageControls: string[];
+  bankrollPolicy: {
+    kellyFraction: number;
+    maxStakeFraction: number;
+    drawdownRules: Array<{
+      from: number;
+      to: number | null;
+      multiplier: number;
+    }>;
+  };
+  limitations: string[];
+};
