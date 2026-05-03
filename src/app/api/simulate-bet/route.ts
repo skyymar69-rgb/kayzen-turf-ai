@@ -7,14 +7,16 @@ export async function POST(request: Request) {
     odds?: number;
     winProbability?: number;
     bankroll?: number;
+    drawdown?: number;
   };
 
   const stake = Number(body.stake ?? 20);
   const odds = Number(body.odds ?? 5);
   const winProbability = Number(body.winProbability ?? 20);
   const bankroll = Number(body.bankroll ?? 500);
+  const drawdown = Number(body.drawdown ?? 0);
 
-  if (stake <= 0 || odds <= 1 || winProbability <= 0 || winProbability > 100 || bankroll <= 0) {
+  if (stake <= 0 || odds <= 1 || winProbability <= 0 || winProbability > 100 || bankroll <= 0 || drawdown < 0) {
     return NextResponse.json(
       { error: "Parametres invalides: stake, odds, winProbability et bankroll sont requis." },
       { status: 400 },
@@ -23,6 +25,6 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     generatedAt: new Date().toISOString(),
-    data: simulateBet(stake, odds, winProbability, bankroll),
+    data: simulateBet(stake, odds, winProbability, bankroll, drawdown),
   });
 }

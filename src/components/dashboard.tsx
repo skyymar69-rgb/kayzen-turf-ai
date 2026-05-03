@@ -60,6 +60,7 @@ export function Dashboard({ race }: DashboardProps) {
   const [selectedHorseId, setSelectedHorseId] = useState(race.horses[0].id);
   const [stake, setStake] = useState(25);
   const [bankroll, setBankroll] = useState(500);
+  const [drawdown, setDrawdown] = useState(0);
   const mounted = useClientReady();
 
   const selectedHorse = useMemo(
@@ -68,8 +69,8 @@ export function Dashboard({ race }: DashboardProps) {
   );
 
   const simulation = useMemo(
-    () => simulateBet(stake, selectedHorse.odds, selectedHorse.winProbability, bankroll),
-    [bankroll, selectedHorse.odds, selectedHorse.winProbability, stake],
+    () => simulateBet(stake, selectedHorse.odds, selectedHorse.winProbability, bankroll, drawdown),
+    [bankroll, drawdown, selectedHorse.odds, selectedHorse.winProbability, stake],
   );
 
   const scoreData = race.horses.map((horse) => ({
@@ -127,7 +128,7 @@ export function Dashboard({ race }: DashboardProps) {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:min-w-[520px]">
             <Metric icon={Target} label="Consensus IA" value={`${race.modelConsensus}%`} tone="emerald" />
             <Metric icon={Activity} label="Volatilite" value={`${race.marketVolatility}%`} tone="cyan" />
-            <Metric icon={CircleDollarSign} label="ROI demo" value="+12.8%" tone="gold" />
+            <Metric icon={CircleDollarSign} label="Qualite course" value={`${race.raceQualityScore}`} tone="gold" />
             <Metric icon={Lock} label="Premium" value="Pret" tone="coral" />
           </div>
         </header>
@@ -144,6 +145,7 @@ export function Dashboard({ race }: DashboardProps) {
               </div>
               <div className="flex flex-wrap gap-2">
                 <Pill icon={Sparkles} text="IA explicable" />
+                <Pill icon={Target} text={`Tier ${race.bettingTier}`} />
                 <Pill icon={ShieldCheck} text="Jeu responsable" />
               </div>
             </div>
@@ -157,6 +159,7 @@ export function Dashboard({ race }: DashboardProps) {
                     <th className="border-b border-white/10 pb-3 font-medium">Gagnant</th>
                     <th className="border-b border-white/10 pb-3 font-medium">Top 3</th>
                     <th className="border-b border-white/10 pb-3 font-medium">Cote</th>
+                    <th className="border-b border-white/10 pb-3 font-medium">Juste</th>
                     <th className="border-b border-white/10 pb-3 font-medium">Value</th>
                     <th className="border-b border-white/10 pb-3 font-medium">Signal</th>
                   </tr>
@@ -198,11 +201,15 @@ export function Dashboard({ race }: DashboardProps) {
               <div className="mt-4 grid grid-cols-2 gap-3">
                 <NumberInput label="Mise" min={1} setValue={setStake} suffix="EUR" value={stake} />
                 <NumberInput label="Bankroll" min={50} setValue={setBankroll} suffix="EUR" value={bankroll} />
+                <NumberInput label="Drawdown" min={0} setValue={setDrawdown} suffix="%" value={drawdown} />
               </div>
               <div className="mt-4 grid grid-cols-2 gap-3">
+                <Result label="Cote juste" value={`${simulation.fairOdds}`} />
+                <Result label="Edge marche" value={`${simulation.marketEdge}%`} />
                 <Result label="Retour potentiel" value={`${simulation.potentialReturn} EUR`} />
                 <Result label="EV estimee" value={`${simulation.expectedValue} EUR`} />
                 <Result label="Kelly prudent" value={`${simulation.kellyStake} EUR`} />
+                <Result label="Mise ajustee" value={`${simulation.drawdownAdjustedStake} EUR`} />
                 <Result label="Decision" value={simulation.recommendation} />
               </div>
             </Panel>
@@ -216,7 +223,7 @@ export function Dashboard({ race }: DashboardProps) {
                       <span className="font-mono text-sm text-emerald-300">+{horse.valueIndex}%</span>
                     </div>
                     <p className="mt-1 text-sm text-[#93a39c]">
-                      Cote {horse.odds} · Proba {horse.winProbability}% · {horse.confidence}
+                      Cote {horse.odds} · Juste {horse.fairOdds} · Proba {horse.winProbability}% · {horse.confidence}
                     </p>
                   </div>
                 ))}
@@ -351,6 +358,7 @@ function HorseRow({
       <td className="border-b border-white/10 py-4 pr-4">{horse.winProbability}%</td>
       <td className="border-b border-white/10 py-4 pr-4">{horse.top3Probability}%</td>
       <td className="border-b border-white/10 py-4 pr-4 font-mono">{horse.odds}</td>
+      <td className="border-b border-white/10 py-4 pr-4 font-mono">{horse.fairOdds}</td>
       <td className={`border-b border-white/10 py-4 pr-4 font-mono ${horse.valueIndex > 0 ? "text-emerald-300" : "text-[#ff8066]"}`}>
         {horse.valueIndex > 0 ? "+" : ""}{horse.valueIndex}%
       </td>

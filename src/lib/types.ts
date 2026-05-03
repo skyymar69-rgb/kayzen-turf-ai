@@ -7,6 +7,8 @@ export type HorsePrediction = {
   jockey: string;
   trainer: string;
   odds: number;
+  fairOdds: number;
+  marketEdge: number;
   winProbability: number;
   top3Probability: number;
   top5Probability: number;
@@ -27,6 +29,8 @@ export type RaceAnalysis = {
   weather: string;
   marketVolatility: number;
   modelConsensus: number;
+  raceQualityScore: number;
+  bettingTier: "Focus" | "Value" | "Avoid";
   riskLevel: "Prudent" | "Equilibre" | "Speculatif";
   horses: HorsePrediction[];
 };
@@ -38,5 +42,8 @@ export type BetSimulation = {
   expectedValue: number;
   potentialReturn: number;
   kellyStake: number;
+  drawdownAdjustedStake: number;
+  fairOdds: number;
+  marketEdge: number;
   recommendation: "Eviter" | "Observer" | "Miser prudemment" | "Value bet";
 };

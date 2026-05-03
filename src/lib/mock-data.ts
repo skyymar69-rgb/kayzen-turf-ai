@@ -11,6 +11,8 @@ export const raceAnalysis: RaceAnalysis = {
   weather: "Nuageux, vent faible",
   marketVolatility: 18,
   modelConsensus: 76,
+  raceQualityScore: 82,
+  bettingTier: "Focus",
   riskLevel: "Equilibre",
   horses: [
     {
@@ -20,6 +22,8 @@ export const raceAnalysis: RaceAnalysis = {
       jockey: "M. Barzalona",
       trainer: "A. Fabre",
       odds: 4.8,
+      fairOdds: 4.17,
+      marketEdge: 15.2,
       winProbability: 24,
       top3Probability: 56,
       top5Probability: 72,
@@ -35,6 +39,8 @@ export const raceAnalysis: RaceAnalysis = {
       jockey: "C. Soumillon",
       trainer: "J. Reynier",
       odds: 7.2,
+      fairOdds: 5.56,
+      marketEdge: 29.6,
       winProbability: 18,
       top3Probability: 44,
       top5Probability: 63,
@@ -50,6 +56,8 @@ export const raceAnalysis: RaceAnalysis = {
       jockey: "T. Piccone",
       trainer: "F. Chappet",
       odds: 5.6,
+      fairOdds: 5.88,
+      marketEdge: -4.8,
       winProbability: 17,
       top3Probability: 39,
       top5Probability: 58,
@@ -65,6 +73,8 @@ export const raceAnalysis: RaceAnalysis = {
       jockey: "A. Lemaitre",
       trainer: "M. Delzangles",
       odds: 14.5,
+      fairOdds: 10,
+      marketEdge: 45,
       winProbability: 10,
       top3Probability: 31,
       top5Probability: 49,
@@ -80,6 +90,8 @@ export const raceAnalysis: RaceAnalysis = {
       jockey: "S. Pasquier",
       trainer: "P. Bary",
       odds: 3.9,
+      fairOdds: 4.76,
+      marketEdge: -18.1,
       winProbability: 21,
       top3Probability: 48,
       top5Probability: 69,
@@ -104,18 +116,23 @@ export function simulateBet(
   odds: number,
   winProbability: number,
   bankroll = 500,
+  drawdown = 0,
 ): BetSimulation {
   const probability = winProbability / 100;
+  const fairOdds = probability > 0 ? 1 / probability : 0;
   const potentialReturn = stake * odds;
   const expectedValue = potentialReturn * probability - stake;
-  const edge = odds * probability - 1;
-  const kellyFraction = Math.max(0, edge / Math.max(odds - 1, 1));
-  const kellyStake = Math.min(bankroll * kellyFraction * 0.5, bankroll * 0.04);
+  const marketEdge = odds * probability - 1;
+  const fullKelly = Math.max(0, marketEdge / Math.max(odds - 1, 1));
+  const kellyFraction = Math.min(fullKelly * 0.25, 0.05);
+  const kellyStake = bankroll * kellyFraction;
+  const drawdownMultiplier = getDrawdownMultiplier(drawdown);
+  const drawdownAdjustedStake = kellyStake * drawdownMultiplier;
 
   let recommendation: BetSimulation["recommendation"] = "Eviter";
-  if (edge > 0.22) recommendation = "Value bet";
-  else if (edge > 0.08) recommendation = "Miser prudemment";
-  else if (edge > -0.05) recommendation = "Observer";
+  if (marketEdge > 0.22) recommendation = "Value bet";
+  else if (marketEdge > 0.08) recommendation = "Miser prudemment";
+  else if (marketEdge > -0.05) recommendation = "Observer";
 
   return {
     stake,
@@ -124,10 +141,21 @@ export function simulateBet(
     expectedValue: Number(expectedValue.toFixed(2)),
     potentialReturn: Number(potentialReturn.toFixed(2)),
     kellyStake: Number(kellyStake.toFixed(2)),
+    drawdownAdjustedStake: Number(drawdownAdjustedStake.toFixed(2)),
+    fairOdds: Number(fairOdds.toFixed(2)),
+    marketEdge: Number((marketEdge * 100).toFixed(1)),
     recommendation,
   };
 }
 
 export function getTopPick(): HorsePrediction {
   return predictions[0];
+}
+
+function getDrawdownMultiplier(drawdown: number) {
+  if (drawdown < 10) return 1;
+  if (drawdown < 15) return 0.75;
+  if (drawdown < 25) return 0.5;
+  if (drawdown < 35) return 0.25;
+  return 0.1;
 }
