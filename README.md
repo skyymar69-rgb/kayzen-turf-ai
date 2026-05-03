@@ -39,6 +39,12 @@ Experimental PMU import:
 npm run data:import:pmu -- --date 03052026 --max-races 10
 ```
 
+Full PMU programme import for a day:
+
+```bash
+npm run data:import:pmu -- --date 03052026
+```
+
 This connector uses the publicly reachable PMU JSON programme endpoint with a clear user agent, no bot evasion, and a short delay between race participant requests. For commercial scale, validate usage rights or replace it with an authorised PMU partner feed.
 
 ## MVP API
