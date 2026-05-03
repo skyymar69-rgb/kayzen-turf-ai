@@ -66,7 +66,7 @@ const roiTrend = [
 ];
 
 export function Dashboard({ races }: DashboardProps) {
-  const initialRace = races[0];
+  const initialRace = races.find((item) => item.relativeDay === "today") ?? races[0];
   const [selectedRaceId, setSelectedRaceId] = useState(initialRace?.id ?? "");
   const [dayFilter, setDayFilter] = useState<RaceAnalysis["relativeDay"] | "all">("today");
   const [tierFilter, setTierFilter] = useState<RaceAnalysis["bettingTier"] | "all">("all");
@@ -97,7 +97,7 @@ export function Dashboard({ races }: DashboardProps) {
   }, [dayFilter, query, races, tierFilter]);
 
   const raceMeetings = useMemo(() => groupRacesByMeeting(filteredRaces), [filteredRaces]);
-  const race = races.find((item) => item.id === selectedRaceId) ?? filteredRaces[0] ?? initialRace;
+  const race = filteredRaces.find((item) => item.id === selectedRaceId) ?? filteredRaces[0] ?? initialRace;
   const [selectedHorseId, setSelectedHorseId] = useState(race?.horses[0]?.id ?? "");
 
   const selectedHorse = useMemo(() => {
@@ -217,6 +217,37 @@ export function Dashboard({ races }: DashboardProps) {
               value={query}
             />
           </label>
+        </div>
+
+        <div className="mx-auto mb-4 flex max-w-7xl gap-2 overflow-x-auto kz-scroll">
+          {raceMeetings.map((meeting) => {
+            const active = meeting.races.some((item) => item.id === race.id);
+
+            return (
+              <button
+                className={`shrink-0 rounded-md border px-3 py-2 text-left transition ${
+                  active
+                    ? "border-emerald-300/40 bg-emerald-300/[0.12] text-white"
+                    : "border-white/10 bg-white/[0.03] text-[#b6c5bf] hover:bg-white/[0.06]"
+                }`}
+                key={meeting.key}
+                onClick={() => {
+                  const nextRace = meeting.races[0];
+                  setSelectedRaceId(nextRace.id);
+                  setSelectedHorseId(nextRace.horses[0]?.id ?? "");
+                }}
+                type="button"
+              >
+                <span className="block font-mono text-sm font-semibold text-emerald-300">
+                  R{meeting.reunionNumber}
+                </span>
+                <span className="mt-1 block max-w-36 truncate text-xs">{meeting.racecourse}</span>
+                <span className="mt-1 block text-xs text-[#93a39c]">
+                  C1-C{meeting.races.at(-1)?.courseNumber ?? meeting.races.length}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         <section className="mx-auto mb-4 max-w-7xl rounded-lg border border-white/10 bg-[#0d1a17]/86 p-3">
