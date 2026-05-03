@@ -14,3 +14,5 @@ pnpm-debug.log*
 *.tsbuildinfo
 .DS_Store
 .tmp_*
+
+.vercel
