@@ -36,6 +36,10 @@ npm run dev
 - Validate models with temporal splits and leakage checks before using live data.
 - Keep responsible gaming and uncertainty visible in the product.
 
+## Architecture
+
+See [`docs/INSTITUTIONAL_SYSTEM_DESIGN.md`](docs/INSTITUTIONAL_SYSTEM_DESIGN.md) for the full institutional-grade system design: data engine, AI engine, scoring, database structure, API/MCP, compliance, and roadmap.
+
 ## Responsible Gaming
 
 KAYZEN TURF AI is a decision-support product, not a guarantee of profit. The application must keep clear risk disclaimers, responsible gaming messages, and transparent AI explanations.
