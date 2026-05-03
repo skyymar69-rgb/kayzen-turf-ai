@@ -7,6 +7,10 @@ export async function GET(request: Request) {
   const raceId = searchParams.get("raceId");
   const race = raceId ? await getRaceById(raceId) : (await getRaces())[0];
 
+  if (!race) {
+    return NextResponse.json({ error: "Race not found" }, { status: 404 });
+  }
+
   return NextResponse.json({
     generatedAt: new Date().toISOString(),
     race: {

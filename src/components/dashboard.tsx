@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   Activity,
   AlertTriangle,
@@ -279,18 +280,14 @@ export function Dashboard({ races }: DashboardProps) {
                 </div>
                 <div className="flex gap-2 overflow-x-auto kz-scroll">
                   {meeting.races.map((item) => (
-                    <button
+                    <Link
                       className={`min-w-[250px] shrink-0 rounded-md border p-3 text-left text-sm transition ${
                         item.id === race.id
                           ? "border-emerald-300/40 bg-emerald-300/[0.12] text-white"
                           : "border-white/10 bg-white/[0.03] text-[#b6c5bf] hover:bg-white/[0.06]"
                       }`}
+                      href={`/races/${encodeURIComponent(item.id)}`}
                       key={item.id}
-                      onClick={() => {
-                        setSelectedRaceId(item.id);
-                        setSelectedHorseId(item.horses[0].id);
-                      }}
-                      type="button"
                     >
                       <span className="flex items-center justify-between gap-3">
                         <span className="font-mono text-sm font-semibold text-emerald-300">{item.programCode}</span>
@@ -300,7 +297,7 @@ export function Dashboard({ races }: DashboardProps) {
                       <span className="mt-1 block text-xs text-[#93a39c]">
                         {item.discipline} - {item.distance} - {item.bettingTier}
                       </span>
-                    </button>
+                    </Link>
                   ))}
                 </div>
               </section>

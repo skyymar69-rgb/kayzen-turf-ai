@@ -94,10 +94,12 @@ export async function getRaces(filters?: { date?: string | null; day?: string | 
   return sortByStartTime(hydratedRaces);
 }
 
-export async function getRaceById(id?: string | null, baseRow?: RaceRow) {
+export async function getRaceById(id?: string | null, baseRow?: RaceRow, options: { fallback?: boolean } = {}) {
+  const fallback = options.fallback ?? true;
+
   if (!hasDatabase()) {
-    if (!id) return raceAnalysis;
-    return raceCards.find((race) => race.id === id) ?? raceAnalysis;
+    if (!id) return fallback ? raceAnalysis : null;
+    return raceCards.find((race) => race.id === id) ?? (fallback ? raceAnalysis : null);
   }
 
   const sql = getSql();
@@ -131,10 +133,10 @@ export async function getRaceById(id?: string | null, baseRow?: RaceRow) {
       limit 1
     ` as RaceRow[])[0];
   } catch {
-    return raceCards.find((race) => race.id === id) ?? raceAnalysis;
+    return raceCards.find((race) => race.id === id) ?? (fallback ? raceAnalysis : null);
   }
 
-  if (!row) return raceCards.find((race) => race.id === id) ?? raceAnalysis;
+  if (!row) return raceCards.find((race) => race.id === id) ?? (fallback ? raceAnalysis : null);
 
   const entries = await sql`
     select
@@ -164,7 +166,7 @@ export async function getRaceById(id?: string | null, baseRow?: RaceRow) {
     order by entries.kz_score desc
   ` as EntryRow[];
 
-  return entries.length > 0 ? mapRace(row, entries) : raceCards.find((race) => race.id === row.id) ?? raceAnalysis;
+  return entries.length > 0 ? mapRace(row, entries) : raceCards.find((race) => race.id === row.id) ?? (fallback ? raceAnalysis : null);
 }
 
 export async function getPredictions() {
