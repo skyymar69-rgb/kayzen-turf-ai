@@ -1,6 +1,6 @@
 import { getSql, hasDatabase } from "@/lib/db";
 import { raceAnalysis, raceCards, valueBets } from "@/lib/mock-data";
-import type { Confidence, HorsePrediction, RaceAnalysis } from "@/lib/types";
+import type { BetOffer, Confidence, HorsePrediction, RaceAnalysis } from "@/lib/types";
 
 type RaceRow = {
   id: string;
@@ -21,6 +21,7 @@ type RaceRow = {
   race_quality_score: string;
   betting_tier: RaceAnalysis["bettingTier"];
   risk_level: RaceAnalysis["riskLevel"];
+  bet_types: BetOffer[] | string | null;
 };
 
 type EntryRow = {
@@ -73,7 +74,8 @@ export async function getRaces(filters?: { date?: string | null; day?: string | 
         races.model_consensus::text,
         races.race_quality_score::text,
         races.betting_tier,
-        races.risk_level
+        races.risk_level,
+        races.bet_types
       from races
       left join racecourses on racecourses.id = races.racecourse_id
       where (${filters?.date ?? null}::text is null or races.race_date = ${filters?.date ?? null}::date)
@@ -119,7 +121,8 @@ export async function getRaceById(id?: string | null, baseRow?: RaceRow) {
         races.model_consensus::text,
         races.race_quality_score::text,
         races.betting_tier,
-        races.risk_level
+        races.risk_level,
+        races.bet_types
       from races
       left join racecourses on racecourses.id = races.racecourse_id
       where races.id = ${id ?? raceAnalysis.id}
@@ -194,6 +197,7 @@ function mapRace(row: RaceRow, entries: EntryRow[]): RaceAnalysis {
     raceQualityScore: Number(row.race_quality_score),
     bettingTier: row.betting_tier,
     riskLevel: row.risk_level,
+    betTypes: parseJsonArray<BetOffer>(row.bet_types),
     horses: entries.map(mapHorse),
   };
 }
@@ -229,6 +233,18 @@ function mapHorse(row: EntryRow): HorsePrediction {
     kzScore: Number(row.kz_score),
     valueIndex: Number(row.value_index),
     confidence: row.confidence,
-    factors: Array.isArray(row.factors) ? row.factors : JSON.parse(row.factors),
+    factors: parseJsonArray<string>(row.factors),
   };
+}
+
+function parseJsonArray<T>(value: T[] | string | null | undefined): T[] {
+  if (Array.isArray(value)) return value;
+  if (!value) return [];
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
 }

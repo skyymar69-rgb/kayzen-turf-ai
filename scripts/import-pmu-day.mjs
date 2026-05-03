@@ -206,6 +206,61 @@ function isRelevantReunion(reunion, allowlist) {
   return allowlist.includes(countryCode);
 }
 
+function normalizeBetTypes(paris = []) {
+  const unique = new Map();
+
+  for (const pari of paris) {
+    const rawType = String(pari?.codePari ?? pari?.typePari ?? "");
+    if (!rawType || rawType === "REPORT_PLUS" || rawType === "E_REPORT_PLUS") continue;
+
+    const type = rawType.replace(/^E_/, "");
+    const existing = unique.get(type);
+    const offer = {
+      type,
+      label: labelBetType(type),
+      audience: pari.audience ?? null,
+      baseStake: Number(pari.miseBase ?? 0) / 100,
+      ordered: Boolean(pari.ordre),
+      combined: Boolean(pari.combine),
+      requiredHorses: Number(pari.nbChevauxReglementaire ?? 0),
+      flexi: pari.valeursFlexiAutorisees ?? [],
+      riskOptions: pari.valeursRisqueAutorisees ?? [],
+      online: rawType.startsWith("E_"),
+      spotAllowed: Boolean(pari.spotAutorise),
+    };
+
+    if (!existing || offer.online) unique.set(type, offer);
+  }
+
+  return Array.from(unique.values()).sort((a, b) => betTypeRank(a.type) - betTypeRank(b.type));
+}
+
+function labelBetType(type) {
+  return type
+    .replaceAll("_", " ")
+    .toLowerCase()
+    .replace(/(^|\s)\S/g, (letter) => letter.toUpperCase());
+}
+
+function betTypeRank(type) {
+  const order = [
+    "SIMPLE_GAGNANT",
+    "SIMPLE_PLACE",
+    "COUPLE_GAGNANT",
+    "COUPLE_PLACE",
+    "COUPLE_ORDRE",
+    "DEUX_SUR_QUATRE",
+    "TRIO",
+    "TRIO_ORDRE",
+    "MULTI",
+    "SUPER_QUATRE",
+    "QUARTE_PLUS",
+    "QUINTE_PLUS",
+  ];
+  const index = order.indexOf(type);
+  return index === -1 ? 999 : index;
+}
+
 async function importDate(sql, pmuDate, maxRaces) {
   const programmeUrl = `${PMU_BASE}/${pmuDate}`;
   const payload = await fetchJson(programmeUrl);
@@ -264,6 +319,7 @@ async function importDate(sql, pmuDate, maxRaces) {
       const fieldSize = Number(course.nombreDeclaresPartants ?? 0);
       const volatility = fieldSize >= 16 ? 24 : fieldSize >= 12 ? 18 : 11;
       const qualityScore = clamp(82 - Math.abs(fieldSize - 12) * 2 + (course.montantPrix ?? 0) / 10000, 35, 92);
+      const betTypes = normalizeBetTypes(course.paris);
       const weather = reunion?.meteo
         ? `${reunion.meteo.nebulositeLibelleCourt ?? "Meteo inconnue"}, ${reunion.meteo.temperature ?? "?"}C, vent ${reunion.meteo.forceVent ?? "?"}km/h`
         : "Meteo non renseignee";
@@ -273,7 +329,7 @@ async function importDate(sql, pmuDate, maxRaces) {
           id, race_date, relative_day, reunion_number, course_number, source_country,
           name, racecourse_id, start_time, discipline,
           distance, going, weather, market_volatility, model_consensus, race_quality_score,
-          betting_tier, risk_level, data_cutoff_at
+          betting_tier, risk_level, bet_types, data_cutoff_at
         )
         values (
           ${raceId}, ${isoDate}, ${relativeDay}, ${Number(reunion.numOfficiel)}, ${Number(course.numOrdre)},
@@ -281,7 +337,7 @@ async function importDate(sql, pmuDate, maxRaces) {
           ${racecourseId}, ${startTime}, ${disciplineFromPmu(course.discipline)},
           ${String(course.distance ?? course.parcours ?? "")}, ${course?.penetrometre?.intitule ?? course.typePiste ?? null},
           ${weather}, ${volatility}, ${68}, ${qualityScore}, ${bettingTier(qualityScore)},
-          ${riskFromVolatility(volatility)}, now()
+          ${riskFromVolatility(volatility)}, ${JSON.stringify(betTypes)}, now()
         )
         on conflict (id) do update set
           race_date = excluded.race_date,
@@ -301,6 +357,7 @@ async function importDate(sql, pmuDate, maxRaces) {
           race_quality_score = excluded.race_quality_score,
           betting_tier = excluded.betting_tier,
           risk_level = excluded.risk_level,
+          bet_types = excluded.bet_types,
           data_cutoff_at = excluded.data_cutoff_at,
           updated_at = now()
       `;

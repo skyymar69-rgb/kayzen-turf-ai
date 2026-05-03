@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   Sparkles,
   Target,
+  Trophy,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useMemo, useState, useSyncExternalStore } from "react";
@@ -32,6 +33,7 @@ import {
   YAxis,
 } from "recharts";
 import { modelCard, simulateBet } from "@/lib/betting-engine";
+import { buildBetRecommendations, probableArrival } from "@/lib/bet-recommendations";
 import type { HorsePrediction, RaceAnalysis } from "@/lib/types";
 
 type DashboardProps = {
@@ -128,6 +130,8 @@ export function Dashboard({ races }: DashboardProps) {
     value: horse.valueIndex,
   }));
   const selectedValueBets = race.horses.filter((horse) => horse.valueIndex > 10).sort((a, b) => b.valueIndex - a.valueIndex);
+  const arrival = probableArrival(race.horses);
+  const betRecommendations = buildBetRecommendations(race.horses, race.betTypes);
 
   return (
     <main className="min-h-screen">
@@ -352,6 +356,39 @@ export function Dashboard({ races }: DashboardProps) {
           </section>
 
           <section className="grid gap-4">
+            <Panel title="Tickets proposes" icon={Trophy}>
+              <div className="mb-3 rounded-md border border-white/10 bg-white/[0.03] p-3">
+                <p className="text-xs text-[#93a39c]">Ordre d&apos;arrivee probable</p>
+                <p className="mt-1 font-mono text-sm text-white">
+                  {arrival.slice(0, 6).map((horse) => horse.number).join(" - ")}
+                </p>
+              </div>
+              <div className="space-y-3">
+                {betRecommendations.slice(0, 7).map((recommendation) => (
+                  <div className="rounded-md border border-white/10 bg-white/[0.03] p-3" key={recommendation.type}>
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="font-medium text-white">{recommendation.label}</p>
+                        <p className="mt-1 font-mono text-sm text-emerald-300">{recommendation.ticket}</p>
+                      </div>
+                      <span className="rounded-md border border-white/10 px-2 py-1 font-mono text-xs text-[#d7e4de]">
+                        {recommendation.confidence}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs text-[#93a39c]">
+                      {recommendation.strategy} - {recommendation.audience ?? "PMU"} - Mise base {recommendation.baseStake || 0} EUR
+                    </p>
+                    <p className="mt-2 text-xs leading-5 text-[#b6c5bf]">{recommendation.rationale}</p>
+                  </div>
+                ))}
+                {betRecommendations.length === 0 ? (
+                  <div className="rounded-md border border-white/10 bg-white/[0.03] p-3 text-sm text-[#93a39c]">
+                    Aucun pari PMU exploitable detecte sur cette course.
+                  </div>
+                ) : null}
+              </div>
+            </Panel>
+
             <Panel title="Copilote betting" icon={Gauge}>
               <label className="text-sm text-[#93a39c]" htmlFor="horse">
                 Selection
@@ -496,6 +533,7 @@ export function Dashboard({ races }: DashboardProps) {
                 "GET /api/predictions",
                 "GET /api/races",
                 "GET /api/race-analysis",
+                "GET /api/bet-recommendations",
                 "GET /api/value-bets",
                 "POST /api/simulate",
                 "POST /api/simulate-bet",

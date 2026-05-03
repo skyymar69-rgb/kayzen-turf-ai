@@ -27,6 +27,7 @@ create table if not exists races (
   race_quality_score numeric not null default 0,
   betting_tier text not null check (betting_tier in ('Focus', 'Value', 'Avoid')),
   risk_level text not null check (risk_level in ('Prudent', 'Equilibre', 'Speculatif')),
+  bet_types jsonb not null default '[]'::jsonb,
   data_cutoff_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -35,6 +36,7 @@ create table if not exists races (
 alter table races add column if not exists reunion_number integer;
 alter table races add column if not exists course_number integer;
 alter table races add column if not exists source_country text;
+alter table races add column if not exists bet_types jsonb not null default '[]'::jsonb;
 
 create table if not exists horses (
   id text primary key,

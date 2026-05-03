@@ -18,6 +18,35 @@ export type HorsePrediction = {
   factors: string[];
 };
 
+export type BetOffer = {
+  type: string;
+  label: string;
+  audience: string | null;
+  baseStake: number;
+  ordered: boolean;
+  combined: boolean;
+  requiredHorses: number;
+  flexi: number[];
+  riskOptions: number[];
+  online: boolean;
+  spotAllowed: boolean;
+};
+
+export type BetRecommendation = {
+  type: string;
+  label: string;
+  audience: string | null;
+  baseStake: number;
+  strategy: "Confiance" | "Value" | "Couverture" | "Speculatif";
+  horses: Array<{
+    number: number;
+    name: string;
+  }>;
+  ticket: string;
+  confidence: number;
+  rationale: string;
+};
+
 export type RaceAnalysis = {
   id: string;
   name: string;
@@ -38,6 +67,7 @@ export type RaceAnalysis = {
   raceQualityScore: number;
   bettingTier: "Focus" | "Value" | "Avoid";
   riskLevel: "Prudent" | "Equilibre" | "Speculatif";
+  betTypes: BetOffer[];
   horses: HorsePrediction[];
 };
 
