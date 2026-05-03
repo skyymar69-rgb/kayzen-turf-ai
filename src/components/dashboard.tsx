@@ -13,6 +13,7 @@ import {
   Database,
   Gauge,
   Lock,
+  Search,
   ShieldCheck,
   Sparkles,
   Target,
@@ -59,6 +60,9 @@ const roiTrend = [
 
 export function Dashboard({ races }: DashboardProps) {
   const [selectedRaceId, setSelectedRaceId] = useState(races[0].id);
+  const [dayFilter, setDayFilter] = useState<RaceAnalysis["relativeDay"] | "all">("today");
+  const [tierFilter, setTierFilter] = useState<RaceAnalysis["bettingTier"] | "all">("all");
+  const [query, setQuery] = useState("");
   const race = useMemo(
     () => races.find((item) => item.id === selectedRaceId) ?? races[0],
     [races, selectedRaceId],
@@ -86,6 +90,19 @@ export function Dashboard({ races }: DashboardProps) {
   }));
 
   const selectedValueBets = valueBets.filter((horse) => horse.raceId === race.id);
+
+  const filteredRaces = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+
+    return races
+      .filter((item) => dayFilter === "all" || item.relativeDay === dayFilter)
+      .filter((item) => tierFilter === "all" || item.bettingTier === tierFilter)
+      .filter((item) => {
+        if (!normalizedQuery) return true;
+        return `${item.name} ${item.racecourse} ${item.discipline}`.toLowerCase().includes(normalizedQuery);
+      })
+      .sort((a, b) => b.raceQualityScore - a.raceQualityScore || b.modelConsensus - a.modelConsensus);
+  }, [dayFilter, query, races, tierFilter]);
 
   return (
     <main className="min-h-screen">
@@ -143,6 +160,86 @@ export function Dashboard({ races }: DashboardProps) {
         </header>
 
         <div className="mx-auto mb-4 flex max-w-7xl gap-2 overflow-x-auto kz-scroll">
+          {(["today", "tomorrow", "yesterday", "all"] as const).map((day) => (
+            <button
+              className={`shrink-0 rounded-md border px-3 py-2 text-sm transition ${
+                dayFilter === day
+                  ? "border-emerald-300/40 bg-emerald-300/[0.12] text-white"
+                  : "border-white/10 bg-white/[0.03] text-[#b6c5bf] hover:bg-white/[0.06]"
+              }`}
+              key={day}
+              onClick={() => setDayFilter(day)}
+              type="button"
+            >
+              {day === "all" ? "Tous" : formatRelativeDay(day)}
+            </button>
+          ))}
+          {(["all", "Focus", "Value", "Avoid"] as const).map((tier) => (
+            <button
+              className={`shrink-0 rounded-md border px-3 py-2 text-sm transition ${
+                tierFilter === tier
+                  ? "border-cyan-300/40 bg-cyan-300/[0.10] text-white"
+                  : "border-white/10 bg-white/[0.03] text-[#b6c5bf] hover:bg-white/[0.06]"
+              }`}
+              key={tier}
+              onClick={() => setTierFilter(tier)}
+              type="button"
+            >
+              {tier === "all" ? "Tous tiers" : tier}
+            </button>
+          ))}
+          <label className="flex h-10 min-w-[260px] items-center gap-2 rounded-md border border-white/10 bg-[#081310] px-3 text-sm text-[#93a39c]">
+            <Search size={16} />
+            <input
+              className="min-w-0 flex-1 bg-transparent text-white outline-none"
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Hippodrome, course, discipline"
+              value={query}
+            />
+          </label>
+        </div>
+
+        <div className="mx-auto mb-4 max-w-7xl rounded-lg border border-white/10 bg-[#0d1a17]/86 p-3">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-[#b6c5bf]">
+              {filteredRaces.length} courses affichees · {races.length} courses en base
+            </p>
+            <p className="text-xs text-[#93a39c]">Tri automatique par qualite course et consensus IA</p>
+          </div>
+          <div className="flex gap-2 overflow-x-auto kz-scroll">
+            {filteredRaces.map((item) => (
+              <button
+                className={`min-w-[230px] shrink-0 rounded-md border p-3 text-left text-sm transition ${
+                  item.id === race.id
+                    ? "border-emerald-300/40 bg-emerald-300/[0.12] text-white"
+                    : "border-white/10 bg-white/[0.03] text-[#b6c5bf] hover:bg-white/[0.06]"
+                }`}
+                key={item.id}
+                onClick={() => {
+                  setSelectedRaceId(item.id);
+                  setSelectedHorseId(item.horses[0].id);
+                }}
+                type="button"
+              >
+                <span className="flex items-center justify-between gap-3">
+                  <span className="font-medium">{item.startTime} · {item.racecourse}</span>
+                  <span className="font-mono text-xs text-emerald-300">{item.raceQualityScore}</span>
+                </span>
+                <span className="mt-1 block truncate text-xs text-[#93a39c]">{item.name}</span>
+                <span className="mt-2 inline-flex rounded-md border border-white/10 px-2 py-1 text-xs text-[#d7e4de]">
+                  {formatRelativeDay(item.relativeDay)} · {item.bettingTier}
+                </span>
+              </button>
+            ))}
+            {filteredRaces.length === 0 ? (
+              <div className="rounded-md border border-white/10 bg-white/[0.03] p-3 text-sm text-[#93a39c]">
+                Aucun filtre ne correspond. Elargis le jour, le tier ou la recherche.
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="mx-auto mb-4 hidden max-w-7xl gap-2 overflow-x-auto kz-scroll">
           {races.map((item) => (
             <button
               className={`shrink-0 rounded-md border px-4 py-2 text-left text-sm transition ${
