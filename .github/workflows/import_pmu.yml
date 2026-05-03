@@ -17,6 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
     steps:
       - name: Checkout
@@ -35,9 +36,9 @@ jobs:
         run: npm run db:schema
 
       - name: Import requested PMU date
-        if: ${{ inputs.date != '' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.date != '' }}
         run: npm run data:import:pmu -- --date "${{ inputs.date }}"
 
       - name: Import rolling PMU window
-        if: ${{ inputs.date == '' }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.date == '' }}
         run: npm run data:import:pmu
