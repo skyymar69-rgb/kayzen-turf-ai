@@ -116,7 +116,7 @@ export function Dashboard({ races }: DashboardProps) {
         <div className="rounded-lg border border-white/10 bg-[#0d1a17]/86 p-6 text-center">
           <Brain className="mx-auto text-emerald-300" size={32} />
           <h1 className="mt-4 text-2xl font-semibold text-white">KAYZEN TURF AI</h1>
-          <p className="mt-2 text-sm text-[#b6c5bf]">Aucune course disponible pour le perimetre France/Equidia.</p>
+          <p className="mt-2 text-sm text-[#b6c5bf]">Aucune course francaise disponible.</p>
         </div>
       </main>
     );
@@ -255,7 +255,7 @@ export function Dashboard({ races }: DashboardProps) {
             <p className="text-sm text-[#b6c5bf]">
               {filteredRaces.length} courses affichees - {races.length} courses en base
             </p>
-            <p className="text-xs text-[#93a39c]">Perimetre France et courses internationales PMU/Equidia</p>
+            <p className="text-xs text-[#93a39c]">Perimetre courses francaises uniquement</p>
           </div>
           <div className="space-y-3">
             {raceMeetings.map((meeting) => (

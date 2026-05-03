@@ -4,26 +4,7 @@ import { neon } from "@neondatabase/serverless";
 
 const PMU_BASE = "https://offline.turfinfo.api.pmu.fr/rest/client/7/programme";
 const USER_AGENT = "KayzenTurfAI/0.1 contact:github.com/skyymar69-rgb/kayzen-turf-ai";
-const DEFAULT_EQUEDIA_COUNTRY_CODES = [
-  "FRA",
-  "GBR",
-  "IRL",
-  "AUS",
-  "HKG",
-  "ESP",
-  "ITA",
-  "DEU",
-  "BEL",
-  "SWE",
-  "NOR",
-  "DNK",
-  "NLD",
-  "CHE",
-  "ZAF",
-  "USA",
-  "JPN",
-  "ARE",
-];
+const DEFAULT_ALLOWED_COUNTRY_CODES = ["FRA"];
 
 async function loadLocalEnv() {
   try {
@@ -212,7 +193,7 @@ function horseId(participant) {
 
 function allowedCountryCodes() {
   const configured = process.env.KAYZEN_ALLOWED_COUNTRIES;
-  if (!configured) return DEFAULT_EQUEDIA_COUNTRY_CODES;
+  if (!configured) return DEFAULT_ALLOWED_COUNTRY_CODES;
 
   return configured
     .split(",")
@@ -255,7 +236,7 @@ async function importDate(sql, pmuDate, maxRaces) {
       const skippedCourses = reunion.courses?.length ?? 0;
       skippedRaces += skippedCourses;
       console.log(
-        `[pmu] skipped R${reunion.numOfficiel} ${reunion?.hippodrome?.libelleCourt ?? ""} (${reunion?.pays?.code ?? "N/A"}) - outside France/Equidia scope`,
+        `[pmu] skipped R${reunion.numOfficiel} ${reunion?.hippodrome?.libelleCourt ?? ""} (${reunion?.pays?.code ?? "N/A"}) - outside French race scope`,
       );
       continue;
     }
@@ -421,7 +402,7 @@ async function importDate(sql, pmuDate, maxRaces) {
   }
 
   if (skippedRaces > 0) {
-    console.log(`[pmu] skipped ${skippedRaces} races outside France/Equidia scope`);
+    console.log(`[pmu] skipped ${skippedRaces} races outside French race scope`);
   }
 
   return importedRaces;

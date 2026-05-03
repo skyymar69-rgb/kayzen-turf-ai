@@ -2,26 +2,7 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { neon } from "@neondatabase/serverless";
 
-const DEFAULT_EQUEDIA_COUNTRY_CODES = [
-  "FRA",
-  "GBR",
-  "IRL",
-  "AUS",
-  "HKG",
-  "ESP",
-  "ITA",
-  "DEU",
-  "BEL",
-  "SWE",
-  "NOR",
-  "DNK",
-  "NLD",
-  "CHE",
-  "ZAF",
-  "USA",
-  "JPN",
-  "ARE",
-];
+const DEFAULT_ALLOWED_COUNTRY_CODES = ["FRA"];
 
 async function loadLocalEnv() {
   try {
@@ -42,7 +23,7 @@ async function loadLocalEnv() {
 
 function allowedCountryCodes() {
   const configured = process.env.KAYZEN_ALLOWED_COUNTRIES;
-  if (!configured) return DEFAULT_EQUEDIA_COUNTRY_CODES;
+  if (!configured) return DEFAULT_ALLOWED_COUNTRY_CODES;
 
   return configured
     .split(",")

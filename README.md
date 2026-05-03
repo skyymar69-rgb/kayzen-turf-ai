@@ -58,7 +58,7 @@ Race scope cleanup:
 npm run data:prune:scope
 ```
 
-By default, imports keep French races plus major Equidia/PMU international simulcast countries. Override with `KAYZEN_ALLOWED_COUNTRIES=FRA,GBR,AUS` when needed.
+By default, imports keep French races only. Override with `KAYZEN_ALLOWED_COUNTRIES=FRA,GBR,AUS` only if the product scope changes later.
 
 This connector uses the publicly reachable PMU JSON programme endpoint with a clear user agent, no bot evasion, and a short delay between race participant requests. For commercial scale, validate usage rights or replace it with an authorised PMU partner feed.
 
