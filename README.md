@@ -52,6 +52,14 @@ Full PMU programme import for a day:
 npm run data:import:pmu -- --date 03052026
 ```
 
+Race scope cleanup:
+
+```bash
+npm run data:prune:scope
+```
+
+By default, imports keep French races plus major Equidia/PMU international simulcast countries. Override with `KAYZEN_ALLOWED_COUNTRIES=FRA,GBR,AUS` when needed.
+
 This connector uses the publicly reachable PMU JSON programme endpoint with a clear user agent, no bot evasion, and a short delay between race participant requests. For commercial scale, validate usage rights or replace it with an authorised PMU partner feed.
 
 ## Cloud Automation

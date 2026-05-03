@@ -4,6 +4,26 @@ import { neon } from "@neondatabase/serverless";
 
 const PMU_BASE = "https://offline.turfinfo.api.pmu.fr/rest/client/7/programme";
 const USER_AGENT = "KayzenTurfAI/0.1 contact:github.com/skyymar69-rgb/kayzen-turf-ai";
+const DEFAULT_EQUEDIA_COUNTRY_CODES = [
+  "FRA",
+  "GBR",
+  "IRL",
+  "AUS",
+  "HKG",
+  "ESP",
+  "ITA",
+  "DEU",
+  "BEL",
+  "SWE",
+  "NOR",
+  "DNK",
+  "NLD",
+  "CHE",
+  "ZAF",
+  "USA",
+  "JPN",
+  "ARE",
+];
 
 async function loadLocalEnv() {
   try {
@@ -190,6 +210,21 @@ function horseId(participant) {
     .slice(0, 120);
 }
 
+function allowedCountryCodes() {
+  const configured = process.env.KAYZEN_ALLOWED_COUNTRIES;
+  if (!configured) return DEFAULT_EQUEDIA_COUNTRY_CODES;
+
+  return configured
+    .split(",")
+    .map((code) => code.trim().toUpperCase())
+    .filter(Boolean);
+}
+
+function isRelevantReunion(reunion, allowlist) {
+  const countryCode = String(reunion?.pays?.code ?? "").toUpperCase();
+  return allowlist.includes(countryCode);
+}
+
 async function importDate(sql, pmuDate, maxRaces) {
   const programmeUrl = `${PMU_BASE}/${pmuDate}`;
   const payload = await fetchJson(programmeUrl);
@@ -211,9 +246,20 @@ async function importDate(sql, pmuDate, maxRaces) {
     returning id
   `;
   const predictionRunId = predictionRunRows[0].id;
+  const allowlist = allowedCountryCodes();
   let importedRaces = 0;
+  let skippedRaces = 0;
 
   for (const reunion of reunions) {
+    if (!isRelevantReunion(reunion, allowlist)) {
+      const skippedCourses = reunion.courses?.length ?? 0;
+      skippedRaces += skippedCourses;
+      console.log(
+        `[pmu] skipped R${reunion.numOfficiel} ${reunion?.hippodrome?.libelleCourt ?? ""} (${reunion?.pays?.code ?? "N/A"}) - outside France/Equidia scope`,
+      );
+      continue;
+    }
+
     const racecourseName = reunion?.hippodrome?.libelleCourt ?? reunion?.hippodrome?.libelleLong ?? `R${reunion.numOfficiel}`;
     const racecourseRows = await sql`
       insert into racecourses (name, country, surface)
@@ -243,12 +289,14 @@ async function importDate(sql, pmuDate, maxRaces) {
 
       await sql`
         insert into races (
-          id, race_date, relative_day, name, racecourse_id, start_time, discipline,
+          id, race_date, relative_day, reunion_number, course_number, source_country,
+          name, racecourse_id, start_time, discipline,
           distance, going, weather, market_volatility, model_consensus, race_quality_score,
           betting_tier, risk_level, data_cutoff_at
         )
         values (
-          ${raceId}, ${isoDate}, ${relativeDay}, ${course.libelle ?? `Course ${course.numOrdre}`},
+          ${raceId}, ${isoDate}, ${relativeDay}, ${Number(reunion.numOfficiel)}, ${Number(course.numOrdre)},
+          ${reunion?.pays?.code ?? null}, ${course.libelle ?? `Course ${course.numOrdre}`},
           ${racecourseId}, ${startTime}, ${disciplineFromPmu(course.discipline)},
           ${String(course.distance ?? course.parcours ?? "")}, ${course?.penetrometre?.intitule ?? course.typePiste ?? null},
           ${weather}, ${volatility}, ${68}, ${qualityScore}, ${bettingTier(qualityScore)},
@@ -257,6 +305,9 @@ async function importDate(sql, pmuDate, maxRaces) {
         on conflict (id) do update set
           race_date = excluded.race_date,
           relative_day = excluded.relative_day,
+          reunion_number = excluded.reunion_number,
+          course_number = excluded.course_number,
+          source_country = excluded.source_country,
           name = excluded.name,
           racecourse_id = excluded.racecourse_id,
           start_time = excluded.start_time,
@@ -367,6 +418,10 @@ async function importDate(sql, pmuDate, maxRaces) {
       importedRaces += 1;
       await delay(300);
     }
+  }
+
+  if (skippedRaces > 0) {
+    console.log(`[pmu] skipped ${skippedRaces} races outside France/Equidia scope`);
   }
 
   return importedRaces;

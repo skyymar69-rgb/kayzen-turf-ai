@@ -4,7 +4,6 @@ import {
   Activity,
   AlertTriangle,
   ArrowUpRight,
-  BadgeEuro,
   Bell,
   Brain,
   ChartNoAxesCombined,
@@ -18,6 +17,7 @@ import {
   Sparkles,
   Target,
 } from "lucide-react";
+import type { ReactNode } from "react";
 import { useMemo, useState, useSyncExternalStore } from "react";
 import {
   Area,
@@ -32,10 +32,17 @@ import {
   YAxis,
 } from "recharts";
 import { modelCard, simulateBet } from "@/lib/betting-engine";
-import { valueBets } from "@/lib/mock-data";
 import type { HorsePrediction, RaceAnalysis } from "@/lib/types";
 
 type DashboardProps = {
+  races: RaceAnalysis[];
+};
+
+type RaceMeeting = {
+  key: string;
+  reunionNumber: number;
+  racecourse: string;
+  sourceCountry: string;
   races: RaceAnalysis[];
 };
 
@@ -59,37 +66,15 @@ const roiTrend = [
 ];
 
 export function Dashboard({ races }: DashboardProps) {
-  const [selectedRaceId, setSelectedRaceId] = useState(races[0].id);
+  const initialRace = races[0];
+  const [selectedRaceId, setSelectedRaceId] = useState(initialRace?.id ?? "");
   const [dayFilter, setDayFilter] = useState<RaceAnalysis["relativeDay"] | "all">("today");
   const [tierFilter, setTierFilter] = useState<RaceAnalysis["bettingTier"] | "all">("all");
   const [query, setQuery] = useState("");
-  const race = useMemo(
-    () => races.find((item) => item.id === selectedRaceId) ?? races[0],
-    [races, selectedRaceId],
-  );
-  const [selectedHorseId, setSelectedHorseId] = useState(race.horses[0].id);
   const [stake, setStake] = useState(25);
   const [bankroll, setBankroll] = useState(500);
   const [drawdown, setDrawdown] = useState(0);
   const mounted = useClientReady();
-
-  const selectedHorse = useMemo(
-    () => race.horses.find((horse) => horse.id === selectedHorseId) ?? race.horses[0],
-    [race.horses, selectedHorseId],
-  );
-
-  const simulation = useMemo(
-    () => simulateBet(stake, selectedHorse.odds, selectedHorse.winProbability, bankroll, drawdown),
-    [bankroll, drawdown, selectedHorse.odds, selectedHorse.winProbability, stake],
-  );
-
-  const scoreData = race.horses.map((horse) => ({
-    name: `#${horse.number}`,
-    score: horse.kzScore,
-    value: horse.valueIndex,
-  }));
-
-  const selectedValueBets = valueBets.filter((horse) => horse.raceId === race.id);
 
   const filteredRaces = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -99,10 +84,50 @@ export function Dashboard({ races }: DashboardProps) {
       .filter((item) => tierFilter === "all" || item.bettingTier === tierFilter)
       .filter((item) => {
         if (!normalizedQuery) return true;
-        return `${item.name} ${item.racecourse} ${item.discipline}`.toLowerCase().includes(normalizedQuery);
+        return `${item.programCode} ${item.name} ${item.racecourse} ${item.sourceCountry} ${item.discipline}`
+          .toLowerCase()
+          .includes(normalizedQuery);
       })
-      .sort((a, b) => b.raceQualityScore - a.raceQualityScore || b.modelConsensus - a.modelConsensus);
+      .sort(
+        (a, b) =>
+          a.reunionNumber - b.reunionNumber ||
+          a.courseNumber - b.courseNumber ||
+          a.startTime.localeCompare(b.startTime),
+      );
   }, [dayFilter, query, races, tierFilter]);
+
+  const raceMeetings = useMemo(() => groupRacesByMeeting(filteredRaces), [filteredRaces]);
+  const race = races.find((item) => item.id === selectedRaceId) ?? filteredRaces[0] ?? initialRace;
+  const [selectedHorseId, setSelectedHorseId] = useState(race?.horses[0]?.id ?? "");
+
+  const selectedHorse = useMemo(() => {
+    if (!race) return undefined;
+    return race.horses.find((horse) => horse.id === selectedHorseId) ?? race.horses[0];
+  }, [race, selectedHorseId]);
+
+  const simulation = useMemo(() => {
+    if (!selectedHorse) return null;
+    return simulateBet(stake, selectedHorse.odds, selectedHorse.winProbability, bankroll, drawdown);
+  }, [bankroll, drawdown, selectedHorse, stake]);
+
+  if (!race || !selectedHorse || !simulation) {
+    return (
+      <main className="grid min-h-screen place-items-center px-4">
+        <div className="rounded-lg border border-white/10 bg-[#0d1a17]/86 p-6 text-center">
+          <Brain className="mx-auto text-emerald-300" size={32} />
+          <h1 className="mt-4 text-2xl font-semibold text-white">KAYZEN TURF AI</h1>
+          <p className="mt-2 text-sm text-[#b6c5bf]">Aucune course disponible pour le perimetre France/Equidia.</p>
+        </div>
+      </main>
+    );
+  }
+
+  const scoreData = race.horses.map((horse) => ({
+    name: `#${horse.number}`,
+    score: horse.kzScore,
+    value: horse.valueIndex,
+  }));
+  const selectedValueBets = race.horses.filter((horse) => horse.valueIndex > 10).sort((a, b) => b.valueIndex - a.valueIndex);
 
   return (
     <main className="min-h-screen">
@@ -111,7 +136,7 @@ export function Dashboard({ races }: DashboardProps) {
           <Brain size={24} />
         </div>
         <nav className="mt-10 flex flex-1 flex-col gap-4">
-          {[Gauge, Target, ChartNoAxesCombined, BadgeEuro, Database, ShieldCheck].map((Icon, index) => (
+          {[Gauge, Target, ChartNoAxesCombined, CircleDollarSign, Database, ShieldCheck].map((Icon, index) => (
             <button
               aria-label={`Navigation ${index + 1}`}
               className="grid h-11 w-11 place-items-center rounded-md text-white/60 transition hover:bg-white/10 hover:text-white"
@@ -122,11 +147,7 @@ export function Dashboard({ races }: DashboardProps) {
             </button>
           ))}
         </nav>
-        <button
-          aria-label="Alertes"
-          className="grid h-11 w-11 place-items-center rounded-md border border-white/10 text-white/70"
-          type="button"
-        >
+        <button aria-label="Alertes" className="grid h-11 w-11 place-items-center rounded-md border border-white/10 text-white/70" type="button">
           <Bell size={20} />
         </button>
       </aside>
@@ -135,27 +156,26 @@ export function Dashboard({ races }: DashboardProps) {
         <header className="mx-auto flex max-w-7xl flex-col gap-5 pb-6 xl:flex-row xl:items-center xl:justify-between">
           <div>
             <div className="flex flex-wrap items-center gap-3 text-sm text-emerald-200/80">
-              <span className="rounded-md border border-emerald-300/20 bg-emerald-300/10 px-2.5 py-1">
-                SaaS MVP
-              </span>
-              <span>{formatRelativeDay(race.relativeDay)} · {race.raceDate}</span>
+              <span className="rounded-md border border-emerald-300/20 bg-emerald-300/10 px-2.5 py-1">SaaS MVP</span>
+              <span className="font-mono text-emerald-300">{race.programCode}</span>
+              <span>{formatRelativeDay(race.relativeDay)} - {race.raceDate}</span>
               <span>{race.racecourse}</span>
               <span>{race.startTime}</span>
               <span>{race.discipline}</span>
+              <span>{race.sourceCountry}</span>
             </div>
             <h1 className="mt-4 max-w-3xl text-3xl font-semibold tracking-normal text-white sm:text-5xl">
               KAYZEN TURF AI
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-[#b6c5bf] sm:text-base">
-              Intelligence predictive, detection value bet et pilotage de bankroll pour transformer
-              l&apos;analyse hippique en decision mesurable.
+              Courses triees par reunion, predictions explicables, value bets et pilotage de bankroll.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:min-w-[520px]">
-            <Metric icon={Target} label="Consensus IA" value={`${race.modelConsensus}%`} tone="emerald" />
-            <Metric icon={Activity} label="Volatilite" value={`${race.marketVolatility}%`} tone="cyan" />
-            <Metric icon={CircleDollarSign} label="Qualite course" value={`${race.raceQualityScore}`} tone="gold" />
-            <Metric icon={Lock} label="Premium" value="Pret" tone="coral" />
+            <Metric icon={Target} label="Consensus IA" value={`${race.modelConsensus}%`} />
+            <Metric icon={Activity} label="Volatilite" value={`${race.marketVolatility}%`} />
+            <Metric icon={CircleDollarSign} label="Qualite course" value={`${race.raceQualityScore}`} />
+            <Metric icon={Lock} label="Premium" value="Pret" />
           </div>
         </header>
 
@@ -188,88 +208,81 @@ export function Dashboard({ races }: DashboardProps) {
               {tier === "all" ? "Tous tiers" : tier}
             </button>
           ))}
-          <label className="flex h-10 min-w-[260px] items-center gap-2 rounded-md border border-white/10 bg-[#081310] px-3 text-sm text-[#93a39c]">
+          <label className="flex h-10 min-w-[280px] items-center gap-2 rounded-md border border-white/10 bg-[#081310] px-3 text-sm text-[#93a39c]">
             <Search size={16} />
             <input
               className="min-w-0 flex-1 bg-transparent text-white outline-none"
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Hippodrome, course, discipline"
+              placeholder="R1C1, hippodrome, pays, discipline"
               value={query}
             />
           </label>
         </div>
 
-        <div className="mx-auto mb-4 max-w-7xl rounded-lg border border-white/10 bg-[#0d1a17]/86 p-3">
+        <section className="mx-auto mb-4 max-w-7xl rounded-lg border border-white/10 bg-[#0d1a17]/86 p-3">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm text-[#b6c5bf]">
-              {filteredRaces.length} courses affichees · {races.length} courses en base
+              {filteredRaces.length} courses affichees - {races.length} courses en base
             </p>
-            <p className="text-xs text-[#93a39c]">Tri automatique par qualite course et consensus IA</p>
+            <p className="text-xs text-[#93a39c]">Perimetre France et courses internationales PMU/Equidia</p>
           </div>
-          <div className="flex gap-2 overflow-x-auto kz-scroll">
-            {filteredRaces.map((item) => (
-              <button
-                className={`min-w-[230px] shrink-0 rounded-md border p-3 text-left text-sm transition ${
-                  item.id === race.id
-                    ? "border-emerald-300/40 bg-emerald-300/[0.12] text-white"
-                    : "border-white/10 bg-white/[0.03] text-[#b6c5bf] hover:bg-white/[0.06]"
-                }`}
-                key={item.id}
-                onClick={() => {
-                  setSelectedRaceId(item.id);
-                  setSelectedHorseId(item.horses[0].id);
-                }}
-                type="button"
-              >
-                <span className="flex items-center justify-between gap-3">
-                  <span className="font-medium">{item.startTime} · {item.racecourse}</span>
-                  <span className="font-mono text-xs text-emerald-300">{item.raceQualityScore}</span>
-                </span>
-                <span className="mt-1 block truncate text-xs text-[#93a39c]">{item.name}</span>
-                <span className="mt-2 inline-flex rounded-md border border-white/10 px-2 py-1 text-xs text-[#d7e4de]">
-                  {formatRelativeDay(item.relativeDay)} · {item.bettingTier}
-                </span>
-              </button>
+          <div className="space-y-3">
+            {raceMeetings.map((meeting) => (
+              <section className="rounded-md border border-white/10 bg-white/[0.02] p-3" key={meeting.key}>
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-md bg-emerald-300 px-2 py-1 font-mono text-xs font-semibold text-[#06110e]">
+                      R{meeting.reunionNumber}
+                    </span>
+                    <p className="text-sm font-medium text-white">{meeting.racecourse}</p>
+                    <span className="text-xs text-[#93a39c]">{meeting.sourceCountry}</span>
+                  </div>
+                  <p className="text-xs text-[#93a39c]">{meeting.races.length} courses</p>
+                </div>
+                <div className="flex gap-2 overflow-x-auto kz-scroll">
+                  {meeting.races.map((item) => (
+                    <button
+                      className={`min-w-[250px] shrink-0 rounded-md border p-3 text-left text-sm transition ${
+                        item.id === race.id
+                          ? "border-emerald-300/40 bg-emerald-300/[0.12] text-white"
+                          : "border-white/10 bg-white/[0.03] text-[#b6c5bf] hover:bg-white/[0.06]"
+                      }`}
+                      key={item.id}
+                      onClick={() => {
+                        setSelectedRaceId(item.id);
+                        setSelectedHorseId(item.horses[0].id);
+                      }}
+                      type="button"
+                    >
+                      <span className="flex items-center justify-between gap-3">
+                        <span className="font-mono text-sm font-semibold text-emerald-300">{item.programCode}</span>
+                        <span className="text-xs text-[#93a39c]">{item.startTime}</span>
+                      </span>
+                      <span className="mt-2 block truncate font-medium text-white">{item.name}</span>
+                      <span className="mt-1 block text-xs text-[#93a39c]">
+                        {item.discipline} - {item.distance} - {item.bettingTier}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </section>
             ))}
             {filteredRaces.length === 0 ? (
               <div className="rounded-md border border-white/10 bg-white/[0.03] p-3 text-sm text-[#93a39c]">
-                Aucun filtre ne correspond. Elargis le jour, le tier ou la recherche.
+                Aucun filtre ne correspond.
               </div>
             ) : null}
           </div>
-        </div>
-
-        <div className="mx-auto mb-4 hidden max-w-7xl gap-2 overflow-x-auto kz-scroll">
-          {races.map((item) => (
-            <button
-              className={`shrink-0 rounded-md border px-4 py-2 text-left text-sm transition ${
-                item.id === race.id
-                  ? "border-emerald-300/40 bg-emerald-300/[0.12] text-white"
-                  : "border-white/10 bg-white/[0.03] text-[#b6c5bf] hover:bg-white/[0.06]"
-              }`}
-              key={item.id}
-              onClick={() => {
-                setSelectedRaceId(item.id);
-                setSelectedHorseId(item.horses[0].id);
-              }}
-              type="button"
-            >
-              <span className="block font-medium">{formatRelativeDay(item.relativeDay)}</span>
-              <span className="mt-1 block font-mono text-xs text-[#93a39c]">
-                {item.startTime} · {item.racecourse}
-              </span>
-            </button>
-          ))}
-        </div>
+        </section>
 
         <div className="mx-auto grid max-w-7xl gap-4 xl:grid-cols-[1.45fr_0.85fr]">
           <section className="rounded-lg border border-white/10 bg-[#0d1a17]/86 p-4 shadow-2xl shadow-black/20 sm:p-5">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <p className="text-sm text-[#93a39c]">Course analyse</p>
-                <h2 className="mt-1 text-xl font-semibold text-white">{race.name}</h2>
+                <p className="text-sm text-[#93a39c]">Course analysee</p>
+                <h2 className="mt-1 text-xl font-semibold text-white">{race.programCode} - {race.name}</h2>
                 <p className="mt-2 text-sm text-[#b6c5bf]">
-                  {race.distance} · {race.going} · {race.weather}
+                  Reunion {race.reunionNumber} - Course {race.courseNumber} - {race.distance} - {race.going} - {race.weather}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -297,7 +310,7 @@ export function Dashboard({ races }: DashboardProps) {
                   {race.horses.map((horse) => (
                     <HorseRow
                       horse={horse}
-                      isSelected={horse.id === selectedHorseId}
+                      isSelected={horse.id === selectedHorse.id}
                       key={horse.id}
                       onSelect={() => setSelectedHorseId(horse.id)}
                     />
@@ -317,7 +330,7 @@ export function Dashboard({ races }: DashboardProps) {
                   className="h-11 w-full appearance-none rounded-md border border-white/10 bg-[#081310] px-3 text-sm text-white outline-none"
                   id="horse"
                   onChange={(event) => setSelectedHorseId(event.target.value)}
-                  value={selectedHorseId}
+                  value={selectedHorse.id}
                 >
                   {race.horses.map((horse) => (
                     <option key={horse.id} value={horse.id}>
@@ -352,7 +365,7 @@ export function Dashboard({ races }: DashboardProps) {
                       <span className="font-mono text-sm text-emerald-300">+{horse.valueIndex}%</span>
                     </div>
                     <p className="mt-1 text-sm text-[#93a39c]">
-                      Cote {horse.odds} · Juste {horse.fairOdds} · Proba {horse.winProbability}% · {horse.confidence}
+                      Cote {horse.odds} - Juste {horse.fairOdds} - Proba {horse.winProbability}% - {horse.confidence}
                     </p>
                   </div>
                 ))}
@@ -421,8 +434,7 @@ export function Dashboard({ races }: DashboardProps) {
               ))}
               <div className="rounded-md border border-amber-300/20 bg-amber-300/10 p-3 text-sm text-amber-100">
                 <AlertTriangle className="mb-2 text-amber-200" size={18} />
-                Outil d&apos;aide a la decision. Aucun pronostic ne garantit un gain. Gardez une mise
-                proportionnee a votre bankroll.
+                Outil d&apos;aide a la decision. Aucun pronostic ne garantit un gain.
               </div>
             </div>
           </Panel>
@@ -457,22 +469,41 @@ export function Dashboard({ races }: DashboardProps) {
                 "POST /api/simulate",
                 "POST /api/simulate-bet",
                 "GET /api/model-card",
-              ].map(
-                (endpoint) => (
-                  <div className="rounded-md border border-white/10 bg-[#081310] p-4" key={endpoint}>
-                    <p className="font-mono text-sm text-emerald-200">{endpoint}</p>
-                    <p className="mt-2 text-sm text-[#93a39c]">
-                      Contrat MVP pret pour bots, partenaires et futurs quotas premium.
-                    </p>
-                  </div>
-                ),
-              )}
+              ].map((endpoint) => (
+                <div className="rounded-md border border-white/10 bg-[#081310] p-4" key={endpoint}>
+                  <p className="font-mono text-sm text-emerald-200">{endpoint}</p>
+                  <p className="mt-2 text-sm text-[#93a39c]">Contrat MVP pret pour bots, partenaires et futurs quotas premium.</p>
+                </div>
+              ))}
             </div>
           </Panel>
         </div>
       </section>
     </main>
   );
+}
+
+function groupRacesByMeeting(races: RaceAnalysis[]): RaceMeeting[] {
+  const meetings = new Map<string, RaceMeeting>();
+
+  for (const race of races) {
+    const key = `${race.raceDate}-R${race.reunionNumber}-${race.racecourse}`;
+    const meeting = meetings.get(key);
+
+    if (meeting) {
+      meeting.races.push(race);
+    } else {
+      meetings.set(key, {
+        key,
+        reunionNumber: race.reunionNumber,
+        racecourse: race.racecourse,
+        sourceCountry: race.sourceCountry,
+        races: [race],
+      });
+    }
+  }
+
+  return Array.from(meetings.values()).sort((a, b) => a.reunionNumber - b.reunionNumber);
 }
 
 function HorseRow({
@@ -485,10 +516,7 @@ function HorseRow({
   onSelect: () => void;
 }) {
   return (
-    <tr
-      className={isSelected ? "bg-emerald-300/[0.08]" : "transition hover:bg-white/[0.03]"}
-      onClick={onSelect}
-    >
+    <tr className={isSelected ? "bg-emerald-300/[0.08]" : "transition hover:bg-white/[0.03]"} onClick={onSelect}>
       <td className="border-b border-white/10 py-4 pr-4">
         <div className="flex items-center gap-3">
           <span className="grid h-9 w-9 place-items-center rounded-md bg-white/10 font-mono text-sm text-white">
@@ -496,7 +524,7 @@ function HorseRow({
           </span>
           <div>
             <p className="font-medium text-white">{horse.horse}</p>
-            <p className="text-xs text-[#93a39c]">{horse.jockey} · {horse.trainer}</p>
+            <p className="text-xs text-[#93a39c]">{horse.jockey} - {horse.trainer}</p>
           </div>
         </div>
       </td>
@@ -515,16 +543,7 @@ function HorseRow({
   );
 }
 
-function Metric({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: typeof Target;
-  label: string;
-  tone: "emerald" | "cyan" | "gold" | "coral";
-  value: string;
-}) {
+function Metric({ icon: Icon, label, value }: { icon: typeof Target; label: string; value: string }) {
   return (
     <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
       <Icon className="text-emerald-300" size={18} />
@@ -534,15 +553,7 @@ function Metric({
   );
 }
 
-function Panel({
-  children,
-  icon: Icon,
-  title,
-}: {
-  children: React.ReactNode;
-  icon: typeof Target;
-  title: string;
-}) {
+function Panel({ children, icon: Icon, title }: { children: ReactNode; icon: typeof Target; title: string }) {
   return (
     <section className="rounded-lg border border-white/10 bg-[#0d1a17]/86 p-4 shadow-2xl shadow-black/20 sm:p-5">
       <div className="mb-4 flex items-center gap-3">

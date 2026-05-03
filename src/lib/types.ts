@@ -23,6 +23,10 @@ export type RaceAnalysis = {
   name: string;
   raceDate: string;
   relativeDay: "yesterday" | "today" | "tomorrow";
+  reunionNumber: number;
+  courseNumber: number;
+  programCode: string;
+  sourceCountry: string;
   racecourse: string;
   startTime: string;
   discipline: "Plat" | "Trot" | "Obstacle";

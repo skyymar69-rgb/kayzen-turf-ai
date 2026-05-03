@@ -42,3 +42,6 @@ jobs:
       - name: Import rolling PMU window
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.date == '' }}
         run: npm run data:import:pmu
+
+      - name: Prune races outside France/Equidia scope
+        run: npm run data:prune:scope

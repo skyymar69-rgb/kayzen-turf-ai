@@ -6,6 +6,9 @@ type RaceRow = {
   id: string;
   race_date: string;
   relative_day: RaceAnalysis["relativeDay"];
+  reunion_number: number | null;
+  course_number: number | null;
+  source_country: string | null;
   name: string;
   racecourse: string;
   start_time: string;
@@ -56,6 +59,9 @@ export async function getRaces(filters?: { date?: string | null; day?: string | 
         races.id,
         races.race_date::text,
         races.relative_day,
+        races.reunion_number,
+        races.course_number,
+        coalesce(races.source_country, racecourses.country, 'N/A') as source_country,
         races.name,
         racecourses.name as racecourse,
         races.start_time,
@@ -72,7 +78,7 @@ export async function getRaces(filters?: { date?: string | null; day?: string | 
       left join racecourses on racecourses.id = races.racecourse_id
       where (${filters?.date ?? null}::text is null or races.race_date = ${filters?.date ?? null}::date)
         and (${filters?.day ?? null}::text is null or races.relative_day = ${filters?.day ?? null})
-      order by races.race_date, races.start_time
+      order by races.race_date, races.reunion_number nulls last, races.course_number nulls last, races.start_time
     ` as RaceRow[];
   } catch {
     return raceCards;
@@ -81,7 +87,7 @@ export async function getRaces(filters?: { date?: string | null; day?: string | 
   const races = await Promise.all(rows.map((row) => getRaceById(row.id, row)));
   const hydratedRaces = races.filter((race): race is RaceAnalysis => Boolean(race));
 
-  return hydratedRaces.length > 0 ? hydratedRaces : raceCards;
+  return hydratedRaces.length > 0 ? sortByProgramOrder(hydratedRaces) : raceCards;
 }
 
 export async function getRaceById(id?: string | null, baseRow?: RaceRow) {
@@ -99,6 +105,9 @@ export async function getRaceById(id?: string | null, baseRow?: RaceRow) {
         races.id,
         races.race_date::text,
         races.relative_day,
+        races.reunion_number,
+        races.course_number,
+        coalesce(races.source_country, racecourses.country, 'N/A') as source_country,
         races.name,
         racecourses.name as racecourse,
         races.start_time,
@@ -170,6 +179,10 @@ function mapRace(row: RaceRow, entries: EntryRow[]): RaceAnalysis {
     name: row.name,
     raceDate: row.race_date,
     relativeDay: row.relative_day,
+    reunionNumber: row.reunion_number ?? programNumber(row.id, "R"),
+    courseNumber: row.course_number ?? programNumber(row.id, "C"),
+    programCode: `R${row.reunion_number ?? programNumber(row.id, "R")}C${row.course_number ?? programNumber(row.id, "C")}`,
+    sourceCountry: row.source_country ?? "N/A",
     racecourse: row.racecourse,
     startTime: row.start_time,
     discipline: row.discipline,
@@ -183,6 +196,21 @@ function mapRace(row: RaceRow, entries: EntryRow[]): RaceAnalysis {
     riskLevel: row.risk_level,
     horses: entries.map(mapHorse),
   };
+}
+
+function programNumber(id: string, marker: "R" | "C") {
+  const pattern = marker === "R" ? /-R(\d+)-C\d+$/ : /-R\d+-C(\d+)$/;
+  return Number(id.match(pattern)?.[1] ?? 0);
+}
+
+function sortByProgramOrder(races: RaceAnalysis[]) {
+  return races.sort(
+    (a, b) =>
+      a.raceDate.localeCompare(b.raceDate) ||
+      a.reunionNumber - b.reunionNumber ||
+      a.courseNumber - b.courseNumber ||
+      a.startTime.localeCompare(b.startTime),
+  );
 }
 
 function mapHorse(row: EntryRow): HorsePrediction {

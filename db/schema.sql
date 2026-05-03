@@ -12,6 +12,9 @@ create table if not exists races (
   id text primary key,
   race_date date not null,
   relative_day text check (relative_day in ('yesterday', 'today', 'tomorrow')),
+  reunion_number integer,
+  course_number integer,
+  source_country text,
   name text not null,
   racecourse_id uuid references racecourses(id),
   start_time text not null,
@@ -28,6 +31,10 @@ create table if not exists races (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table races add column if not exists reunion_number integer;
+alter table races add column if not exists course_number integer;
+alter table races add column if not exists source_country text;
 
 create table if not exists horses (
   id text primary key,
@@ -123,6 +130,7 @@ create table if not exists value_bets (
 
 create index if not exists races_race_date_idx on races (race_date);
 create index if not exists races_relative_day_idx on races (relative_day);
+create index if not exists races_program_order_idx on races (race_date, reunion_number, course_number);
 create index if not exists entries_race_id_idx on entries (race_id);
 create index if not exists odds_snapshots_race_horse_observed_idx on odds_snapshots (race_id, horse_id, observed_at desc);
 create index if not exists prediction_runs_generated_at_idx on prediction_runs (generated_at desc);
