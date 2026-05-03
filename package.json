@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "db:schema": "node scripts/apply-schema.mjs"
+    "db:schema": "node scripts/apply-schema.mjs",
+    "data:import:pmu": "node scripts/import-pmu-day.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

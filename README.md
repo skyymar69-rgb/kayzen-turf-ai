@@ -31,6 +31,16 @@ The app is ready for Neon Postgres through `DATABASE_URL`.
 
 If `DATABASE_URL` is missing, the app falls back to the built-in mock dataset so development and Vercel previews keep working.
 
+## Real Data Import
+
+Experimental PMU import:
+
+```bash
+npm run data:import:pmu -- --date 03052026 --max-races 10
+```
+
+This connector uses the publicly reachable PMU JSON programme endpoint with a clear user agent, no bot evasion, and a short delay between race participant requests. For commercial scale, validate usage rights or replace it with an authorised PMU partner feed.
+
 ## MVP API
 
 - `GET /api/predictions`
