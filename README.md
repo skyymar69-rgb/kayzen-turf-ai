@@ -23,8 +23,10 @@ npm run dev
 ## MVP API
 
 - `GET /api/predictions`
+- `GET /api/races`
 - `GET /api/race-analysis`
 - `GET /api/value-bets`
+- `POST /api/simulate`
 - `POST /api/simulate-bet`
 - `GET /api/model-card`
 

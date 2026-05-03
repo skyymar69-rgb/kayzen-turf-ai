@@ -21,6 +21,8 @@ export type HorsePrediction = {
 export type RaceAnalysis = {
   id: string;
   name: string;
+  raceDate: string;
+  relativeDay: "yesterday" | "today" | "tomorrow";
   racecourse: string;
   startTime: string;
   discipline: "Plat" | "Trot" | "Obstacle";

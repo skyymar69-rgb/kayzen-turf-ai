@@ -35,7 +35,7 @@ import { valueBets } from "@/lib/mock-data";
 import type { HorsePrediction, RaceAnalysis } from "@/lib/types";
 
 type DashboardProps = {
-  race: RaceAnalysis;
+  races: RaceAnalysis[];
 };
 
 const marketTrend = [
@@ -57,7 +57,12 @@ const roiTrend = [
   { day: "Dim", roi: 12.8 },
 ];
 
-export function Dashboard({ race }: DashboardProps) {
+export function Dashboard({ races }: DashboardProps) {
+  const [selectedRaceId, setSelectedRaceId] = useState(races[0].id);
+  const race = useMemo(
+    () => races.find((item) => item.id === selectedRaceId) ?? races[0],
+    [races, selectedRaceId],
+  );
   const [selectedHorseId, setSelectedHorseId] = useState(race.horses[0].id);
   const [stake, setStake] = useState(25);
   const [bankroll, setBankroll] = useState(500);
@@ -79,6 +84,8 @@ export function Dashboard({ race }: DashboardProps) {
     score: horse.kzScore,
     value: horse.valueIndex,
   }));
+
+  const selectedValueBets = valueBets.filter((horse) => horse.raceId === race.id);
 
   return (
     <main className="min-h-screen">
@@ -114,6 +121,7 @@ export function Dashboard({ race }: DashboardProps) {
               <span className="rounded-md border border-emerald-300/20 bg-emerald-300/10 px-2.5 py-1">
                 SaaS MVP
               </span>
+              <span>{formatRelativeDay(race.relativeDay)} · {race.raceDate}</span>
               <span>{race.racecourse}</span>
               <span>{race.startTime}</span>
               <span>{race.discipline}</span>
@@ -133,6 +141,29 @@ export function Dashboard({ race }: DashboardProps) {
             <Metric icon={Lock} label="Premium" value="Pret" tone="coral" />
           </div>
         </header>
+
+        <div className="mx-auto mb-4 flex max-w-7xl gap-2 overflow-x-auto kz-scroll">
+          {races.map((item) => (
+            <button
+              className={`shrink-0 rounded-md border px-4 py-2 text-left text-sm transition ${
+                item.id === race.id
+                  ? "border-emerald-300/40 bg-emerald-300/[0.12] text-white"
+                  : "border-white/10 bg-white/[0.03] text-[#b6c5bf] hover:bg-white/[0.06]"
+              }`}
+              key={item.id}
+              onClick={() => {
+                setSelectedRaceId(item.id);
+                setSelectedHorseId(item.horses[0].id);
+              }}
+              type="button"
+            >
+              <span className="block font-medium">{formatRelativeDay(item.relativeDay)}</span>
+              <span className="mt-1 block font-mono text-xs text-[#93a39c]">
+                {item.startTime} · {item.racecourse}
+              </span>
+            </button>
+          ))}
+        </div>
 
         <div className="mx-auto grid max-w-7xl gap-4 xl:grid-cols-[1.45fr_0.85fr]">
           <section className="rounded-lg border border-white/10 bg-[#0d1a17]/86 p-4 shadow-2xl shadow-black/20 sm:p-5">
@@ -217,7 +248,7 @@ export function Dashboard({ race }: DashboardProps) {
 
             <Panel title="Value bets" icon={ArrowUpRight}>
               <div className="space-y-3">
-                {valueBets.map((horse) => (
+                {selectedValueBets.map((horse) => (
                   <div className="rounded-md border border-white/10 bg-white/[0.03] p-3" key={horse.id}>
                     <div className="flex items-center justify-between gap-3">
                       <p className="font-medium text-white">#{horse.number} {horse.horse}</p>
@@ -228,6 +259,11 @@ export function Dashboard({ race }: DashboardProps) {
                     </p>
                   </div>
                 ))}
+                {selectedValueBets.length === 0 ? (
+                  <div className="rounded-md border border-white/10 bg-white/[0.03] p-3 text-sm text-[#93a39c]">
+                    Aucun signal value bet ne passe les seuils de confiance pour cette course.
+                  </div>
+                ) : null}
               </div>
             </Panel>
           </section>
@@ -318,8 +354,10 @@ export function Dashboard({ race }: DashboardProps) {
             <div className="grid gap-3 sm:grid-cols-2">
               {[
                 "GET /api/predictions",
+                "GET /api/races",
                 "GET /api/race-analysis",
                 "GET /api/value-bets",
+                "POST /api/simulate",
                 "POST /api/simulate-bet",
                 "GET /api/model-card",
               ].map(
@@ -479,4 +517,10 @@ function useClientReady() {
     () => true,
     () => false,
   );
+}
+
+function formatRelativeDay(day: RaceAnalysis["relativeDay"]) {
+  if (day === "yesterday") return "Hier";
+  if (day === "tomorrow") return "Demain";
+  return "Aujourd'hui";
 }
