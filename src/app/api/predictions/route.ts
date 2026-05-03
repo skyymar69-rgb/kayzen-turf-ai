@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
-import { predictions } from "@/lib/mock-data";
+import { getPredictions } from "@/lib/race-repository";
 
-export function GET() {
+export async function GET() {
+  const predictions = await getPredictions();
+
   return NextResponse.json({
     generatedAt: new Date().toISOString(),
     data: predictions,

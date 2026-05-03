@@ -10,6 +10,7 @@ Open source SaaS starter for predictive horse racing analytics, value bet detect
 - Tailwind CSS
 - Recharts
 - Lucide React
+- Neon Postgres compatible data layer
 
 The technical stack is based on open source packages. The product can still be commercialized through subscriptions, API access, and B2B licensing.
 
@@ -19,6 +20,16 @@ The technical stack is based on open source packages. The product can still be c
 npm install
 npm run dev
 ```
+
+## Database
+
+The app is ready for Neon Postgres through `DATABASE_URL`.
+
+- Schema: `db/schema.sql`
+- Demo seed placeholder: `db/seed-demo.sql`
+- Runtime data access: `src/lib/race-repository.ts`
+
+If `DATABASE_URL` is missing, the app falls back to the built-in mock dataset so development and Vercel previews keep working.
 
 ## MVP API
 

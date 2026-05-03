@@ -1,0 +1,206 @@
+import { getSql, hasDatabase } from "@/lib/db";
+import { raceAnalysis, raceCards, valueBets } from "@/lib/mock-data";
+import type { Confidence, HorsePrediction, RaceAnalysis } from "@/lib/types";
+
+type RaceRow = {
+  id: string;
+  race_date: string;
+  relative_day: RaceAnalysis["relativeDay"];
+  name: string;
+  racecourse: string;
+  start_time: string;
+  discipline: RaceAnalysis["discipline"];
+  distance: string;
+  going: string;
+  weather: string;
+  market_volatility: string;
+  model_consensus: string;
+  race_quality_score: string;
+  betting_tier: RaceAnalysis["bettingTier"];
+  risk_level: RaceAnalysis["riskLevel"];
+};
+
+type EntryRow = {
+  id: string;
+  number: number;
+  horse: string;
+  jockey: string;
+  trainer: string;
+  odds: string;
+  fair_odds: string;
+  market_edge: string;
+  win_probability: string;
+  top3_probability: string;
+  top5_probability: string;
+  kz_score: string;
+  value_index: string;
+  confidence: Confidence;
+  factors: string[] | string;
+};
+
+export async function getRaces(filters?: { date?: string | null; day?: string | null }) {
+  if (!hasDatabase()) {
+    return raceCards.filter((race) => {
+      if (filters?.date && race.raceDate !== filters.date) return false;
+      if (filters?.day && race.relativeDay !== filters.day) return false;
+      return true;
+    });
+  }
+
+  let rows: RaceRow[] = [];
+
+  try {
+    const sql = getSql();
+    rows = await sql`
+      select
+        races.id,
+        races.race_date::text,
+        races.relative_day,
+        races.name,
+        racecourses.name as racecourse,
+        races.start_time,
+        races.discipline,
+        races.distance,
+        races.going,
+        races.weather,
+        races.market_volatility::text,
+        races.model_consensus::text,
+        races.race_quality_score::text,
+        races.betting_tier,
+        races.risk_level
+      from races
+      left join racecourses on racecourses.id = races.racecourse_id
+      where (${filters?.date ?? null}::text is null or races.race_date = ${filters?.date ?? null}::date)
+        and (${filters?.day ?? null}::text is null or races.relative_day = ${filters?.day ?? null})
+      order by races.race_date, races.start_time
+    ` as RaceRow[];
+  } catch {
+    return raceCards;
+  }
+
+  const races = await Promise.all(rows.map((row) => getRaceById(row.id, row)));
+  const hydratedRaces = races.filter((race): race is RaceAnalysis => Boolean(race));
+
+  return hydratedRaces.length > 0 ? hydratedRaces : raceCards;
+}
+
+export async function getRaceById(id?: string | null, baseRow?: RaceRow) {
+  if (!hasDatabase()) {
+    if (!id) return raceAnalysis;
+    return raceCards.find((race) => race.id === id) ?? raceAnalysis;
+  }
+
+  const sql = getSql();
+  let row: RaceRow | undefined = baseRow;
+
+  try {
+    row ??= (await sql`
+      select
+        races.id,
+        races.race_date::text,
+        races.relative_day,
+        races.name,
+        racecourses.name as racecourse,
+        races.start_time,
+        races.discipline,
+        races.distance,
+        races.going,
+        races.weather,
+        races.market_volatility::text,
+        races.model_consensus::text,
+        races.race_quality_score::text,
+        races.betting_tier,
+        races.risk_level
+      from races
+      left join racecourses on racecourses.id = races.racecourse_id
+      where races.id = ${id ?? raceAnalysis.id}
+      limit 1
+    ` as RaceRow[])[0];
+  } catch {
+    return raceCards.find((race) => race.id === id) ?? raceAnalysis;
+  }
+
+  if (!row) return raceCards.find((race) => race.id === id) ?? raceAnalysis;
+
+  const entries = await sql`
+    select
+      entries.id,
+      entries.number,
+      horses.name as horse,
+      jockeys.name as jockey,
+      trainers.name as trainer,
+      entries.odds::text,
+      entries.fair_odds::text,
+      entries.market_edge::text,
+      entries.win_probability::text,
+      entries.top3_probability::text,
+      entries.top5_probability::text,
+      entries.kz_score::text,
+      entries.value_index::text,
+      entries.confidence,
+      entries.factors
+    from entries
+    join horses on horses.id = entries.horse_id
+    left join jockeys on jockeys.id = entries.jockey_id
+    left join trainers on trainers.id = entries.trainer_id
+    where entries.race_id = ${row.id}
+    order by entries.kz_score desc
+  ` as EntryRow[];
+
+  return entries.length > 0 ? mapRace(row, entries) : raceCards.find((race) => race.id === row.id) ?? raceAnalysis;
+}
+
+export async function getPredictions() {
+  const races = await getRaces();
+  return races
+    .flatMap((race) => race.horses.map((horse) => ({ ...horse, raceId: race.id, raceName: race.name })))
+    .sort((a, b) => b.kzScore - a.kzScore);
+}
+
+export async function getValueBets() {
+  if (!hasDatabase()) return valueBets;
+
+  const predictions = await getPredictions();
+  return predictions.filter((horse) => horse.valueIndex > 10).sort((a, b) => b.valueIndex - a.valueIndex);
+}
+
+function mapRace(row: RaceRow, entries: EntryRow[]): RaceAnalysis {
+  return {
+    id: row.id,
+    name: row.name,
+    raceDate: row.race_date,
+    relativeDay: row.relative_day,
+    racecourse: row.racecourse,
+    startTime: row.start_time,
+    discipline: row.discipline,
+    distance: row.distance,
+    going: row.going,
+    weather: row.weather,
+    marketVolatility: Number(row.market_volatility),
+    modelConsensus: Number(row.model_consensus),
+    raceQualityScore: Number(row.race_quality_score),
+    bettingTier: row.betting_tier,
+    riskLevel: row.risk_level,
+    horses: entries.map(mapHorse),
+  };
+}
+
+function mapHorse(row: EntryRow): HorsePrediction {
+  return {
+    id: row.id,
+    number: row.number,
+    horse: row.horse,
+    jockey: row.jockey,
+    trainer: row.trainer,
+    odds: Number(row.odds),
+    fairOdds: Number(row.fair_odds),
+    marketEdge: Number(row.market_edge),
+    winProbability: Number(row.win_probability),
+    top3Probability: Number(row.top3_probability),
+    top5Probability: Number(row.top5_probability),
+    kzScore: Number(row.kz_score),
+    valueIndex: Number(row.value_index),
+    confidence: row.confidence,
+    factors: Array.isArray(row.factors) ? row.factors : JSON.parse(row.factors),
+  };
+}

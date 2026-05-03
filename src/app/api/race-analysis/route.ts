@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { raceAnalysis, raceCards } from "@/lib/mock-data";
+import { getRaceById } from "@/lib/race-repository";
 
-export function GET(request: Request) {
+export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const raceId = searchParams.get("raceId");
-  const race = raceId ? raceCards.find((item) => item.id === raceId) : raceAnalysis;
+  const race = await getRaceById(raceId);
 
   return NextResponse.json({
     generatedAt: new Date().toISOString(),

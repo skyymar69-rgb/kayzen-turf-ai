@@ -1,6 +1,8 @@
 import { Dashboard } from "@/components/dashboard";
-import { raceCards } from "@/lib/mock-data";
+import { getRaces } from "@/lib/race-repository";
 
-export default function Home() {
-  return <Dashboard races={raceCards} />;
+export default async function Home() {
+  const races = await getRaces();
+
+  return <Dashboard races={races} />;
 }
