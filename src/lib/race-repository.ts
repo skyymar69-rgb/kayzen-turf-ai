@@ -80,7 +80,7 @@ export async function getRaces(filters?: { date?: string | null; day?: string | 
       left join racecourses on racecourses.id = races.racecourse_id
       where (${filters?.date ?? null}::text is null or races.race_date = ${filters?.date ?? null}::date)
         and (${filters?.day ?? null}::text is null or races.relative_day = ${filters?.day ?? null})
-      order by races.race_date, races.reunion_number nulls last, races.course_number nulls last, races.start_time
+      order by races.race_date, races.start_time, races.reunion_number nulls last, races.course_number nulls last
     ` as RaceRow[];
   } catch {
     return raceCards;
@@ -89,7 +89,7 @@ export async function getRaces(filters?: { date?: string | null; day?: string | 
   const races = await Promise.all(rows.map((row) => getRaceById(row.id, row)));
   const hydratedRaces = races.filter((race): race is RaceAnalysis => Boolean(race));
 
-  return sortByProgramOrder(hydratedRaces);
+  return sortByStartTime(hydratedRaces);
 }
 
 export async function getRaceById(id?: string | null, baseRow?: RaceRow) {
@@ -207,13 +207,13 @@ function programNumber(id: string, marker: "R" | "C") {
   return Number(id.match(pattern)?.[1] ?? 0);
 }
 
-function sortByProgramOrder(races: RaceAnalysis[]) {
+function sortByStartTime(races: RaceAnalysis[]) {
   return races.sort(
     (a, b) =>
       a.raceDate.localeCompare(b.raceDate) ||
+      a.startTime.localeCompare(b.startTime) ||
       a.reunionNumber - b.reunionNumber ||
-      a.courseNumber - b.courseNumber ||
-      a.startTime.localeCompare(b.startTime),
+      a.courseNumber - b.courseNumber,
   );
 }
 

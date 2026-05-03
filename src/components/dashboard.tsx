@@ -68,10 +68,15 @@ const roiTrend = [
 ];
 
 export function Dashboard({ races }: DashboardProps) {
-  const initialRace = races.find((item) => item.relativeDay === "today") ?? races[0];
-  const [selectedRaceId, setSelectedRaceId] = useState(initialRace?.id ?? "");
+  const currentMinute = useCurrentMinute();
   const [dayFilter, setDayFilter] = useState<RaceAnalysis["relativeDay"] | "all">("today");
   const [tierFilter, setTierFilter] = useState<RaceAnalysis["bettingTier"] | "all">("all");
+  const initialRace = selectTimelineRace(
+    races.filter((item) => item.relativeDay === "today"),
+    "today",
+    currentMinute,
+  ) ?? races[0];
+  const [selectedRaceId, setSelectedRaceId] = useState("");
   const [query, setQuery] = useState("");
   const [stake, setStake] = useState(25);
   const [bankroll, setBankroll] = useState(500);
@@ -90,16 +95,11 @@ export function Dashboard({ races }: DashboardProps) {
           .toLowerCase()
           .includes(normalizedQuery);
       })
-      .sort(
-        (a, b) =>
-          a.reunionNumber - b.reunionNumber ||
-          a.courseNumber - b.courseNumber ||
-          a.startTime.localeCompare(b.startTime),
-      );
-  }, [dayFilter, query, races, tierFilter]);
+      .sort((a, b) => sortRacesByTimeline(a, b, dayFilter, currentMinute));
+  }, [currentMinute, dayFilter, query, races, tierFilter]);
 
   const raceMeetings = useMemo(() => groupRacesByMeeting(filteredRaces), [filteredRaces]);
-  const race = filteredRaces.find((item) => item.id === selectedRaceId) ?? filteredRaces[0] ?? initialRace;
+  const race = filteredRaces.find((item) => item.id === selectedRaceId) ?? selectTimelineRace(filteredRaces, dayFilter, currentMinute) ?? initialRace;
   const [selectedHorseId, setSelectedHorseId] = useState(race?.horses[0]?.id ?? "");
 
   const selectedHorse = useMemo(() => {
@@ -165,6 +165,7 @@ export function Dashboard({ races }: DashboardProps) {
               <span>{formatRelativeDay(race.relativeDay)} - {race.raceDate}</span>
               <span>{race.racecourse}</span>
               <span>{race.startTime}</span>
+              <span>{raceTimingLabel(race, currentMinute)}</span>
               <span>{race.discipline}</span>
               <span>{race.sourceCountry}</span>
             </div>
@@ -172,7 +173,7 @@ export function Dashboard({ races }: DashboardProps) {
               KAYZEN TURF AI
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-[#b6c5bf] sm:text-base">
-              Courses triees par reunion, predictions explicables, value bets et pilotage de bankroll.
+              Programme trie par heure, prochaine course active, predictions explicables et tickets PMU.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:min-w-[520px]">
@@ -259,7 +260,7 @@ export function Dashboard({ races }: DashboardProps) {
             <p className="text-sm text-[#b6c5bf]">
               {filteredRaces.length} courses affichees - {races.length} courses en base
             </p>
-            <p className="text-xs text-[#93a39c]">Perimetre courses francaises uniquement</p>
+            <p className="text-xs text-[#93a39c]">Trie par heure - prochaine course selectionnee automatiquement</p>
           </div>
           <div className="space-y-3">
             {raceMeetings.map((meeting) => (
@@ -291,7 +292,7 @@ export function Dashboard({ races }: DashboardProps) {
                     >
                       <span className="flex items-center justify-between gap-3">
                         <span className="font-mono text-sm font-semibold text-emerald-300">{item.programCode}</span>
-                        <span className="text-xs text-[#93a39c]">{item.startTime}</span>
+                        <span className="text-xs text-[#93a39c]">{item.startTime} - {raceTimingLabel(item, currentMinute)}</span>
                       </span>
                       <span className="mt-2 block truncate font-medium text-white">{item.name}</span>
                       <span className="mt-1 block text-xs text-[#93a39c]">
@@ -552,6 +553,76 @@ export function Dashboard({ races }: DashboardProps) {
   );
 }
 
+function selectTimelineRace(races: RaceAnalysis[], dayFilter: RaceAnalysis["relativeDay"] | "all", currentMinute: number) {
+  if (races.length === 0) return undefined;
+
+  return (
+    races
+      .filter((race) => race.relativeDay !== "today" || minutesFromStartTime(race.startTime) >= currentMinute)
+      .sort((a, b) => sortRacesByTimeline(a, b, dayFilter, currentMinute))[0] ?? races[0]
+  );
+}
+
+function sortRacesByTimeline(
+  a: RaceAnalysis,
+  b: RaceAnalysis,
+  dayFilter: RaceAnalysis["relativeDay"] | "all",
+  currentMinute: number,
+) {
+  if (dayFilter === "all") {
+    return (
+      a.raceDate.localeCompare(b.raceDate) ||
+      minutesFromStartTime(a.startTime) - minutesFromStartTime(b.startTime) ||
+      a.reunionNumber - b.reunionNumber ||
+      a.courseNumber - b.courseNumber
+    );
+  }
+
+  if (dayFilter === "today") {
+    const aMinute = minutesFromStartTime(a.startTime);
+    const bMinute = minutesFromStartTime(b.startTime);
+    const aBucket = aMinute >= currentMinute ? 0 : 1;
+    const bBucket = bMinute >= currentMinute ? 0 : 1;
+
+    return aBucket - bBucket || aMinute - bMinute || a.reunionNumber - b.reunionNumber || a.courseNumber - b.courseNumber;
+  }
+
+  return (
+    minutesFromStartTime(a.startTime) - minutesFromStartTime(b.startTime) ||
+    a.reunionNumber - b.reunionNumber ||
+    a.courseNumber - b.courseNumber
+  );
+}
+
+function minutesFromStartTime(startTime: string) {
+  const [hours = "0", minutes = "0"] = startTime.split(":");
+  return Number(hours) * 60 + Number(minutes);
+}
+
+function raceTimingLabel(race: RaceAnalysis, currentMinute: number) {
+  if (race.relativeDay === "tomorrow") return "A venir";
+  if (race.relativeDay === "yesterday") return "Resultat";
+
+  const startMinute = minutesFromStartTime(race.startTime);
+  if (startMinute < currentMinute) return "Terminee";
+  if (startMinute - currentMinute <= 30) return "Actuelle";
+  return "Prochaine";
+}
+
+function useCurrentMinute() {
+  return useSyncExternalStore(
+    (notify) => {
+      const interval = window.setInterval(notify, 60_000);
+      return () => window.clearInterval(interval);
+    },
+    () => {
+      const now = new Date();
+      return now.getHours() * 60 + now.getMinutes();
+    },
+    () => 0,
+  );
+}
+
 function groupRacesByMeeting(races: RaceAnalysis[]): RaceMeeting[] {
   const meetings = new Map<string, RaceMeeting>();
 
@@ -572,7 +643,12 @@ function groupRacesByMeeting(races: RaceAnalysis[]): RaceMeeting[] {
     }
   }
 
-  return Array.from(meetings.values()).sort((a, b) => a.reunionNumber - b.reunionNumber);
+  return Array.from(meetings.values()).sort(
+    (a, b) =>
+      minutesFromStartTime(a.races[0]?.startTime ?? "00:00") -
+        minutesFromStartTime(b.races[0]?.startTime ?? "00:00") ||
+      a.reunionNumber - b.reunionNumber,
+  );
 }
 
 function HorseRow({
