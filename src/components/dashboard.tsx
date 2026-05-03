@@ -34,6 +34,7 @@ import {
 } from "recharts";
 import { modelCard, simulateBet } from "@/lib/betting-engine";
 import { buildBetRecommendations, probableArrival } from "@/lib/bet-recommendations";
+import { buildPostRaceAnalysis } from "@/lib/post-race-analysis";
 import type { HorsePrediction, RaceAnalysis } from "@/lib/types";
 
 type DashboardProps = {
@@ -132,6 +133,7 @@ export function Dashboard({ races }: DashboardProps) {
   const selectedValueBets = race.horses.filter((horse) => horse.valueIndex > 10).sort((a, b) => b.valueIndex - a.valueIndex);
   const arrival = probableArrival(race.horses);
   const betRecommendations = buildBetRecommendations(race.horses, race.betTypes);
+  const postRaceAnalysis = buildPostRaceAnalysis(race);
 
   return (
     <main className="min-h-screen">
@@ -449,6 +451,36 @@ export function Dashboard({ races }: DashboardProps) {
         </div>
 
         <div className="mx-auto mt-4 grid max-w-7xl gap-4 xl:grid-cols-3">
+          <Panel title="Analyse apres course" icon={Sparkles}>
+            <div className="space-y-3">
+              <div className="rounded-md border border-white/10 bg-white/[0.03] p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-medium text-white">{postRaceAnalysis.verdict}</p>
+                  <span className="font-mono text-sm text-emerald-300">
+                    {postRaceAnalysis.status === "complete" ? `${postRaceAnalysis.metrics.confidenceScore}/99` : "En attente"}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm leading-5 text-[#b6c5bf]">{postRaceAnalysis.summary}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Result label="Prediction" value={postRaceAnalysis.predictedArrival.join("-") || "-"} />
+                <Result label="Arrivee" value={postRaceAnalysis.actualArrival.join("-") || "-"} />
+                <Result label="Top 3" value={`${postRaceAnalysis.metrics.top3Hits}/3`} />
+                <Result label="Top 5" value={`${postRaceAnalysis.metrics.top5Hits}/5`} />
+              </div>
+              {postRaceAnalysis.lessons.slice(0, 3).map((lesson) => (
+                <div className="rounded-md border border-white/10 bg-white/[0.03] p-3 text-sm text-[#d7e4de]" key={lesson}>
+                  {lesson}
+                </div>
+              ))}
+              {postRaceAnalysis.nextModelActions.slice(0, 2).map((action) => (
+                <div className="rounded-md border border-cyan-300/20 bg-cyan-300/10 p-3 text-sm text-cyan-50" key={action}>
+                  {action}
+                </div>
+              ))}
+            </div>
+          </Panel>
+
           <Panel title="Scores proprietaires" icon={ChartNoAxesCombined}>
             <div className="h-64">
               {mounted ? (
@@ -535,6 +567,7 @@ export function Dashboard({ races }: DashboardProps) {
                 "GET /api/races",
                 "GET /api/race-analysis",
                 "GET /api/bet-recommendations",
+                "GET /api/post-race-analysis",
                 "GET /api/value-bets",
                 "POST /api/simulate",
                 "POST /api/simulate-bet",

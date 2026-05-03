@@ -40,6 +40,8 @@ type EntryRow = {
   value_index: string;
   confidence: Confidence;
   factors: string[] | string;
+  finish_position: number | null;
+  won: boolean | null;
 };
 
 export async function getRaces(filters?: { date?: string | null; day?: string | null }) {
@@ -150,11 +152,14 @@ export async function getRaceById(id?: string | null, baseRow?: RaceRow) {
       entries.kz_score::text,
       entries.value_index::text,
       entries.confidence,
-      entries.factors
+      entries.factors,
+      results.finish_position,
+      results.won
     from entries
     join horses on horses.id = entries.horse_id
     left join jockeys on jockeys.id = entries.jockey_id
     left join trainers on trainers.id = entries.trainer_id
+    left join results on results.race_id = entries.race_id and results.horse_id = entries.horse_id
     where entries.race_id = ${row.id}
     order by entries.kz_score desc
   ` as EntryRow[];
@@ -234,6 +239,8 @@ function mapHorse(row: EntryRow): HorsePrediction {
     valueIndex: Number(row.value_index),
     confidence: row.confidence,
     factors: parseJsonArray<string>(row.factors),
+    finishPosition: row.finish_position,
+    won: row.won,
   };
 }
 

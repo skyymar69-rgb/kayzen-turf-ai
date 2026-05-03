@@ -76,6 +76,8 @@ export const raceAnalysis: RaceAnalysis = {
       kzScore: 91,
       confidence: "Forte",
       factors: ["Regularite recente", "Jockey en forme", "Profil piste favorable"],
+      finishPosition: 2,
+      won: false,
     }),
     enrichHorsePrediction({
       id: "h-2",
@@ -90,6 +92,8 @@ export const raceAnalysis: RaceAnalysis = {
       kzScore: 84,
       confidence: "Forte",
       factors: ["Cote superieure au juste prix", "Bonne tenue", "Derniers 600 m solides"],
+      finishPosition: 1,
+      won: true,
     }),
     enrichHorsePrediction({
       id: "h-3",
@@ -104,6 +108,8 @@ export const raceAnalysis: RaceAnalysis = {
       kzScore: 78,
       confidence: "Moyenne",
       factors: ["Classe stable", "Terrain correct", "Marche deja ajuste"],
+      finishPosition: 4,
+      won: false,
     }),
     enrichHorsePrediction({
       id: "h-4",
@@ -118,6 +124,8 @@ export const raceAnalysis: RaceAnalysis = {
       kzScore: 73,
       confidence: "Moyenne",
       factors: ["Outsider sous-estime", "Distance ideale", "Rythme probable avantageux"],
+      finishPosition: 3,
+      won: false,
     }),
     enrichHorsePrediction({
       id: "h-5",

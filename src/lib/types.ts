@@ -16,6 +16,8 @@ export type HorsePrediction = {
   valueIndex: number;
   confidence: Confidence;
   factors: string[];
+  finishPosition?: number | null;
+  won?: boolean | null;
 };
 
 export type BetOffer = {
@@ -45,6 +47,23 @@ export type BetRecommendation = {
   ticket: string;
   confidence: number;
   rationale: string;
+};
+
+export type PostRaceAnalysis = {
+  status: "pending" | "complete";
+  predictedArrival: number[];
+  actualArrival: number[];
+  metrics: {
+    winnerHit: boolean;
+    top3Hits: number;
+    top5Hits: number;
+    averagePositionError: number | null;
+    confidenceScore: number;
+  };
+  verdict: "Bon signal" | "Partiel" | "Erreur modele" | "En attente";
+  summary: string;
+  lessons: string[];
+  nextModelActions: string[];
 };
 
 export type RaceAnalysis = {

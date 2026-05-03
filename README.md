@@ -85,6 +85,8 @@ gh workflow run import_pmu.yml -f date=03052026
 - `GET /api/predictions`
 - `GET /api/races`
 - `GET /api/race-analysis`
+- `GET /api/bet-recommendations`
+- `GET /api/post-race-analysis`
 - `GET /api/value-bets`
 - `POST /api/simulate`
 - `POST /api/simulate-bet`
