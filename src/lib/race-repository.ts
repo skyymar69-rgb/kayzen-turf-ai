@@ -55,10 +55,12 @@ type EntryRow = {
 
 export async function getRaces(filters?: { date?: string | null; day?: string | null }) {
   const filterDate = filters?.date ?? (filters?.day ? dateForRelativeDay(filters.day) : null);
+  const rollingDates = [dateForRelativeDay("yesterday"), dateForRelativeDay("today"), dateForRelativeDay("tomorrow")].filter(Boolean);
 
   if (!hasDatabase()) {
     return raceCards.filter((race) => {
       if (filterDate && race.raceDate !== filterDate) return false;
+      if (!filterDate && !filters?.day && !rollingDates.includes(race.raceDate)) return false;
       if (filters?.day && relativeDayFromDate(race.raceDate) !== filters.day) return false;
       return true;
     });
@@ -92,7 +94,12 @@ export async function getRaces(filters?: { date?: string | null; day?: string | 
         races.bet_types
       from races
       left join racecourses on racecourses.id = races.racecourse_id
-      where (${filterDate ?? null}::text is null or races.race_date = ${filterDate ?? null}::date)
+      where
+        (${filterDate ?? null}::text is not null and races.race_date = ${filterDate ?? null}::date)
+        or (
+          ${filterDate ?? null}::text is null
+          and races.race_date = any(${rollingDates}::date[])
+        )
       order by races.race_date, races.start_time, races.reunion_number nulls last, races.course_number nulls last
     ` as RaceRow[];
   } catch {
@@ -233,23 +240,32 @@ function mapRace(row: RaceRow, entries: EntryRow[]): RaceAnalysis {
 function dateForRelativeDay(day: string) {
   if (day !== "yesterday" && day !== "today" && day !== "tomorrow") return null;
 
-  const date = new Date();
-  if (day === "yesterday") date.setDate(date.getDate() - 1);
-  if (day === "tomorrow") date.setDate(date.getDate() + 1);
-  return parisDate(date);
+  if (day === "yesterday") return parisDateOffset(-1);
+  if (day === "tomorrow") return parisDateOffset(1);
+  return parisDateOffset(0);
 }
 
 function relativeDayFromDate(date: string): RaceAnalysis["relativeDay"] {
   if (date === dateForRelativeDay("yesterday")) return "yesterday";
+  if (date === dateForRelativeDay("today")) return "today";
   if (date === dateForRelativeDay("tomorrow")) return "tomorrow";
-  return "today";
+  return "other";
 }
 
-function parisDate(date: Date) {
-  return new Intl.DateTimeFormat("en-CA", {
+function parisDateOffset(offset: number) {
+  const parisDate = new Intl.DateTimeFormat("en-CA", {
     day: "2-digit",
     month: "2-digit",
     timeZone: "Europe/Paris",
+    year: "numeric",
+  }).format(new Date());
+  const [year, month, day] = parisDate.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day + offset, 12));
+
+  return new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "UTC",
     year: "numeric",
   }).format(date);
 }

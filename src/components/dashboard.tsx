@@ -75,6 +75,14 @@ export function Dashboard({ races }: DashboardProps) {
   const topArrival = probableArrival(selectedRace.horses).slice(0, 5);
   const dayRunnersCount = dayRaces.reduce((total, race) => total + race.horses.length, 0);
   const dayFeatureCount = dayRaces.filter((race) => raceHighlights(race.betTypes).length > 0).length;
+  const todayDate = dateForDay(races, "today");
+
+  function selectDay(day: RaceAnalysis["relativeDay"]) {
+    if (day === "other") return;
+    setDayFilter(day);
+    setSelectedMeetingKey("");
+    setQuery("");
+  }
 
   return (
     <main className="min-h-screen bg-[#f3f5f4] px-3 py-20 text-[#26312e] sm:px-5 lg:px-8" id="contenu-principal">
@@ -83,9 +91,13 @@ export function Dashboard({ races }: DashboardProps) {
           <div className="grid h-16 w-16 place-items-center bg-emerald-800 text-white">
             <Flag size={30} />
           </div>
-          <h1 className="flex h-16 items-center bg-emerald-700 px-6 text-2xl font-bold uppercase tracking-normal text-white sm:text-3xl">
+          <h1 className="flex h-16 items-center bg-emerald-700 px-6 text-2xl font-bold uppercase tracking-normal text-white sm:text-3xl" id="programme-title">
             Resultats PMU : Arrivees & Rapports
           </h1>
+        </div>
+
+        <div className="mb-3 mt-3 rounded-md border border-[#d9e1de] bg-white p-3 text-sm font-medium text-[#52615d] shadow-sm">
+          Aujourd&apos;hui = <span className="font-mono font-bold text-[#26312e]">{formatShortDate(todayDate)}</span>. La navigation charge uniquement hier, aujourd&apos;hui et demain.
         </div>
 
         <section aria-labelledby="programme-title" className="overflow-hidden rounded-b-md border border-[#d9e1de] bg-white shadow-sm">
@@ -94,7 +106,7 @@ export function Dashboard({ races }: DashboardProps) {
               <button
                 aria-label="Jour precedent"
                 className="grid h-full place-items-center text-[#9aa4a0] transition hover:bg-[#f7f8f8] hover:text-[#26312e]"
-                onClick={() => setDayFilter(previousDay(dayFilter))}
+                onClick={() => selectDay(previousDay(dayFilter))}
                 type="button"
               >
                 <ChevronLeft aria-hidden="true" size={34} />
@@ -106,7 +118,7 @@ export function Dashboard({ races }: DashboardProps) {
               <button
                 aria-label="Jour suivant"
                 className="grid h-full place-items-center text-[#9aa4a0] transition hover:bg-[#f7f8f8] hover:text-[#26312e]"
-                onClick={() => setDayFilter(nextDay(dayFilter))}
+                onClick={() => selectDay(nextDay(dayFilter))}
                 type="button"
               >
                 <ChevronRight aria-hidden="true" size={34} />
@@ -120,12 +132,12 @@ export function Dashboard({ races }: DashboardProps) {
                   className={`min-h-20 transition ${dayFilter === day ? "bg-[#3f403f]" : "bg-[#565756] hover:bg-[#4b4c4b]"}`}
                   key={day}
                   onClick={() => {
-                    setDayFilter(day);
-                    setSelectedMeetingKey("");
+                    selectDay(day);
                   }}
                   type="button"
                 >
-                  {formatRelativeDay(day)}
+                  <span className="block">{formatRelativeDay(day)}</span>
+                  <span className="mt-1 block font-mono text-xs font-normal">{formatShortDate(dateForDay(races, day))}</span>
                 </button>
               ))}
             </div>
@@ -412,12 +424,35 @@ function nextDay(day: RaceAnalysis["relativeDay"]) {
 function formatRelativeDay(day: RaceAnalysis["relativeDay"]) {
   if (day === "yesterday") return "Hier";
   if (day === "tomorrow") return "Demain";
+  if (day === "other") return "Autre";
   return "Aujourd'hui";
 }
 
 function formatShortDate(date: string) {
   const [year, month, day] = date.split("-");
   return `${day}-${month}-${year}`;
+}
+
+function dateForDay(races: RaceAnalysis[], day: RaceAnalysis["relativeDay"]) {
+  const raceDate = races.find((race) => race.relativeDay === day)?.raceDate;
+  if (raceDate) return raceDate;
+
+  const offset = day === "yesterday" ? -1 : day === "tomorrow" ? 1 : 0;
+  const parisDate = new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "Europe/Paris",
+    year: "numeric",
+  }).format(new Date());
+  const [year, month, date] = parisDate.split("-").map(Number);
+  const shifted = new Date(Date.UTC(year, month - 1, date + offset, 12));
+
+  return new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "UTC",
+    year: "numeric",
+  }).format(shifted);
 }
 
 function titleCase(value: string) {

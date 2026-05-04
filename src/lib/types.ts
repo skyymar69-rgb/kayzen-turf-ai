@@ -78,7 +78,7 @@ export type RaceAnalysis = {
   id: string;
   name: string;
   raceDate: string;
-  relativeDay: "yesterday" | "today" | "tomorrow";
+  relativeDay: "yesterday" | "today" | "tomorrow" | "other";
   reunionNumber: number;
   courseNumber: number;
   programCode: string;
