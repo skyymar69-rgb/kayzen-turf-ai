@@ -45,3 +45,6 @@ jobs:
 
       - name: Prune races outside France/Equidia scope
         run: npm run data:prune:scope
+
+      - name: Learn from official results
+        run: npm run model:learn

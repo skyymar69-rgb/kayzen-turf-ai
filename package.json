@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "db:schema": "node scripts/apply-schema.mjs",
     "db:stats": "node scripts/db-stats.mjs",
+    "model:learn": "node scripts/learn-from-results.mjs --apply",
     "data:prune:scope": "node scripts/prune-race-scope.mjs",
     "data:import:pmu": "node scripts/import-pmu-day.mjs"
   },

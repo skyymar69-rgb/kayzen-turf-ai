@@ -149,6 +149,33 @@ create table if not exists value_bets (
   unique (race_id, horse_id)
 );
 
+create table if not exists model_calibrations (
+  id uuid primary key default gen_random_uuid(),
+  segment text not null,
+  model_version text not null,
+  weights jsonb not null,
+  metrics jsonb not null default '{}'::jsonb,
+  learned_from_races integer not null default 0,
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists race_feedback (
+  id uuid primary key default gen_random_uuid(),
+  race_id text not null references races(id) on delete cascade,
+  segment text not null,
+  predicted_top5 integer[] not null default '{}',
+  actual_top5 integer[] not null default '{}',
+  winner_hit boolean not null default false,
+  top3_hits integer not null default 0,
+  top5_hits integer not null default 0,
+  average_position_error numeric,
+  verdict text not null,
+  lessons jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now(),
+  unique (race_id, segment)
+);
+
 create index if not exists races_race_date_idx on races (race_date);
 create index if not exists races_relative_day_idx on races (relative_day);
 create index if not exists races_program_order_idx on races (race_date, reunion_number, course_number);
@@ -159,3 +186,5 @@ create index if not exists predictions_race_id_idx on predictions (race_id);
 create index if not exists predictions_run_idx on predictions (prediction_run_id);
 create index if not exists value_bets_race_id_idx on value_bets (race_id);
 create unique index if not exists value_bets_race_horse_unique_idx on value_bets (race_id, horse_id);
+create index if not exists model_calibrations_active_idx on model_calibrations (segment, active, created_at desc);
+create index if not exists race_feedback_race_id_idx on race_feedback (race_id);
