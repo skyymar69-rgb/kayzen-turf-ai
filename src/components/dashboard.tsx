@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarDays, ChevronLeft, ChevronRight, Flag, Search, ShieldCheck, Sparkles } from "lucide-react";
+import { BellRing, CalendarDays, ChevronLeft, ChevronRight, Flag, Gauge, Search, ShieldCheck, Sparkles, TrendingUp } from "lucide-react";
+import type { ReactNode } from "react";
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { probableArrival } from "@/lib/bet-recommendations";
 import type { BetOffer, RaceAnalysis } from "@/lib/types";
@@ -15,6 +16,9 @@ type RaceMeeting = {
   reunionNumber: number;
   racecourse: string;
   startTime: string;
+  score: number;
+  difficulty: "Facile" | "Ouverte" | "Complexe";
+  strategy: string;
   specialties: string[];
   highlights: string[];
   races: RaceAnalysis[];
@@ -75,6 +79,7 @@ export function Dashboard({ races }: DashboardProps) {
   const topArrival = probableArrival(selectedRace.horses).slice(0, 5);
   const dayRunnersCount = dayRaces.reduce((total, race) => total + race.horses.length, 0);
   const dayFeatureCount = dayRaces.filter((race) => raceHighlights(race.betTypes).length > 0).length;
+  const dayInsights = buildDayInsights(dayRaces);
   const todayDate = dateForDay(races, "today");
 
   function selectDay(day: RaceAnalysis["relativeDay"]) {
@@ -102,6 +107,30 @@ export function Dashboard({ races }: DashboardProps) {
             Tous les pronostics du jour
           </Link>
         </div>
+
+        <section aria-label="Cockpit de performance du jour" className="mb-3 grid gap-3 lg:grid-cols-[1fr_1fr_1fr]">
+          <InsightCard
+            icon={<TrendingUp size={20} />}
+            label="ROI estime du jour"
+            tone="green"
+            value={`${dayInsights.estimatedRoi > 0 ? "+" : ""}${dayInsights.estimatedRoi}%`}
+            detail={`${dayInsights.valueRaces} courses avec edge positif detecte`}
+          />
+          <InsightCard
+            icon={<BellRing size={20} />}
+            label="Alerte IA prioritaire"
+            tone="amber"
+            value={dayInsights.bestAlert}
+            detail={dayInsights.nextPriority ? `${dayInsights.nextPriority.programCode} - ${titleCase(dayInsights.nextPriority.name)}` : "Aucune alerte forte"}
+          />
+          <InsightCard
+            icon={<Gauge size={20} />}
+            label="Lecture marche"
+            tone="dark"
+            value={dayInsights.marketMood}
+            detail={`${dayInsights.avoidRaces} courses a eviter / ${dayInsights.focusRaces} focus`}
+          />
+        </section>
 
         <section aria-labelledby="programme-title" className="overflow-hidden rounded-b-md border border-[#d9e1de] bg-white shadow-sm">
           <div className="grid border-b border-[#d9e1de] lg:grid-cols-[1fr_1fr]">
@@ -189,6 +218,11 @@ export function Dashboard({ races }: DashboardProps) {
                         <span className="block text-base leading-5 sm:text-xl sm:leading-6">{titleCase(meeting.racecourse)}</span>
                       </span>
                     </div>
+                    <div className="mt-2 grid gap-1 text-xs font-semibold">
+                      <span>Score reunion {meeting.score}/100</span>
+                      <span>Difficulte : {meeting.difficulty}</span>
+                      <span>{meeting.strategy}</span>
+                    </div>
                     <div className="mt-2 flex flex-wrap gap-1">
                       {meeting.highlights.slice(0, 2).map((highlight) => (
                         <span className="rounded-full bg-yellow-300 px-2 py-0.5 text-xs font-bold italic text-red-600" key={highlight}>
@@ -218,6 +252,7 @@ export function Dashboard({ races }: DashboardProps) {
                     <div>
                       <p className="font-mono text-sm font-bold text-[#65746f]">{race.programCode}</p>
                       <h2 className="mt-1 text-base font-bold text-[#26312e]">{titleCase(race.name)}</h2>
+                      <p className="mt-1 text-xs font-semibold text-emerald-700">{raceOpportunity(race)}</p>
                     </div>
                     <span className="rounded-sm bg-[#3f403f] px-2 py-1 text-xs font-bold uppercase text-white">{raceIcon(race)}</span>
                   </div>
@@ -258,6 +293,7 @@ export function Dashboard({ races }: DashboardProps) {
                   <th className="px-5 py-4 font-bold" scope="col">Discipline</th>
                   <th className="px-5 py-4 font-bold" scope="col">Prix</th>
                   <th className="px-5 py-4 font-bold" scope="col">Depart & Arrivee</th>
+                  <th className="px-5 py-4 font-bold" scope="col">Signal IA</th>
                   <th className="px-5 py-4 text-center font-bold" scope="col">NP</th>
                   <th className="px-5 py-4 text-right font-bold" scope="col">Action</th>
                 </tr>
@@ -284,6 +320,7 @@ export function Dashboard({ races }: DashboardProps) {
                       <td className="px-5 py-4">
                         <span className="font-medium">{raceStatus(race, currentMinute)}</span>
                       </td>
+                      <td className="px-5 py-4 text-sm font-semibold text-emerald-700">{raceOpportunity(race)}</td>
                       <td className="px-5 py-4 text-center text-[#65746f]">-</td>
                       <td className="px-5 py-3 text-right">
                         <Link
@@ -298,7 +335,7 @@ export function Dashboard({ races }: DashboardProps) {
                 })}
                 {visibleMeetingRaces.length === 0 ? (
                   <tr>
-                    <td className="px-7 py-6 text-center text-[#65746f]" colSpan={6}>
+                    <td className="px-7 py-6 text-center text-[#65746f]" colSpan={7}>
                       Aucune course ne correspond au filtre.
                     </td>
                   </tr>
@@ -386,6 +423,8 @@ export function Dashboard({ races }: DashboardProps) {
                 <Metric label="Qualite course" value={`${selectedRace.raceQualityScore}`} />
                 <Metric label="Risque" value={selectedRace.riskLevel} />
                 <Metric label="Discipline" value={selectedRace.specialty} />
+                <Metric label="Scenario" value={raceOpportunity(selectedRace)} />
+                <Metric label="Strategie" value={strategyForRace(selectedRace)} />
               </div>
               <div className="mt-4 rounded-md border border-amber-500/30 bg-amber-50 p-3 text-sm text-amber-950">
                 <ShieldCheck className="mb-2 text-amber-700" size={18} />
@@ -414,6 +453,9 @@ function groupRacesByMeeting(races: RaceAnalysis[]): RaceMeeting[] {
         reunionNumber: race.reunionNumber,
         racecourse: race.racecourse,
         startTime: race.startTime,
+        score: 0,
+        difficulty: "Ouverte",
+        strategy: "",
         specialties: [],
         highlights: [],
         races: [race],
@@ -422,13 +464,87 @@ function groupRacesByMeeting(races: RaceAnalysis[]): RaceMeeting[] {
   }
 
   return Array.from(meetings.values())
-    .map((meeting) => ({
-      ...meeting,
-      highlights: unique(meeting.races.flatMap((race) => raceHighlights(race.betTypes).map((highlight) => highlight.label))),
-      specialties: unique(meeting.races.map((race) => race.specialty)),
-      races: meeting.races.sort((a, b) => a.courseNumber - b.courseNumber),
-    }))
+    .map((meeting) => {
+      const sortedRaces = meeting.races.sort((a, b) => a.courseNumber - b.courseNumber);
+      const score = meetingScore(sortedRaces);
+      return {
+        ...meeting,
+        score,
+        difficulty: meetingDifficulty(score, sortedRaces),
+        strategy: meetingStrategy(score, sortedRaces),
+        highlights: unique(sortedRaces.flatMap((race) => raceHighlights(race.betTypes).map((highlight) => highlight.label))),
+        specialties: unique(sortedRaces.map((race) => race.specialty)),
+        races: sortedRaces,
+      };
+    })
     .sort((a, b) => a.reunionNumber - b.reunionNumber);
+}
+
+function buildDayInsights(races: RaceAnalysis[]) {
+  const valueRaces = races.filter((race) => race.horses.some((horse) => horse.valueIndex > 10)).length;
+  const focusRaces = races.filter((race) => race.bettingTier === "Focus").length;
+  const avoidRaces = races.filter((race) => race.bettingTier === "Avoid" || race.riskLevel === "Speculatif").length;
+  const bestRace = races
+    .slice()
+    .sort((a, b) => racePriorityScore(b) - racePriorityScore(a))[0];
+  const estimatedRoi = Math.round((valueRaces * 2.1 + focusRaces * 1.4 - avoidRaces * 0.9) * 10) / 10;
+
+  return {
+    avoidRaces,
+    bestAlert: bestRace ? priorityLabel(bestRace) : "En attente",
+    estimatedRoi,
+    focusRaces,
+    marketMood: avoidRaces > focusRaces ? "Selectif" : valueRaces >= 3 ? "Opportuniste" : "Stable",
+    nextPriority: bestRace,
+    valueRaces,
+  };
+}
+
+function racePriorityScore(race: RaceAnalysis) {
+  const bestValue = Math.max(...race.horses.map((horse) => horse.valueIndex), 0);
+  return race.modelConsensus + race.raceQualityScore + bestValue - race.marketVolatility - (race.riskLevel === "Speculatif" ? 10 : 0);
+}
+
+function priorityLabel(race: RaceAnalysis) {
+  if (race.horses.some((horse) => horse.valueIndex > 14)) return "Value bet forte";
+  if (race.modelConsensus >= 72) return "Base solide";
+  if (race.raceQualityScore >= 75) return "Course prioritaire";
+  return "Surveillance";
+}
+
+function meetingScore(races: RaceAnalysis[]) {
+  if (races.length === 0) return 0;
+  const average = races.reduce((sum, race) => sum + racePriorityScore(race), 0) / races.length;
+  return Math.max(1, Math.min(100, Math.round(average)));
+}
+
+function meetingDifficulty(score: number, races: RaceAnalysis[]): RaceMeeting["difficulty"] {
+  const speculative = races.filter((race) => race.riskLevel === "Speculatif").length;
+  if (score >= 72 && speculative <= 1) return "Facile";
+  if (score < 55 || speculative >= Math.ceil(races.length / 2)) return "Complexe";
+  return "Ouverte";
+}
+
+function meetingStrategy(score: number, races: RaceAnalysis[]) {
+  if (meetingDifficulty(score, races) === "Facile") return "Bases simples et couples";
+  if (meetingDifficulty(score, races) === "Complexe") return "Mises reduites, value uniquement";
+  return "Mix place/value, tickets flexi";
+}
+
+function raceOpportunity(race: RaceAnalysis) {
+  const best = probableArrival(race.horses)[0];
+  if (!best) return "Signal indisponible";
+  if (best.valueIndex > 14) return `Value #${best.number} (${best.valueIndex})`;
+  if (race.modelConsensus >= 75) return `Base #${best.number}`;
+  if (race.riskLevel === "Speculatif") return "Course ouverte";
+  return "A surveiller";
+}
+
+function strategyForRace(race: RaceAnalysis) {
+  if (race.riskLevel === "Prudent") return "Securise";
+  if (race.bettingTier === "Value") return "Value";
+  if (race.riskLevel === "Speculatif") return "Agressif";
+  return "Equilibre";
 }
 
 function selectTimelineRace(races: RaceAnalysis[], currentMinute: number) {
@@ -554,5 +670,36 @@ function Metric({ label, value }: { label: string; value: string }) {
       <p className="text-xs uppercase text-[#65746f]">{label}</p>
       <p className="mt-1 text-sm font-bold text-[#26312e]">{value}</p>
     </div>
+  );
+}
+
+function InsightCard({
+  detail,
+  icon,
+  label,
+  tone,
+  value,
+}: {
+  detail: string;
+  icon: ReactNode;
+  label: string;
+  tone: "amber" | "dark" | "green";
+  value: string;
+}) {
+  const toneClass = {
+    amber: "border-amber-500/30 bg-amber-50 text-amber-950",
+    dark: "border-[#26312e]/30 bg-[#26312e] text-white",
+    green: "border-emerald-700/20 bg-emerald-50 text-emerald-950",
+  }[tone];
+
+  return (
+    <article className={`rounded-md border p-4 shadow-sm ${toneClass}`}>
+      <div className="flex items-center gap-2 text-sm font-bold uppercase">
+        {icon}
+        <span>{label}</span>
+      </div>
+      <p className="mt-3 text-2xl font-bold tracking-normal">{value}</p>
+      <p className={`mt-1 text-sm ${tone === "dark" ? "text-white/78" : "text-[#52615d]"}`}>{detail}</p>
+    </article>
   );
 }

@@ -24,6 +24,8 @@ type CourseDetailProps = {
   race: RaceAnalysis;
 };
 
+type TicketMode = "agressif" | "equilibre" | "securise";
+
 const TABS = ["Partants", "Cotes", "Pronostics IA", "Statistiques", "Les Plus Joues", "Arrivees et Rapports"] as const;
 
 const BET_COLORS: Record<string, string> = {
@@ -45,10 +47,13 @@ const BET_COLORS: Record<string, string> = {
 export function CourseDetail({ race }: CourseDetailProps) {
   const [selectedHorseId, setSelectedHorseId] = useState(race.horses[0]?.id ?? "");
   const [stake, setStake] = useState(25);
+  const [ticketBudget, setTicketBudget] = useState(30);
+  const [ticketMode, setTicketMode] = useState<TicketMode>("equilibre");
   const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>("Partants");
   const selectedHorse = race.horses.find((horse) => horse.id === selectedHorseId) ?? race.horses[0];
   const arrival = useMemo(() => probableArrival(race.horses), [race.horses]);
   const betRecommendations = useMemo(() => buildBetRecommendations(race.horses, race.betTypes), [race.betTypes, race.horses]);
+  const ticketPlan = useMemo(() => buildTicketPlan(betRecommendations, ticketMode, ticketBudget), [betRecommendations, ticketBudget, ticketMode]);
   const postRaceAnalysis = useMemo(() => buildPostRaceAnalysis(race), [race]);
   const simulation = selectedHorse ? simulateBet(stake, selectedHorse.odds, selectedHorse.winProbability, 500, 0) : null;
   const partantsCount = race.horses.length;
@@ -156,6 +161,57 @@ export function CourseDetail({ race }: CourseDetailProps) {
                 ))}
               </div>
             </div>
+            <section className="mt-4 rounded-md border border-[#d9e1de] bg-[#fbfcfc] p-4">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                  <p className="text-sm font-bold uppercase text-[#65746f]">Generateur de tickets intelligent</p>
+                  <h3 className="mt-1 text-lg font-bold text-[#26312e]">Mode {ticketModeLabel(ticketMode)} - budget {ticketBudget} EUR</h3>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                  <div aria-label="Mode de strategie ticket" className="grid grid-cols-3 rounded-sm border border-[#d9e1de] bg-white text-xs font-bold" role="group">
+                    {(["securise", "equilibre", "agressif"] as TicketMode[]).map((mode) => (
+                      <button
+                        aria-pressed={ticketMode === mode}
+                        className={`min-h-11 px-3 ${ticketMode === mode ? "bg-emerald-700 text-white" : "text-[#52615d] hover:bg-emerald-50"}`}
+                        key={mode}
+                        onClick={() => setTicketMode(mode)}
+                        type="button"
+                      >
+                        {ticketModeLabel(mode)}
+                      </button>
+                    ))}
+                  </div>
+                  <label className="text-xs font-bold uppercase text-[#65746f]">
+                    Budget
+                    <input
+                      className="mt-1 h-11 w-full rounded-sm border border-[#cdd7d3] bg-white px-3 text-[#26312e] sm:w-28"
+                      min={5}
+                      onChange={(event) => setTicketBudget(Number(event.target.value))}
+                      step={5}
+                      type="number"
+                      value={ticketBudget}
+                    />
+                  </label>
+                </div>
+              </div>
+              <div className="mt-4 grid gap-2 md:grid-cols-3">
+                {ticketPlan.map((ticket) => (
+                  <div className="rounded-md border border-[#d9e1de] bg-white p-3" key={ticket.type}>
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-bold text-[#26312e]">{ticket.label}</p>
+                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-800">{ticket.stake} EUR</span>
+                    </div>
+                    <p className="mt-2 font-mono text-lg font-bold text-emerald-700">{ticket.ticket}</p>
+                    <p className="mt-2 text-xs leading-5 text-[#65746f]">{ticket.rationale}</p>
+                  </div>
+                ))}
+                {ticketPlan.length === 0 ? (
+                  <p className="rounded-md border border-[#d9e1de] bg-white p-3 text-sm text-[#65746f]">
+                    Aucun ticket disponible pour ce mode avec les paris ouverts connus.
+                  </p>
+                ) : null}
+              </div>
+            </section>
           </LightPanel>
 
           <LightPanel title="Simulation et responsabilite" icon={Gauge}>
@@ -433,6 +489,40 @@ function Result({ label, value }: { label: string; value: string }) {
       <p className="mt-1 text-sm font-semibold text-[#26312e]">{value}</p>
     </div>
   );
+}
+
+function buildTicketPlan(
+  recommendations: ReturnType<typeof buildBetRecommendations>,
+  mode: TicketMode,
+  budget: number,
+) {
+  const filtered = recommendations.filter((recommendation) => {
+    if (mode === "securise") return recommendation.strategy === "Confiance" || recommendation.strategy === "Couverture";
+    if (mode === "agressif") return recommendation.strategy === "Speculatif" || recommendation.strategy === "Value";
+    return true;
+  });
+  const limited = filtered
+    .slice()
+    .sort((a, b) => b.confidence - a.confidence)
+    .slice(0, mode === "agressif" ? 4 : 3);
+  const totalWeight = limited.reduce((sum, item) => sum + ticketWeight(item.strategy, mode), 0) || 1;
+
+  return limited.map((item) => ({
+    ...item,
+    stake: Math.max(1, Math.round((budget * ticketWeight(item.strategy, mode)) / totalWeight)),
+  }));
+}
+
+function ticketWeight(strategy: string, mode: TicketMode) {
+  if (mode === "securise") return strategy === "Couverture" ? 1.2 : 1;
+  if (mode === "agressif") return strategy === "Speculatif" ? 1.4 : 1;
+  return strategy === "Value" ? 1.25 : 1;
+}
+
+function ticketModeLabel(mode: TicketMode) {
+  if (mode === "securise") return "Securise";
+  if (mode === "agressif") return "Agressif";
+  return "Equilibre";
 }
 
 function visibleBetBadges(offers: BetOffer[]) {
