@@ -88,10 +88,10 @@ export function Dashboard({ races }: DashboardProps) {
     <main className="min-h-screen bg-[#f3f5f4] px-3 py-20 text-[#26312e] sm:px-5 lg:px-8" id="contenu-principal">
       <section className="mx-auto max-w-[1480px]">
         <div className="inline-flex overflow-hidden rounded-t-sm shadow-sm">
-          <div className="grid h-16 w-16 place-items-center bg-emerald-800 text-white">
+          <div className="kz-brand-strong grid h-16 w-16 place-items-center">
             <Flag size={30} />
           </div>
-          <h1 className="flex h-16 items-center bg-emerald-700 px-6 text-2xl font-bold uppercase tracking-normal text-white sm:text-3xl" id="programme-title">
+          <h1 className="kz-brand flex h-16 items-center px-6 text-2xl font-bold uppercase tracking-normal sm:text-3xl" id="programme-title">
             Resultats PMU : Arrivees & Rapports
           </h1>
         </div>
@@ -125,11 +125,11 @@ export function Dashboard({ races }: DashboardProps) {
               </button>
             </div>
 
-            <div aria-label="Choix de la date du programme" className="grid grid-cols-3 bg-[#3f403f] text-lg font-semibold uppercase text-white" role="group">
+            <div aria-label="Choix de la date du programme" className="kz-dark-tabs grid grid-cols-3 text-lg font-semibold uppercase" role="group">
               {DAY_ORDER.map((day) => (
                 <button
                   aria-pressed={dayFilter === day}
-                  className={`min-h-20 transition ${dayFilter === day ? "bg-[#3f403f]" : "bg-[#565756] hover:bg-[#4b4c4b]"}`}
+                  className={`min-h-20 transition ${dayFilter === day ? "kz-dark-tab-active" : "kz-dark-tab"}`}
                   key={day}
                   onClick={() => {
                     selectDay(day);
@@ -173,7 +173,7 @@ export function Dashboard({ races }: DashboardProps) {
                   <button
                     aria-pressed={active}
                     className={`relative min-h-28 min-w-[220px] border-r border-[#d9e1de] px-4 py-3 text-left transition ${
-                      active ? "bg-emerald-700 text-white" : "bg-white text-[#52615d] hover:bg-[#f7f8f8]"
+                      active ? "kz-meeting-active" : "bg-white text-[#52615d] hover:bg-[#f7f8f8]"
                     }`}
                     key={meeting.key}
                     onClick={() => setSelectedMeetingKey(meeting.key)}
@@ -182,7 +182,7 @@ export function Dashboard({ races }: DashboardProps) {
                     <div className="flex items-center gap-3">
                       <span className="text-3xl">{meetingIcon(meeting.specialties)}</span>
                       <span>
-                        <span className={`block text-2xl font-bold ${active ? "text-white" : "text-[#3f403f]"}`}>R{meeting.reunionNumber}</span>
+                        <span className={`block text-2xl font-bold ${active ? "kz-meeting-active-title" : "text-[#3f403f]"}`}>R{meeting.reunionNumber}</span>
                         <span className="block text-xl leading-6">{titleCase(meeting.racecourse)}</span>
                       </span>
                     </div>
@@ -208,7 +208,7 @@ export function Dashboard({ races }: DashboardProps) {
                 Courses de la reunion {selectedMeeting.racecourse}, avec depart, type de pari important et lien vers l&apos;analyse.
               </caption>
               <thead>
-                <tr className="bg-[#3f403f] text-sm uppercase text-white">
+                <tr className="kz-table-head text-sm uppercase">
                   <th className="px-7 py-4 font-bold" scope="col">Course</th>
                   <th className="px-5 py-4 font-bold" scope="col">Discipline</th>
                   <th className="px-5 py-4 font-bold" scope="col">Prix</th>
@@ -278,7 +278,7 @@ export function Dashboard({ races }: DashboardProps) {
                     {selectedRace.programCode} - {titleCase(selectedRace.name)}
                   </h2>
                 </div>
-                <Link className="rounded-sm bg-emerald-700 px-5 py-3 text-sm font-bold uppercase text-white" href={`/races/${encodeURIComponent(selectedRace.id)}`}>
+                <Link className="kz-primary-action rounded-sm px-5 py-3 text-sm font-bold uppercase" href={`/races/${encodeURIComponent(selectedRace.id)}`}>
                   Voir tous les partants
                 </Link>
               </div>
@@ -286,7 +286,7 @@ export function Dashboard({ races }: DashboardProps) {
                 <table className="w-full min-w-[720px] border-collapse text-left">
                   <caption className="sr-only">Top 5 des chevaux reperes par KAYZEN pour la course active.</caption>
                   <thead>
-                    <tr className="bg-[#3f403f] text-xs uppercase text-white">
+                    <tr className="kz-table-head text-xs uppercase">
                       <th className="px-3 py-3" scope="col">N</th>
                       <th className="px-3 py-3" scope="col">Cheval</th>
                       <th className="px-3 py-3" scope="col">Driver</th>

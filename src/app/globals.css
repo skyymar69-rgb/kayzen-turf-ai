@@ -142,6 +142,70 @@ tbody tr {
   scrollbar-color: rgba(237, 247, 241, 0.24) transparent;
 }
 
+.kz-brand,
+.kz-meeting-active,
+.kz-primary-action {
+  background-color: #047857 !important;
+  color: #ffffff !important;
+}
+
+.kz-brand-strong {
+  background-color: #065f46 !important;
+  color: #ffffff !important;
+}
+
+.kz-dark-tabs,
+.kz-dark-tab-active,
+.kz-table-head {
+  background-color: #3f403f !important;
+  color: #ffffff !important;
+}
+
+.kz-dark-tab {
+  background-color: #565756 !important;
+  color: #ffffff !important;
+}
+
+.kz-dark-tab:hover {
+  background-color: #4b4c4b !important;
+}
+
+.kz-meeting-active-title {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .kz-brand,
+[data-theme="dark"] .kz-brand-strong,
+[data-theme="dark"] .kz-meeting-active,
+[data-theme="dark"] .kz-primary-action {
+  background-color: #34d399 !important;
+  color: #04130f !important;
+}
+
+[data-theme="dark"] .kz-brand-strong {
+  background-color: #10b981 !important;
+}
+
+[data-theme="dark"] .kz-dark-tabs,
+[data-theme="dark"] .kz-dark-tab-active,
+[data-theme="dark"] .kz-table-head {
+  background-color: #26312e !important;
+  color: #edf7f1 !important;
+}
+
+[data-theme="dark"] .kz-dark-tab {
+  background-color: #33413d !important;
+  color: #edf7f1 !important;
+}
+
+[data-theme="dark"] .kz-dark-tab:hover {
+  background-color: #3f4f49 !important;
+}
+
+[data-theme="dark"] .kz-meeting-active-title {
+  color: #04130f !important;
+}
+
 [data-theme="dark"] .bg-\[\#f3f5f4\],
 [data-theme="dark"] .bg-\[\#f5f6f6\],
 [data-theme="dark"] .bg-\[\#f7f8f8\],
