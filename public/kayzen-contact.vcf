@@ -1,0 +1,10 @@
+BEGIN:VCARD
+VERSION:3.0
+FN:Kayzen Pronostic Turf PMU
+ORG:KAYZEN LYON
+TEL;TYPE=WORK,VOICE:+33487776861
+EMAIL;TYPE=WORK:contact@kayzen-lyon.fr
+ADR;TYPE=WORK:;;6 rue Pierre TERMIER;Lyon;;69009;France
+URL:https://kayzen-turf-ai.vercel.app
+NOTE:Fierement realise par Kayzen Web - https://internet.kayzen-lyon.fr
+END:VCARD

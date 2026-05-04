@@ -92,12 +92,15 @@ export function Dashboard({ races }: DashboardProps) {
             <Flag size={26} />
           </div>
           <h1 className="kz-brand flex min-h-14 flex-1 items-center px-4 text-lg font-bold uppercase tracking-normal sm:h-16 sm:px-6 sm:text-3xl" id="programme-title">
-            Resultats PMU : Arrivees & Rapports
+            Pronostics Turf - PMU
           </h1>
         </div>
 
-        <div className="mb-3 mt-3 rounded-md border border-[#d9e1de] bg-white p-3 text-sm font-medium text-[#52615d] shadow-sm">
-          Aujourd&apos;hui = <span className="font-mono font-bold text-[#26312e]">{formatShortDate(todayDate)}</span>. La navigation charge uniquement hier, aujourd&apos;hui et demain.
+        <div className="mb-3 mt-3 grid gap-3 rounded-md border border-[#d9e1de] bg-white p-3 text-sm font-medium text-[#52615d] shadow-sm sm:grid-cols-[1fr_auto] sm:items-center">
+          <p>Aujourd&apos;hui = <span className="font-mono font-bold text-[#26312e]">{formatShortDate(todayDate)}</span>. La navigation charge uniquement hier, aujourd&apos;hui et demain.</p>
+          <Link className="inline-flex min-h-11 items-center justify-center rounded-sm bg-emerald-700 px-4 text-sm font-bold uppercase text-white" href="/pronostics">
+            Tous les pronostics du jour
+          </Link>
         </div>
 
         <section aria-labelledby="programme-title" className="overflow-hidden rounded-b-md border border-[#d9e1de] bg-white shadow-sm">

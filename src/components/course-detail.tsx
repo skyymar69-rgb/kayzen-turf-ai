@@ -268,7 +268,7 @@ function PartantsTable({
             <div className="grid grid-cols-[44px_1fr_auto] items-start gap-3">
               {horse.silksUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img alt={`Casaque de ${horse.horse}`} className="h-10 w-10 rounded-sm object-contain" src={horse.silksUrl} />
+                <img alt={`Casaque de ${horse.horse}`} className="premium-silk h-10 w-10 rounded-sm object-contain" decoding="async" loading="lazy" src={horse.silksUrl} />
               ) : (
                 <span className="grid h-10 w-10 place-items-center rounded-sm bg-emerald-100 font-mono font-bold text-emerald-800">{horse.number}</span>
               )}
@@ -326,7 +326,7 @@ function PartantsTable({
                 <div className="flex min-w-[230px] items-center gap-3">
                   {horse.silksUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img alt={`Casaque de ${horse.horse}`} className="h-9 w-9 rounded-sm object-contain" src={horse.silksUrl} />
+                    <img alt={`Casaque de ${horse.horse}`} className="premium-silk h-9 w-9 rounded-sm object-contain" decoding="async" loading="lazy" src={horse.silksUrl} />
                   ) : (
                     <span className="grid h-9 w-9 place-items-center rounded-sm bg-emerald-100 font-mono text-emerald-800">{horse.number}</span>
                   )}

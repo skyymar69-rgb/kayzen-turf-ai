@@ -142,6 +142,23 @@ tbody tr {
   scrollbar-color: rgba(237, 247, 241, 0.24) transparent;
 }
 
+.premium-silk {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(236, 253, 245, 0.74));
+  box-shadow: 0 10px 22px rgba(4, 19, 15, 0.12);
+  filter: saturate(1.08) contrast(1.04);
+  transition: filter 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+.premium-silk:hover {
+  box-shadow: 0 14px 28px rgba(4, 19, 15, 0.18);
+  filter: saturate(1.16) contrast(1.08);
+  transform: translateY(-1px) scale(1.03);
+}
+
+.premium-card {
+  backdrop-filter: saturate(1.18) blur(10px);
+}
+
 .kz-brand,
 .kz-meeting-active,
 .kz-primary-action {

@@ -1,0 +1,65 @@
+import Link from "next/link";
+import type { ReactNode } from "react";
+import { MapPin, QrCode, Star, WalletCards } from "lucide-react";
+import QRCode from "qrcode";
+import { COMPANY, CONTACT_LINKS, SITE_URL } from "@/lib/site-config";
+
+async function svgQr(value: string) {
+  return QRCode.toString(value, {
+    errorCorrectionLevel: "M",
+    margin: 1,
+    type: "svg",
+    width: 116,
+    color: {
+      dark: "#04130f",
+      light: "#ffffff",
+    },
+  });
+}
+
+export async function SiteHeader() {
+  const [siteQr, mapsQr, reviewsQr] = await Promise.all([
+    svgQr(SITE_URL),
+    svgQr(CONTACT_LINKS.maps),
+    svgQr(CONTACT_LINKS.reviews),
+  ]);
+
+  return (
+    <header className="border-b border-[#d9e1de] bg-white/92 px-3 py-3 text-[#26312e] shadow-sm backdrop-blur-md">
+      <div className="mx-auto flex max-w-[1480px] flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <Link className="inline-flex min-h-11 items-center gap-3 rounded-sm font-bold uppercase" href="/">
+          <span className="grid h-10 w-10 place-items-center rounded-sm bg-emerald-700 text-white">KZ</span>
+          <span>{COMPANY.brand}</span>
+        </Link>
+        <nav aria-label="Navigation principale" className="flex gap-2 overflow-x-auto text-sm font-semibold">
+          <Link className="min-h-10 shrink-0 rounded-sm px-3 py-2 hover:bg-[#f7f8f8]" href="/pronostics">Pronostics du jour</Link>
+          <Link className="min-h-10 shrink-0 rounded-sm px-3 py-2 hover:bg-[#f7f8f8]" href="/techniques-prediction">Techniques IA</Link>
+          <Link className="min-h-10 shrink-0 rounded-sm px-3 py-2 hover:bg-[#f7f8f8]" href="/accessibilite">Accessibilite</Link>
+        </nav>
+        <details className="group rounded-md border border-[#d9e1de] bg-[#fbfcfc]">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-3 text-sm font-bold text-emerald-800">
+            <WalletCards size={18} />
+            Carte de contact numerique
+          </summary>
+          <div className="grid gap-3 border-t border-[#d9e1de] p-3 sm:grid-cols-3">
+            <QrTile href={SITE_URL} icon={<QrCode size={17} />} label="QR site" svg={siteQr} />
+            <QrTile href={CONTACT_LINKS.maps} icon={<MapPin size={17} />} label="QR Maps" svg={mapsQr} />
+            <QrTile href={CONTACT_LINKS.reviews} icon={<Star size={17} />} label="QR Avis" svg={reviewsQr} />
+            <a className="sm:col-span-3 rounded-sm border border-emerald-700/20 bg-white px-3 py-2 text-center text-sm font-bold text-emerald-800 hover:bg-emerald-50" href={CONTACT_LINKS.vcard}>
+              Telecharger la vCard
+            </a>
+          </div>
+        </details>
+      </div>
+    </header>
+  );
+}
+
+function QrTile({ href, icon, label, svg }: { href: string; icon: ReactNode; label: string; svg: string }) {
+  return (
+    <a className="group rounded-md border border-[#d9e1de] bg-white p-2 text-center text-xs font-bold text-[#26312e] transition hover:-translate-y-0.5 hover:shadow-lg" href={href} rel="noopener noreferrer" target="_blank">
+      <span className="mb-2 flex items-center justify-center gap-1">{icon}{label}</span>
+      <span className="mx-auto block h-[116px] w-[116px] overflow-hidden rounded-sm" dangerouslySetInnerHTML={{ __html: svg }} />
+    </a>
+  );
+}
