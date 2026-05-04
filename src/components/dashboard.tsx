@@ -1,42 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import {
-  Activity,
-  AlertTriangle,
-  ArrowUpRight,
-  Bell,
-  Brain,
-  ChartNoAxesCombined,
-  ChevronDown,
-  CircleDollarSign,
-  Database,
-  Gauge,
-  Lock,
-  Search,
-  ShieldCheck,
-  Sparkles,
-  Target,
-  Trophy,
-} from "lucide-react";
-import type { ReactNode } from "react";
+import { CalendarDays, ChevronLeft, ChevronRight, Flag, ShieldCheck, Sparkles } from "lucide-react";
 import { useMemo, useState, useSyncExternalStore } from "react";
-import {
-  Area,
-  AreaChart,
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import { modelCard, simulateBet } from "@/lib/betting-engine";
-import { buildBetRecommendations, probableArrival } from "@/lib/bet-recommendations";
-import { buildPostRaceAnalysis } from "@/lib/post-race-analysis";
-import type { HorsePrediction, RaceAnalysis } from "@/lib/types";
+import { probableArrival } from "@/lib/bet-recommendations";
+import type { BetOffer, RaceAnalysis } from "@/lib/types";
 
 type DashboardProps = {
   races: RaceAnalysis[];
@@ -47,617 +15,332 @@ type RaceMeeting = {
   reunionNumber: number;
   racecourse: string;
   startTime: string;
-  sourceCountry: string;
   specialties: string[];
   highlights: string[];
   races: RaceAnalysis[];
 };
 
-const marketTrend = [
-  { time: "12:00", value: 52 },
-  { time: "13:00", value: 58 },
-  { time: "14:00", value: 61 },
-  { time: "14:30", value: 66 },
-  { time: "15:00", value: 72 },
-  { time: "15:12", value: 76 },
-];
+const DAY_ORDER: RaceAnalysis["relativeDay"][] = ["yesterday", "today", "tomorrow"];
 
-const roiTrend = [
-  { day: "Lun", roi: 2.4 },
-  { day: "Mar", roi: 5.2 },
-  { day: "Mer", roi: 4.1 },
-  { day: "Jeu", roi: 8.6 },
-  { day: "Ven", roi: 7.7 },
-  { day: "Sam", roi: 10.4 },
-  { day: "Dim", roi: 12.8 },
-];
+const BET_BADGE_COLORS: Record<string, string> = {
+  QUINTE_PLUS: "bg-red-500 text-white",
+  QUARTE_PLUS: "bg-sky-500 text-white",
+  PICK5: "bg-yellow-300 text-red-600",
+  DEUX_SUR_QUATRE: "bg-purple-600 text-white",
+  TRIO: "bg-orange-400 text-white",
+  MULTI: "bg-pink-600 text-white",
+};
 
 export function Dashboard({ races }: DashboardProps) {
   const currentMinute = useCurrentMinute();
-  const [dayFilter, setDayFilter] = useState<RaceAnalysis["relativeDay"] | "all">("today");
-  const [tierFilter, setTierFilter] = useState<RaceAnalysis["bettingTier"] | "all">("all");
-  const initialRace = selectTimelineRace(
-    races.filter((item) => item.relativeDay === "today"),
-    "today",
-    currentMinute,
-  ) ?? races[0];
-  const [selectedRaceId, setSelectedRaceId] = useState("");
-  const [query, setQuery] = useState("");
-  const [stake, setStake] = useState(25);
-  const [bankroll, setBankroll] = useState(500);
-  const [drawdown, setDrawdown] = useState(0);
-  const mounted = useClientReady();
+  const [dayFilter, setDayFilter] = useState<RaceAnalysis["relativeDay"]>("today");
+  const [selectedMeetingKey, setSelectedMeetingKey] = useState("");
+  const [showRunners, setShowRunners] = useState(true);
 
-  const filteredRaces = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
+  const dayRaces = useMemo(
+    () =>
+      races
+        .filter((race) => race.relativeDay === dayFilter)
+        .sort((a, b) => a.reunionNumber - b.reunionNumber || a.courseNumber - b.courseNumber),
+    [dayFilter, races],
+  );
+  const meetings = useMemo(() => groupRacesByMeeting(dayRaces), [dayRaces]);
+  const timelineRace = useMemo(() => selectTimelineRace(dayRaces, currentMinute), [currentMinute, dayRaces]);
+  const selectedMeeting =
+    meetings.find((meeting) => meeting.key === selectedMeetingKey) ??
+    meetings.find((meeting) => meeting.races.some((race) => race.id === timelineRace?.id)) ??
+    meetings[0];
+  const selectedRace = timelineRace && selectedMeeting?.races.some((race) => race.id === timelineRace.id)
+    ? timelineRace
+    : selectedMeeting?.races[0];
 
-    return races
-      .filter((item) => dayFilter === "all" || item.relativeDay === dayFilter)
-      .filter((item) => tierFilter === "all" || item.bettingTier === tierFilter)
-      .filter((item) => {
-        if (!normalizedQuery) return true;
-        return `${item.programCode} ${item.name} ${item.racecourse} ${item.sourceCountry} ${item.discipline}`
-          .toLowerCase()
-          .includes(normalizedQuery);
-      })
-      .sort((a, b) => sortRacesByTimeline(a, b, dayFilter, currentMinute));
-  }, [currentMinute, dayFilter, query, races, tierFilter]);
-
-  const raceMeetings = useMemo(() => groupRacesByMeeting(filteredRaces), [filteredRaces]);
-  const race = filteredRaces.find((item) => item.id === selectedRaceId) ?? selectTimelineRace(filteredRaces, dayFilter, currentMinute) ?? initialRace;
-  const [selectedHorseId, setSelectedHorseId] = useState(race?.horses[0]?.id ?? "");
-
-  const selectedHorse = useMemo(() => {
-    if (!race) return undefined;
-    return race.horses.find((horse) => horse.id === selectedHorseId) ?? race.horses[0];
-  }, [race, selectedHorseId]);
-
-  const simulation = useMemo(() => {
-    if (!selectedHorse) return null;
-    return simulateBet(stake, selectedHorse.odds, selectedHorse.winProbability, bankroll, drawdown);
-  }, [bankroll, drawdown, selectedHorse, stake]);
-
-  if (!race || !selectedHorse || !simulation) {
+  if (!selectedMeeting || !selectedRace) {
     return (
-      <main className="grid min-h-screen place-items-center px-4">
-        <div className="rounded-lg border border-white/10 bg-[#0d1a17]/86 p-6 text-center">
-          <Brain className="mx-auto text-emerald-300" size={32} />
-          <h1 className="mt-4 text-2xl font-semibold text-white">KAYZEN TURF AI</h1>
-          <p className="mt-2 text-sm text-[#b6c5bf]">Aucune course francaise disponible.</p>
+      <main className="grid min-h-screen place-items-center bg-[#f3f5f4] px-4 text-[#26312e]">
+        <div className="rounded-md border border-[#d9e1de] bg-white p-6 text-center shadow-sm">
+          <Flag className="mx-auto text-emerald-700" size={34} />
+          <h1 className="mt-4 text-2xl font-semibold">KAYZEN TURF AI</h1>
+          <p className="mt-2 text-sm text-[#65746f]">Aucune course francaise disponible sur cette date.</p>
         </div>
       </main>
     );
   }
 
-  const scoreData = race.horses.map((horse) => ({
-    name: `#${horse.number}`,
-    score: horse.kzScore,
-    value: horse.valueIndex,
-  }));
-  const selectedValueBets = race.horses.filter((horse) => horse.valueIndex > 10).sort((a, b) => b.valueIndex - a.valueIndex);
-  const arrival = probableArrival(race.horses);
-  const betRecommendations = buildBetRecommendations(race.horses, race.betTypes);
-  const postRaceAnalysis = buildPostRaceAnalysis(race);
+  const topArrival = probableArrival(selectedRace.horses).slice(0, 5);
 
   return (
-    <main className="min-h-screen">
-      <aside className="fixed inset-y-0 left-0 z-20 hidden w-20 border-r border-white/10 bg-[#081310]/80 backdrop-blur-xl lg:flex lg:flex-col lg:items-center lg:py-6">
-        <div className="grid h-11 w-11 place-items-center rounded-md bg-emerald-400 text-[#06110e]">
-          <Brain size={24} />
-        </div>
-        <nav className="mt-10 flex flex-1 flex-col gap-4">
-          {[Gauge, Target, ChartNoAxesCombined, CircleDollarSign, Database, ShieldCheck].map((Icon, index) => (
-            <button
-              aria-label={`Navigation ${index + 1}`}
-              className="grid h-11 w-11 place-items-center rounded-md text-white/60 transition hover:bg-white/10 hover:text-white"
-              key={index}
-              type="button"
-            >
-              <Icon size={20} />
-            </button>
-          ))}
-        </nav>
-        <button aria-label="Alertes" className="grid h-11 w-11 place-items-center rounded-md border border-white/10 text-white/70" type="button">
-          <Bell size={20} />
-        </button>
-      </aside>
-
-      <section className="px-4 py-5 sm:px-6 lg:ml-20 lg:px-8">
-        <header className="mx-auto flex max-w-7xl flex-col gap-5 pb-6 xl:flex-row xl:items-center xl:justify-between">
-          <div>
-            <div className="flex flex-wrap items-center gap-3 text-sm text-emerald-200/80">
-              <span className="rounded-md border border-emerald-300/20 bg-emerald-300/10 px-2.5 py-1">SaaS MVP</span>
-              <span className="font-mono text-emerald-300">{race.programCode}</span>
-              <span>{formatRelativeDay(race.relativeDay)} - {race.raceDate}</span>
-              <span>{race.racecourse}</span>
-              <span>{race.startTime}</span>
-              <span>{raceTimingLabel(race, currentMinute)}</span>
-              <span>{race.discipline}</span>
-              <span>{race.sourceCountry}</span>
-            </div>
-            <h1 className="mt-4 max-w-3xl text-3xl font-semibold tracking-normal text-white sm:text-5xl">
-              KAYZEN TURF AI
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-[#b6c5bf] sm:text-base">
-              Programme trie par heure, prochaine course active, predictions explicables et tickets PMU.
-            </p>
+    <main className="min-h-screen bg-[#f3f5f4] px-3 py-5 text-[#26312e] sm:px-5 lg:px-8">
+      <section className="mx-auto max-w-[1480px]">
+        <div className="inline-flex overflow-hidden rounded-t-sm shadow-sm">
+          <div className="grid h-16 w-16 place-items-center bg-emerald-800 text-white">
+            <Flag size={30} />
           </div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:min-w-[520px]">
-            <Metric icon={Target} label="Consensus IA" value={`${race.modelConsensus}%`} />
-            <Metric icon={Activity} label="Volatilite" value={`${race.marketVolatility}%`} />
-            <Metric icon={CircleDollarSign} label="Qualite course" value={`${race.raceQualityScore}`} />
-            <Metric icon={Lock} label="Premium" value="Pret" />
-          </div>
-        </header>
-
-        <div className="mx-auto mb-4 flex max-w-7xl gap-2 overflow-x-auto kz-scroll">
-          {(["today", "tomorrow", "yesterday", "all"] as const).map((day) => (
-            <button
-              className={`shrink-0 rounded-md border px-3 py-2 text-sm transition ${
-                dayFilter === day
-                  ? "border-emerald-300/40 bg-emerald-300/[0.12] text-white"
-                  : "border-white/10 bg-white/[0.03] text-[#b6c5bf] hover:bg-white/[0.06]"
-              }`}
-              key={day}
-              onClick={() => setDayFilter(day)}
-              type="button"
-            >
-              {day === "all" ? "Tous" : formatRelativeDay(day)}
-            </button>
-          ))}
-          {(["all", "Focus", "Value", "Avoid"] as const).map((tier) => (
-            <button
-              className={`shrink-0 rounded-md border px-3 py-2 text-sm transition ${
-                tierFilter === tier
-                  ? "border-cyan-300/40 bg-cyan-300/[0.10] text-white"
-                  : "border-white/10 bg-white/[0.03] text-[#b6c5bf] hover:bg-white/[0.06]"
-              }`}
-              key={tier}
-              onClick={() => setTierFilter(tier)}
-              type="button"
-            >
-              {tier === "all" ? "Tous tiers" : tier}
-            </button>
-          ))}
-          <label className="flex h-10 min-w-[280px] items-center gap-2 rounded-md border border-white/10 bg-[#081310] px-3 text-sm text-[#93a39c]">
-            <Search size={16} />
-            <input
-              className="min-w-0 flex-1 bg-transparent text-white outline-none"
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="R1C1, hippodrome, pays, discipline"
-              value={query}
-            />
-          </label>
+          <h1 className="flex h-16 items-center bg-emerald-700 px-6 text-2xl font-bold uppercase tracking-normal text-white sm:text-3xl">
+            Resultats PMU : Arrivees & Rapports
+          </h1>
         </div>
 
-        <div className="mx-auto mb-4 grid max-w-7xl gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {raceMeetings.map((meeting) => {
-            const active = meeting.races.some((item) => item.id === race.id);
-
-            return (
+        <section className="overflow-hidden rounded-b-md border border-[#d9e1de] bg-white shadow-sm">
+          <div className="grid border-b border-[#d9e1de] lg:grid-cols-[1fr_1fr]">
+            <div className="grid min-h-20 grid-cols-[72px_1fr_72px] items-center border-r border-[#d9e1de]">
               <button
-                className={`rounded-md border p-4 text-left transition ${
-                  active
-                    ? "border-emerald-300/40 bg-emerald-300/[0.12] text-white"
-                    : "border-white/10 bg-white/[0.03] text-[#b6c5bf] hover:bg-white/[0.06]"
-                }`}
-                key={meeting.key}
-                onClick={() => {
-                  const nextRace = meeting.races[0];
-                  setSelectedRaceId(nextRace.id);
-                  setSelectedHorseId(nextRace.horses[0]?.id ?? "");
-                }}
+                aria-label="Jour precedent"
+                className="grid h-full place-items-center text-[#9aa4a0] transition hover:bg-[#f7f8f8] hover:text-[#26312e]"
+                onClick={() => setDayFilter(previousDay(dayFilter))}
                 type="button"
               >
-                <span className="flex items-start justify-between gap-3">
-                  <span>
-                    <span className="block font-mono text-lg font-semibold text-emerald-300">R{meeting.reunionNumber}</span>
-                    <span className="mt-1 block text-base font-semibold text-white">{meeting.racecourse}</span>
-                  </span>
-                  <span className="font-mono text-sm text-[#d7e4de]">{meeting.startTime}</span>
-                </span>
-                <span className="mt-3 block text-xs text-[#93a39c]">
-                  {meeting.races.length} courses - {meeting.specialties.join(" - ")}
-                </span>
-                <span className="mt-3 flex flex-wrap gap-1.5">
-                  {meeting.highlights.map((highlight) => (
-                    <span className="rounded-md bg-emerald-300 px-2 py-1 text-xs font-semibold text-[#06110e]" key={highlight}>
-                      {highlight}
-                    </span>
-                  ))}
-                </span>
+                <ChevronLeft size={34} />
               </button>
-            );
-          })}
-        </div>
-
-        <section className="mx-auto mb-4 max-w-7xl rounded-lg border border-white/10 bg-[#0d1a17]/86 p-3">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm text-[#b6c5bf]">
-              {filteredRaces.length} courses affichees - {races.length} courses en base
-            </p>
-            <p className="text-xs text-[#93a39c]">Trie par heure - prochaine course selectionnee automatiquement</p>
-          </div>
-          <div className="space-y-3">
-            {raceMeetings.map((meeting) => (
-              <section className="rounded-md border border-white/10 bg-white/[0.02] p-3" key={meeting.key}>
-                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="rounded-md bg-emerald-300 px-2 py-1 font-mono text-xs font-semibold text-[#06110e]">
-                      R{meeting.reunionNumber}
-                    </span>
-                    <p className="text-sm font-medium text-white">{meeting.racecourse}</p>
-                    <span className="text-xs text-[#93a39c]">{meeting.startTime}</span>
-                    <span className="text-xs text-[#93a39c]">{meeting.sourceCountry}</span>
-                  </div>
-                  <p className="text-xs text-[#93a39c]">{meeting.races.length} courses - {meeting.specialties.join(" - ")}</p>
-                </div>
-                <div className="flex gap-2 overflow-x-auto kz-scroll">
-                  {meeting.races.map((item) => (
-                    <Link
-                      className={`min-w-[250px] shrink-0 rounded-md border p-3 text-left text-sm transition ${
-                        item.id === race.id
-                          ? "border-emerald-300/40 bg-emerald-300/[0.12] text-white"
-                          : "border-white/10 bg-white/[0.03] text-[#b6c5bf] hover:bg-white/[0.06]"
-                      }`}
-                      href={`/races/${encodeURIComponent(item.id)}`}
-                      key={item.id}
-                    >
-                      <span className="flex items-center justify-between gap-3">
-                        <span className="font-mono text-sm font-semibold text-emerald-300">{item.programCode}</span>
-                        <span className="text-xs text-[#93a39c]">{item.startTime} - {raceTimingLabel(item, currentMinute)}</span>
-                      </span>
-                      <span className="mt-2 block truncate font-medium text-white">{item.name}</span>
-                      <span className="mt-1 block text-xs text-[#93a39c]">
-                        {item.specialty} - {item.distance} - {item.bettingTier}
-                      </span>
-                      <span className="mt-2 flex flex-wrap gap-1.5">
-                        {raceHighlights(item).map((highlight) => (
-                          <span className="rounded-md border border-emerald-300/30 px-2 py-1 text-xs text-emerald-200" key={highlight}>
-                            {highlight}
-                          </span>
-                        ))}
-                      </span>
-                    </Link>
-                  ))}
-                </div>
-              </section>
-            ))}
-            {filteredRaces.length === 0 ? (
-              <div className="rounded-md border border-white/10 bg-white/[0.03] p-3 text-sm text-[#93a39c]">
-                Aucun filtre ne correspond.
+              <div className="flex items-center justify-center gap-5 text-2xl text-[#52615d]">
+                <CalendarDays size={36} />
+                <span>{formatShortDate(selectedRace.raceDate)}</span>
               </div>
-            ) : null}
+              <button
+                aria-label="Jour suivant"
+                className="grid h-full place-items-center text-[#9aa4a0] transition hover:bg-[#f7f8f8] hover:text-[#26312e]"
+                onClick={() => setDayFilter(nextDay(dayFilter))}
+                type="button"
+              >
+                <ChevronRight size={34} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-3 bg-[#3f403f] text-lg font-semibold uppercase text-white">
+              {DAY_ORDER.map((day) => (
+                <button
+                  className={`min-h-20 transition ${dayFilter === day ? "bg-[#3f403f]" : "bg-[#565756] hover:bg-[#4b4c4b]"}`}
+                  key={day}
+                  onClick={() => {
+                    setDayFilter(day);
+                    setSelectedMeetingKey("");
+                  }}
+                  type="button"
+                >
+                  {formatRelativeDay(day)}
+                </button>
+              ))}
+            </div>
           </div>
+
+          <div className="grid grid-cols-[56px_1fr_56px] border-b border-[#d9e1de]">
+            <button className="grid min-h-28 place-items-center border-r border-[#d9e1de] text-[#65746f]" type="button">
+              <ChevronLeft size={34} />
+            </button>
+            <div className="flex overflow-x-auto">
+              {meetings.map((meeting) => {
+                const active = meeting.key === selectedMeeting.key;
+                return (
+                  <button
+                    className={`relative min-h-28 min-w-[220px] border-r border-[#d9e1de] px-4 py-3 text-left transition ${
+                      active ? "bg-emerald-700 text-white" : "bg-white text-[#52615d] hover:bg-[#f7f8f8]"
+                    }`}
+                    key={meeting.key}
+                    onClick={() => setSelectedMeetingKey(meeting.key)}
+                    type="button"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-3xl">{meetingIcon(meeting.specialties)}</span>
+                      <span>
+                        <span className={`block text-2xl font-bold ${active ? "text-white" : "text-[#3f403f]"}`}>R{meeting.reunionNumber}</span>
+                        <span className="block text-xl leading-6">{titleCase(meeting.racecourse)}</span>
+                      </span>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {meeting.highlights.slice(0, 2).map((highlight) => (
+                        <span className="rounded-full bg-yellow-300 px-2 py-0.5 text-xs font-bold italic text-red-600" key={highlight}>
+                          {highlight}
+                        </span>
+                      ))}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            <button className="grid min-h-28 place-items-center border-l border-[#d9e1de] text-[#b0b8b5]" type="button">
+              <ChevronRight size={34} />
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[980px] border-collapse text-left">
+              <thead>
+                <tr className="bg-[#3f403f] text-sm uppercase text-white">
+                  <th className="px-7 py-4 font-bold">Course</th>
+                  <th className="px-5 py-4 font-bold">Discipline</th>
+                  <th className="px-5 py-4 font-bold">Prix</th>
+                  <th className="px-5 py-4 font-bold">Depart & Arrivee</th>
+                  <th className="px-5 py-4 text-center font-bold">NP</th>
+                  <th className="px-5 py-4 text-right font-bold">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {selectedMeeting.races.map((race) => {
+                  const active = race.id === selectedRace.id;
+                  return (
+                    <tr className={`${active ? "bg-emerald-50" : "even:bg-[#f5f6f6]"} border-b border-[#e0e5e3] text-lg`} key={race.id}>
+                      <td className="px-7 py-4 font-bold text-[#26312e]">C{race.courseNumber}</td>
+                      <td className="px-5 py-4 text-2xl">{raceIcon(race)}</td>
+                      <td className="px-5 py-4">
+                        <Link className="font-bold text-[#26312e] hover:text-emerald-700" href={`/races/${encodeURIComponent(race.id)}`}>
+                          {titleCase(race.name)}
+                        </Link>
+                        <span className="ml-2 inline-flex flex-wrap gap-1 align-middle">
+                          {raceHighlights(race.betTypes).map((highlight) => (
+                            <span className={`rounded-full px-2 py-0.5 text-xs font-bold italic ${highlight.className}`} key={highlight.label}>
+                              {highlight.label}
+                            </span>
+                          ))}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className="font-medium">{raceStatus(race, currentMinute)}</span>
+                      </td>
+                      <td className="px-5 py-4 text-center text-[#65746f]">-</td>
+                      <td className="px-5 py-3 text-right">
+                        <Link
+                          className="inline-flex h-12 min-w-40 items-center justify-center rounded-sm border-2 border-rose-400 bg-white px-6 text-lg font-semibold uppercase text-rose-500 transition hover:bg-rose-50"
+                          href={`/races/${encodeURIComponent(race.id)}`}
+                        >
+                          Analyser
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <label className="flex items-center gap-3 px-3 py-3 text-xl italic text-[#26312e]">
+            <input checked={showRunners} className="h-5 w-5 accent-emerald-700" onChange={(event) => setShowRunners(event.target.checked)} type="checkbox" />
+            Afficher les partants/montes de cette reunion
+          </label>
         </section>
 
-        <div className="mx-auto grid max-w-7xl gap-4 xl:grid-cols-[1.45fr_0.85fr]">
-          <section className="rounded-lg border border-white/10 bg-[#0d1a17]/86 p-4 shadow-2xl shadow-black/20 sm:p-5">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <p className="text-sm text-[#93a39c]">Course analysee</p>
-                <h2 className="mt-1 text-xl font-semibold text-white">{race.programCode} - {race.name}</h2>
-                <p className="mt-2 text-sm text-[#b6c5bf]">
-                  Reunion {race.reunionNumber} - Course {race.courseNumber} - {race.distance} - {race.going} - {race.weather}
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Pill icon={Sparkles} text="IA explicable" />
-                <Pill icon={Target} text={`Tier ${race.bettingTier}`} />
-                <Pill icon={ShieldCheck} text="Jeu responsable" />
-              </div>
-            </div>
-
-            <div className="mt-5 overflow-x-auto kz-scroll">
-              <table className="w-full min-w-[820px] border-separate border-spacing-0 text-left">
-                <thead>
-                  <tr className="text-xs uppercase text-[#93a39c]">
-                    <th className="border-b border-white/10 pb-3 font-medium">Cheval</th>
-                    <th className="border-b border-white/10 pb-3 font-medium">KZ Score</th>
-                    <th className="border-b border-white/10 pb-3 font-medium">Gagnant</th>
-                    <th className="border-b border-white/10 pb-3 font-medium">Top 3</th>
-                    <th className="border-b border-white/10 pb-3 font-medium">Cote</th>
-                    <th className="border-b border-white/10 pb-3 font-medium">Juste</th>
-                    <th className="border-b border-white/10 pb-3 font-medium">Value</th>
-                    <th className="border-b border-white/10 pb-3 font-medium">Signal</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {race.horses.map((horse) => (
-                    <HorseRow
-                      horse={horse}
-                      isSelected={horse.id === selectedHorse.id}
-                      key={horse.id}
-                      onSelect={() => setSelectedHorseId(horse.id)}
-                    />
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          <section className="grid gap-4">
-            <Panel title="Tickets proposes" icon={Trophy}>
-              <div className="mb-3 rounded-md border border-white/10 bg-white/[0.03] p-3">
-                <p className="text-xs text-[#93a39c]">Ordre d&apos;arrivee probable</p>
-                <p className="mt-1 font-mono text-sm text-white">
-                  {arrival.slice(0, 6).map((horse) => horse.number).join(" - ")}
-                </p>
-              </div>
-              <div className="space-y-3">
-                {betRecommendations.slice(0, 7).map((recommendation) => (
-                  <div className="rounded-md border border-white/10 bg-white/[0.03] p-3" key={recommendation.type}>
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="font-medium text-white">{recommendation.label}</p>
-                        <p className="mt-1 font-mono text-sm text-emerald-300">{recommendation.ticket}</p>
-                      </div>
-                      <span className="rounded-md border border-white/10 px-2 py-1 font-mono text-xs text-[#d7e4de]">
-                        {recommendation.confidence}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-xs text-[#93a39c]">
-                      {recommendation.strategy} - {recommendation.audience ?? "PMU"} - Mise base {recommendation.baseStake || 0} EUR
-                    </p>
-                    <p className="mt-2 text-xs leading-5 text-[#b6c5bf]">{recommendation.rationale}</p>
-                  </div>
-                ))}
-                {betRecommendations.length === 0 ? (
-                  <div className="rounded-md border border-white/10 bg-white/[0.03] p-3 text-sm text-[#93a39c]">
-                    Aucun pari PMU exploitable detecte sur cette course.
-                  </div>
-                ) : null}
-              </div>
-            </Panel>
-
-            <Panel title="Copilote betting" icon={Gauge}>
-              <label className="text-sm text-[#93a39c]" htmlFor="horse">
-                Selection
-              </label>
-              <div className="relative mt-2">
-                <select
-                  className="h-11 w-full appearance-none rounded-md border border-white/10 bg-[#081310] px-3 text-sm text-white outline-none"
-                  id="horse"
-                  onChange={(event) => setSelectedHorseId(event.target.value)}
-                  value={selectedHorse.id}
-                >
-                  {race.horses.map((horse) => (
-                    <option key={horse.id} value={horse.id}>
-                      #{horse.number} {horse.horse}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-3 top-3 text-white/50" size={18} />
-              </div>
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                <NumberInput label="Mise" min={1} setValue={setStake} suffix="EUR" value={stake} />
-                <NumberInput label="Bankroll" min={50} setValue={setBankroll} suffix="EUR" value={bankroll} />
-                <NumberInput label="Drawdown" min={0} setValue={setDrawdown} suffix="%" value={drawdown} />
-              </div>
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                <Result label="Cote juste" value={`${simulation.fairOdds}`} />
-                <Result label="Edge marche" value={`${simulation.marketEdge}%`} />
-                <Result label="Retour potentiel" value={`${simulation.potentialReturn} EUR`} />
-                <Result label="EV estimee" value={`${simulation.expectedValue} EUR`} />
-                <Result label="Kelly prudent" value={`${simulation.kellyStake} EUR`} />
-                <Result label="Mise ajustee" value={`${simulation.drawdownAdjustedStake} EUR`} />
-                <Result label="Decision" value={simulation.recommendation} />
-              </div>
-            </Panel>
-
-            <Panel title="Value bets" icon={ArrowUpRight}>
-              <div className="space-y-3">
-                {selectedValueBets.map((horse) => (
-                  <div className="rounded-md border border-white/10 bg-white/[0.03] p-3" key={horse.id}>
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="font-medium text-white">#{horse.number} {horse.horse}</p>
-                      <span className="font-mono text-sm text-emerald-300">+{horse.valueIndex}%</span>
-                    </div>
-                    <p className="mt-1 text-sm text-[#93a39c]">
-                      Cote {horse.odds} - Juste {horse.fairOdds} - Proba {horse.winProbability}% - {horse.confidence}
-                    </p>
-                  </div>
-                ))}
-                {selectedValueBets.length === 0 ? (
-                  <div className="rounded-md border border-white/10 bg-white/[0.03] p-3 text-sm text-[#93a39c]">
-                    Aucun signal value bet ne passe les seuils de confiance pour cette course.
-                  </div>
-                ) : null}
-              </div>
-            </Panel>
-          </section>
-        </div>
-
-        <div className="mx-auto mt-4 grid max-w-7xl gap-4 xl:grid-cols-3">
-          <Panel title="Analyse apres course" icon={Sparkles}>
-            <div className="space-y-3">
-              <div className="rounded-md border border-white/10 bg-white/[0.03] p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-medium text-white">{postRaceAnalysis.verdict}</p>
-                  <span className="font-mono text-sm text-emerald-300">
-                    {postRaceAnalysis.status === "complete" ? `${postRaceAnalysis.metrics.confidenceScore}/99` : "En attente"}
-                  </span>
+        {showRunners ? (
+          <section className="mt-5 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+            <div className="rounded-md border border-[#d9e1de] bg-white p-5 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm uppercase text-[#65746f]">Course active</p>
+                  <h2 className="mt-1 text-2xl font-bold text-[#26312e]">
+                    {selectedRace.programCode} - {titleCase(selectedRace.name)}
+                  </h2>
                 </div>
-                <p className="mt-2 text-sm leading-5 text-[#b6c5bf]">{postRaceAnalysis.summary}</p>
+                <Link className="rounded-sm bg-emerald-700 px-5 py-3 text-sm font-bold uppercase text-white" href={`/races/${encodeURIComponent(selectedRace.id)}`}>
+                  Voir tous les partants
+                </Link>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Result label="Prediction" value={postRaceAnalysis.predictedArrival.join("-") || "-"} />
-                <Result label="Arrivee" value={postRaceAnalysis.actualArrival.join("-") || "-"} />
-                <Result label="Top 3" value={`${postRaceAnalysis.metrics.top3Hits}/3`} />
-                <Result label="Top 5" value={`${postRaceAnalysis.metrics.top5Hits}/5`} />
+              <div className="mt-4 overflow-x-auto">
+                <table className="w-full min-w-[720px] border-collapse text-left">
+                  <thead>
+                    <tr className="bg-[#3f403f] text-xs uppercase text-white">
+                      <th className="px-3 py-3">N</th>
+                      <th className="px-3 py-3">Cheval</th>
+                      <th className="px-3 py-3">Driver</th>
+                      <th className="px-3 py-3">Cote</th>
+                      <th className="px-3 py-3">KZ</th>
+                      <th className="px-3 py-3">Top 3</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {topArrival.map((horse) => (
+                      <tr className="border-b border-[#e0e5e3] text-sm even:bg-[#f5f6f6]" key={horse.id}>
+                        <td className="px-3 py-3 font-mono font-bold">{horse.number}</td>
+                        <td className="px-3 py-3 font-semibold uppercase">{horse.horse}</td>
+                        <td className="px-3 py-3 text-[#65746f]">{horse.jockey}</td>
+                        <td className="px-3 py-3 font-mono">{horse.odds}</td>
+                        <td className="px-3 py-3 font-mono font-bold text-emerald-700">{horse.kzScore}</td>
+                        <td className="px-3 py-3 font-mono">{horse.top3Probability}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-              {postRaceAnalysis.lessons.slice(0, 3).map((lesson) => (
-                <div className="rounded-md border border-white/10 bg-white/[0.03] p-3 text-sm text-[#d7e4de]" key={lesson}>
-                  {lesson}
+            </div>
+
+            <div className="rounded-md border border-[#d9e1de] bg-white p-5 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="grid h-10 w-10 place-items-center rounded-sm bg-emerald-50 text-emerald-700">
+                  <Sparkles size={20} />
                 </div>
-              ))}
-              {postRaceAnalysis.nextModelActions.slice(0, 2).map((action) => (
-                <div className="rounded-md border border-cyan-300/20 bg-cyan-300/10 p-3 text-sm text-cyan-50" key={action}>
-                  {action}
+                <div>
+                  <p className="text-sm uppercase text-[#65746f]">Synthese IA</p>
+                  <h2 className="text-xl font-bold">Lecture rapide</h2>
                 </div>
-              ))}
-            </div>
-          </Panel>
-
-          <Panel title="Scores proprietaires" icon={ChartNoAxesCombined}>
-            <div className="h-64">
-              {mounted ? (
-                <ResponsiveContainer height="100%" minHeight={0} minWidth={0} width="100%">
-                  <BarChart data={scoreData}>
-                    <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
-                    <XAxis dataKey="name" stroke="#93a39c" />
-                    <YAxis stroke="#93a39c" />
-                    <Tooltip contentStyle={{ background: "#0d1a17", border: "1px solid rgba(255,255,255,.12)" }} />
-                    <Bar dataKey="score" radius={[5, 5, 0, 0]}>
-                      {scoreData.map((entry) => (
-                        <Cell fill={entry.value > 10 ? "#38d996" : "#53c7e8"} key={entry.name} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <ChartFallback />
-              )}
-            </div>
-          </Panel>
-
-          <Panel title="Performance IA" icon={Activity}>
-            <div className="h-64">
-              {mounted ? (
-                <ResponsiveContainer height="100%" minHeight={0} minWidth={0} width="100%">
-                  <AreaChart data={roiTrend}>
-                    <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
-                    <XAxis dataKey="day" stroke="#93a39c" />
-                    <YAxis stroke="#93a39c" />
-                    <Tooltip contentStyle={{ background: "#0d1a17", border: "1px solid rgba(255,255,255,.12)" }} />
-                    <Area dataKey="roi" fill="#38d99633" stroke="#38d996" strokeWidth={2} type="monotone" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              ) : (
-                <ChartFallback />
-              )}
-            </div>
-          </Panel>
-
-          <Panel title="Transparence IA" icon={Brain}>
-            <div className="space-y-3">
-              <div className="rounded-md border border-white/10 bg-white/[0.03] p-3">
-                <p className="text-sm font-medium text-white">Calibration prudente</p>
-                <p className="mt-1 text-sm leading-5 text-[#93a39c]">{modelCard.calibration.rationale}</p>
               </div>
-              {selectedHorse.factors.map((factor) => (
-                <div className="flex gap-3 rounded-md border border-white/10 bg-white/[0.03] p-3" key={factor}>
-                  <Sparkles className="mt-0.5 shrink-0 text-emerald-300" size={17} />
-                  <p className="text-sm text-[#d7e4de]">{factor}</p>
-                </div>
-              ))}
-              <div className="rounded-md border border-amber-300/20 bg-amber-300/10 p-3 text-sm text-amber-100">
-                <AlertTriangle className="mb-2 text-amber-200" size={18} />
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <Metric label="Consensus" value={`${selectedRace.modelConsensus}%`} />
+                <Metric label="Qualite course" value={`${selectedRace.raceQualityScore}`} />
+                <Metric label="Risque" value={selectedRace.riskLevel} />
+                <Metric label="Discipline" value={selectedRace.specialty} />
+              </div>
+              <div className="mt-4 rounded-md border border-amber-500/30 bg-amber-50 p-3 text-sm text-amber-950">
+                <ShieldCheck className="mb-2 text-amber-700" size={18} />
                 Outil d&apos;aide a la decision. Aucun pronostic ne garantit un gain.
               </div>
             </div>
-          </Panel>
-        </div>
-
-        <div className="mx-auto mt-4 grid max-w-7xl gap-4 xl:grid-cols-[0.8fr_1.2fr]">
-          <Panel title="Live intelligence" icon={Bell}>
-            <div className="h-56">
-              {mounted ? (
-                <ResponsiveContainer height="100%" minHeight={0} minWidth={0} width="100%">
-                  <AreaChart data={marketTrend}>
-                    <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
-                    <XAxis dataKey="time" stroke="#93a39c" />
-                    <YAxis stroke="#93a39c" />
-                    <Tooltip contentStyle={{ background: "#0d1a17", border: "1px solid rgba(255,255,255,.12)" }} />
-                    <Area dataKey="value" fill="#53c7e833" stroke="#53c7e8" strokeWidth={2} type="monotone" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              ) : (
-                <ChartFallback />
-              )}
-            </div>
-          </Panel>
-
-          <Panel title="API et MCP" icon={Database}>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {[
-                "GET /api/predictions",
-                "GET /api/races",
-                "GET /api/race-analysis",
-                "GET /api/bet-recommendations",
-                "GET /api/post-race-analysis",
-                "GET /api/value-bets",
-                "POST /api/simulate",
-                "POST /api/simulate-bet",
-                "GET /api/model-card",
-              ].map((endpoint) => (
-                <div className="rounded-md border border-white/10 bg-[#081310] p-4" key={endpoint}>
-                  <p className="font-mono text-sm text-emerald-200">{endpoint}</p>
-                  <p className="mt-2 text-sm text-[#93a39c]">Contrat MVP pret pour bots, partenaires et futurs quotas premium.</p>
-                </div>
-              ))}
-            </div>
-          </Panel>
-        </div>
+          </section>
+        ) : null}
       </section>
     </main>
   );
 }
 
-function selectTimelineRace(races: RaceAnalysis[], dayFilter: RaceAnalysis["relativeDay"] | "all", currentMinute: number) {
-  if (races.length === 0) return undefined;
+function groupRacesByMeeting(races: RaceAnalysis[]): RaceMeeting[] {
+  const meetings = new Map<string, RaceMeeting>();
 
+  for (const race of races) {
+    const key = `${race.raceDate}-R${race.reunionNumber}`;
+    const meeting = meetings.get(key);
+
+    if (meeting) {
+      meeting.races.push(race);
+    } else {
+      meetings.set(key, {
+        key,
+        reunionNumber: race.reunionNumber,
+        racecourse: race.racecourse,
+        startTime: race.startTime,
+        specialties: [],
+        highlights: [],
+        races: [race],
+      });
+    }
+  }
+
+  return Array.from(meetings.values())
+    .map((meeting) => ({
+      ...meeting,
+      highlights: unique(meeting.races.flatMap((race) => raceHighlights(race.betTypes).map((highlight) => highlight.label))),
+      specialties: unique(meeting.races.map((race) => race.specialty)),
+      races: meeting.races.sort((a, b) => a.courseNumber - b.courseNumber),
+    }))
+    .sort((a, b) => a.reunionNumber - b.reunionNumber);
+}
+
+function selectTimelineRace(races: RaceAnalysis[], currentMinute: number) {
   return (
     races
-      .filter((race) => race.relativeDay !== "today" || minutesFromStartTime(race.startTime) >= currentMinute)
-      .sort((a, b) => sortRacesByTimeline(a, b, dayFilter, currentMinute))[0] ?? races[0]
+      .filter((race) => minutesFromStartTime(race.startTime) >= currentMinute)
+      .sort((a, b) => minutesFromStartTime(a.startTime) - minutesFromStartTime(b.startTime))[0] ??
+    races.sort((a, b) => minutesFromStartTime(a.startTime) - minutesFromStartTime(b.startTime))[0]
   );
 }
 
-function sortRacesByTimeline(
-  a: RaceAnalysis,
-  b: RaceAnalysis,
-  dayFilter: RaceAnalysis["relativeDay"] | "all",
-  currentMinute: number,
-) {
-  if (dayFilter === "all") {
-    return (
-      a.raceDate.localeCompare(b.raceDate) ||
-      minutesFromStartTime(a.startTime) - minutesFromStartTime(b.startTime) ||
-      a.reunionNumber - b.reunionNumber ||
-      a.courseNumber - b.courseNumber
-    );
-  }
+function raceStatus(race: RaceAnalysis, currentMinute: number) {
+  if (race.relativeDay === "yesterday") return race.horses.some((horse) => horse.finishPosition) ? "Arrivee disponible" : `Depart a ${race.startTime}`;
+  if (race.relativeDay === "tomorrow") return `Depart a ${race.startTime}`;
 
-  if (dayFilter === "today") {
-    const aMinute = minutesFromStartTime(a.startTime);
-    const bMinute = minutesFromStartTime(b.startTime);
-    const aBucket = aMinute >= currentMinute ? 0 : 1;
-    const bBucket = bMinute >= currentMinute ? 0 : 1;
-
-    return aBucket - bBucket || aMinute - bMinute || a.reunionNumber - b.reunionNumber || a.courseNumber - b.courseNumber;
-  }
-
-  return (
-    minutesFromStartTime(a.startTime) - minutesFromStartTime(b.startTime) ||
-    a.reunionNumber - b.reunionNumber ||
-    a.courseNumber - b.courseNumber
-  );
+  const startMinute = minutesFromStartTime(race.startTime);
+  if (startMinute < currentMinute) return race.horses.some((horse) => horse.finishPosition) ? "Arrivee disponible" : `Depart a ${race.startTime}`;
+  if (startMinute - currentMinute <= 30) return `Depart imminent ${race.startTime}`;
+  return `Depart a ${race.startTime}`;
 }
 
 function minutesFromStartTime(startTime: string) {
   const [hours = "0", minutes = "0"] = startTime.split(":");
   return Number(hours) * 60 + Number(minutes);
-}
-
-function raceTimingLabel(race: RaceAnalysis, currentMinute: number) {
-  if (race.relativeDay === "tomorrow") return "A venir";
-  if (race.relativeDay === "yesterday") return "Resultat";
-
-  const startMinute = minutesFromStartTime(race.startTime);
-  if (startMinute < currentMinute) return "Terminee";
-  if (startMinute - currentMinute <= 30) return "Actuelle";
-  return "Prochaine";
 }
 
 function useCurrentMinute() {
@@ -674,185 +357,67 @@ function useCurrentMinute() {
   );
 }
 
-function groupRacesByMeeting(races: RaceAnalysis[]): RaceMeeting[] {
-  const meetings = new Map<string, RaceMeeting>();
-
-  for (const race of races) {
-    const key = `${race.raceDate}-R${race.reunionNumber}-${race.racecourse}`;
-    const meeting = meetings.get(key);
-
-    if (meeting) {
-      meeting.races.push(race);
-    } else {
-      meetings.set(key, {
-        key,
-        reunionNumber: race.reunionNumber,
-        racecourse: race.racecourse,
-        startTime: race.startTime,
-        sourceCountry: race.sourceCountry,
-        specialties: [],
-        highlights: [],
-        races: [race],
-      });
-    }
-  }
-
-  return Array.from(meetings.values())
-    .map((meeting) => ({
-      ...meeting,
-      highlights: unique(meeting.races.flatMap(meetingHighlights)),
-      specialties: unique(meeting.races.map((race) => race.specialty)),
-    }))
-    .sort(
-      (a, b) =>
-        minutesFromStartTime(a.races[0]?.startTime ?? "00:00") -
-          minutesFromStartTime(b.races[0]?.startTime ?? "00:00") ||
-        a.reunionNumber - b.reunionNumber,
-    );
+function previousDay(day: RaceAnalysis["relativeDay"]) {
+  if (day === "tomorrow") return "today";
+  if (day === "today") return "yesterday";
+  return "yesterday";
 }
 
-function unique(values: string[]) {
-  return Array.from(new Set(values.filter(Boolean)));
-}
-
-function raceHighlights(race: RaceAnalysis) {
-  const types = race.betTypes.map((bet) => bet.type);
-  const highlights: string[] = [];
-
-  if (types.includes("QUINTE_PLUS")) highlights.push("Quinte+");
-  if (race.betTypes.some((bet) => bet.type === "QUARTE_PLUS" && bet.audience === "REGIONAL")) highlights.push("Quarte regional");
-  if (types.includes("PICK5")) highlights.push("Pick5");
-
-  return highlights;
-}
-
-function meetingHighlights(race: RaceAnalysis) {
-  return raceHighlights(race).map((highlight) => `${highlight} ${race.programCode}`);
-}
-
-function HorseRow({
-  horse,
-  isSelected,
-  onSelect,
-}: {
-  horse: HorsePrediction;
-  isSelected: boolean;
-  onSelect: () => void;
-}) {
-  return (
-    <tr className={isSelected ? "bg-emerald-300/[0.08]" : "transition hover:bg-white/[0.03]"} onClick={onSelect}>
-      <td className="border-b border-white/10 py-4 pr-4">
-        <div className="flex items-center gap-3">
-          <span className="grid h-9 w-9 place-items-center rounded-md bg-white/10 font-mono text-sm text-white">
-            {horse.number}
-          </span>
-          <div>
-            <p className="font-medium text-white">{horse.horse}</p>
-            <p className="text-xs text-[#93a39c]">{horse.jockey} - {horse.trainer}</p>
-          </div>
-        </div>
-      </td>
-      <td className="border-b border-white/10 py-4 pr-4 font-mono text-emerald-300">{horse.kzScore}</td>
-      <td className="border-b border-white/10 py-4 pr-4">{horse.winProbability}%</td>
-      <td className="border-b border-white/10 py-4 pr-4">{horse.top3Probability}%</td>
-      <td className="border-b border-white/10 py-4 pr-4 font-mono">{horse.odds}</td>
-      <td className="border-b border-white/10 py-4 pr-4 font-mono">{horse.fairOdds}</td>
-      <td className={`border-b border-white/10 py-4 pr-4 font-mono ${horse.valueIndex > 0 ? "text-emerald-300" : "text-[#ff8066]"}`}>
-        {horse.valueIndex > 0 ? "+" : ""}{horse.valueIndex}%
-      </td>
-      <td className="border-b border-white/10 py-4 pr-4">
-        <span className="rounded-md border border-white/10 px-2 py-1 text-xs text-[#d7e4de]">{horse.confidence}</span>
-      </td>
-    </tr>
-  );
-}
-
-function Metric({ icon: Icon, label, value }: { icon: typeof Target; label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
-      <Icon className="text-emerald-300" size={18} />
-      <p className="mt-3 text-xs text-[#93a39c]">{label}</p>
-      <p className="mt-1 font-mono text-lg font-semibold text-white">{value}</p>
-    </div>
-  );
-}
-
-function Panel({ children, icon: Icon, title }: { children: ReactNode; icon: typeof Target; title: string }) {
-  return (
-    <section className="rounded-lg border border-white/10 bg-[#0d1a17]/86 p-4 shadow-2xl shadow-black/20 sm:p-5">
-      <div className="mb-4 flex items-center gap-3">
-        <div className="grid h-9 w-9 place-items-center rounded-md bg-white/10 text-emerald-300">
-          <Icon size={18} />
-        </div>
-        <h2 className="font-semibold text-white">{title}</h2>
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function Pill({ icon: Icon, text }: { icon: typeof Target; text: string }) {
-  return (
-    <span className="inline-flex items-center gap-2 rounded-md border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-[#d7e4de]">
-      <Icon size={16} />
-      {text}
-    </span>
-  );
-}
-
-function NumberInput({
-  label,
-  min,
-  setValue,
-  suffix,
-  value,
-}: {
-  label: string;
-  min: number;
-  setValue: (value: number) => void;
-  suffix: string;
-  value: number;
-}) {
-  return (
-    <label className="text-sm text-[#93a39c]">
-      {label}
-      <div className="mt-2 flex h-11 items-center rounded-md border border-white/10 bg-[#081310] px-3">
-        <input
-          className="min-w-0 flex-1 bg-transparent text-white outline-none"
-          min={min}
-          onChange={(event) => setValue(Number(event.target.value))}
-          type="number"
-          value={value}
-        />
-        <span className="ml-2 text-xs text-[#93a39c]">{suffix}</span>
-      </div>
-    </label>
-  );
-}
-
-function Result({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-md border border-white/10 bg-white/[0.03] p-3">
-      <p className="text-xs text-[#93a39c]">{label}</p>
-      <p className="mt-1 text-sm font-semibold text-white">{value}</p>
-    </div>
-  );
-}
-
-function ChartFallback() {
-  return <div className="h-full w-full rounded-md border border-white/10 bg-white/[0.03]" />;
-}
-
-function useClientReady() {
-  return useSyncExternalStore(
-    () => () => undefined,
-    () => true,
-    () => false,
-  );
+function nextDay(day: RaceAnalysis["relativeDay"]) {
+  if (day === "yesterday") return "today";
+  if (day === "today") return "tomorrow";
+  return "tomorrow";
 }
 
 function formatRelativeDay(day: RaceAnalysis["relativeDay"]) {
   if (day === "yesterday") return "Hier";
   if (day === "tomorrow") return "Demain";
   return "Aujourd'hui";
+}
+
+function formatShortDate(date: string) {
+  const [year, month, day] = date.split("-");
+  return `${day}-${month}-${year}`;
+}
+
+function titleCase(value: string) {
+  return value
+    .toLowerCase()
+    .split(/(\s|-|')/)
+    .map((part) => (part.length > 1 ? part.charAt(0).toUpperCase() + part.slice(1) : part))
+    .join("");
+}
+
+function raceIcon(race: RaceAnalysis) {
+  if (race.discipline === "Trot") return "♞";
+  if (race.discipline === "Obstacle") return "♘";
+  return "♞";
+}
+
+function meetingIcon(specialties: string[]) {
+  if (specialties.some((specialty) => specialty.includes("Attele") || specialty.includes("Monte"))) return "♞";
+  return "♘";
+}
+
+function raceHighlights(offers: BetOffer[]) {
+  const highlights: Array<{ label: string; className: string }> = [];
+  if (offers.some((offer) => offer.type === "QUINTE_PLUS")) highlights.push({ label: "Quinte+", className: BET_BADGE_COLORS.QUINTE_PLUS });
+  if (offers.some((offer) => offer.type === "QUARTE_PLUS" && offer.audience === "REGIONAL")) {
+    highlights.push({ label: "Quarte regional", className: BET_BADGE_COLORS.QUARTE_PLUS });
+  }
+  if (offers.some((offer) => offer.type === "PICK5")) highlights.push({ label: "Pick 5", className: BET_BADGE_COLORS.PICK5 });
+  return highlights;
+}
+
+function unique(values: string[]) {
+  return Array.from(new Set(values.filter(Boolean)));
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-[#d9e1de] bg-[#fbfcfc] p-3">
+      <p className="text-xs uppercase text-[#65746f]">{label}</p>
+      <p className="mt-1 text-sm font-bold text-[#26312e]">{value}</p>
+    </div>
+  );
 }
