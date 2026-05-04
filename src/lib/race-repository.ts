@@ -55,7 +55,10 @@ type EntryRow = {
 
 export async function getRaces(filters?: { date?: string | null; day?: string | null }) {
   const filterDate = filters?.date ?? (filters?.day ? dateForRelativeDay(filters.day) : null);
-  const rollingDates = [dateForRelativeDay("yesterday"), dateForRelativeDay("today"), dateForRelativeDay("tomorrow")].filter(Boolean);
+  const yesterdayDate = dateForRelativeDay("yesterday");
+  const todayDate = dateForRelativeDay("today");
+  const tomorrowDate = dateForRelativeDay("tomorrow");
+  const rollingDates = [yesterdayDate, todayDate, tomorrowDate].filter((date): date is string => Boolean(date));
 
   if (!hasDatabase()) {
     return raceCards.filter((race) => {
@@ -98,7 +101,7 @@ export async function getRaces(filters?: { date?: string | null; day?: string | 
         (${filterDate ?? null}::text is not null and races.race_date = ${filterDate ?? null}::date)
         or (
           ${filterDate ?? null}::text is null
-          and races.race_date = any(${rollingDates}::date[])
+          and races.race_date in (${yesterdayDate}::date, ${todayDate}::date, ${tomorrowDate}::date)
         )
       order by races.race_date, races.start_time, races.reunion_number nulls last, races.course_number nulls last
     ` as RaceRow[];
