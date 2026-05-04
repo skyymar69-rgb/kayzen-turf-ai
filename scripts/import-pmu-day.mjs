@@ -41,19 +41,20 @@ function parseArgs() {
 }
 
 function defaultDates() {
-  const now = new Date();
-  return [-1, 0, 1].map((offset) => {
-    const date = new Date(now);
-    date.setDate(date.getDate() + offset);
-    return formatPmuDate(date);
-  });
+  return [-1, 0, 1].map(formatParisPmuDateOffset);
 }
 
-function formatPmuDate(date) {
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const year = String(date.getFullYear());
-  return `${day}${month}${year}`;
+function formatParisPmuDateOffset(offset) {
+  const parisDate = new Intl.DateTimeFormat("fr-CA", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "Europe/Paris",
+    year: "numeric",
+  }).format(new Date());
+  const [year, month, day] = parisDate.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day + offset, 12));
+
+  return `${String(date.getUTCDate()).padStart(2, "0")}${String(date.getUTCMonth() + 1).padStart(2, "0")}${date.getUTCFullYear()}`;
 }
 
 function isoDateFromPmu(pmuDate) {
@@ -61,15 +62,9 @@ function isoDateFromPmu(pmuDate) {
 }
 
 function relativeDayFromPmu(pmuDate) {
-  const today = formatPmuDate(new Date());
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
-  if (pmuDate === today) return "today";
-  if (pmuDate === formatPmuDate(yesterday)) return "yesterday";
-  if (pmuDate === formatPmuDate(tomorrow)) return "tomorrow";
+  if (pmuDate === formatParisPmuDateOffset(0)) return "today";
+  if (pmuDate === formatParisPmuDateOffset(-1)) return "yesterday";
+  if (pmuDate === formatParisPmuDateOffset(1)) return "tomorrow";
   return null;
 }
 
