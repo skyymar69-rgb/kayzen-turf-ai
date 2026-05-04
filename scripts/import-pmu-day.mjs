@@ -95,6 +95,19 @@ function delay(ms) {
 function disciplineFromPmu(value) {
   if (String(value).includes("TROT")) return "Trot";
   if (String(value).includes("OBSTACLE")) return "Obstacle";
+  if (String(value).includes("MONTE") || String(value).includes("ATTELE")) return "Trot";
+  if (String(value).includes("HAIE") || String(value).includes("STEEPLE") || String(value).includes("CROSS")) return "Obstacle";
+  return "Plat";
+}
+
+function specialtyFromPmu(course) {
+  const value = String(course?.specialite ?? course?.discipline ?? "");
+  if (value.includes("MONTE")) return "Monte";
+  if (value.includes("ATTELE")) return "Attele";
+  if (value.includes("HAIE")) return "Haies";
+  if (value.includes("STEEPLE")) return "Steeple";
+  if (value.includes("CROSS")) return "Cross";
+  if (value.includes("OBSTACLE")) return "Obstacle";
   return "Plat";
 }
 
@@ -327,14 +340,14 @@ async function importDate(sql, pmuDate, maxRaces) {
       await sql`
         insert into races (
           id, race_date, relative_day, reunion_number, course_number, source_country,
-          name, racecourse_id, start_time, discipline,
+          name, racecourse_id, start_time, discipline, specialty,
           distance, going, weather, market_volatility, model_consensus, race_quality_score,
           betting_tier, risk_level, bet_types, data_cutoff_at
         )
         values (
           ${raceId}, ${isoDate}, ${relativeDay}, ${Number(reunion.numOfficiel)}, ${Number(course.numOrdre)},
           ${reunion?.pays?.code ?? null}, ${course.libelle ?? `Course ${course.numOrdre}`},
-          ${racecourseId}, ${startTime}, ${disciplineFromPmu(course.discipline)},
+          ${racecourseId}, ${startTime}, ${disciplineFromPmu(course.specialite ?? course.discipline)}, ${specialtyFromPmu(course)},
           ${String(course.distance ?? course.parcours ?? "")}, ${course?.penetrometre?.intitule ?? course.typePiste ?? null},
           ${weather}, ${volatility}, ${68}, ${qualityScore}, ${bettingTier(qualityScore)},
           ${riskFromVolatility(volatility)}, ${JSON.stringify(betTypes)}, now()
@@ -349,6 +362,7 @@ async function importDate(sql, pmuDate, maxRaces) {
           racecourse_id = excluded.racecourse_id,
           start_time = excluded.start_time,
           discipline = excluded.discipline,
+          specialty = excluded.specialty,
           distance = excluded.distance,
           going = excluded.going,
           weather = excluded.weather,

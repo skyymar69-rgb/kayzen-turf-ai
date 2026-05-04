@@ -13,6 +13,7 @@ export const raceAnalysis: RaceAnalysis = {
   racecourse: "ParisLongchamp",
   startTime: "15:15",
   discipline: "Plat",
+  specialty: "Plat",
   distance: "2 100 m",
   going: "Bon souple",
   weather: "Nuageux, vent faible",

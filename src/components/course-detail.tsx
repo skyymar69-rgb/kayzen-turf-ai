@@ -46,11 +46,11 @@ export function CourseDetail({ race }: CourseDetailProps) {
             <span>{race.raceDate}</span>
             <span>{race.startTime}</span>
             <span>{race.racecourse}</span>
-            <span>{race.discipline}</span>
+            <span>{race.specialty}</span>
           </div>
           <h1 className="mt-4 text-3xl font-semibold text-white sm:text-5xl">{race.name}</h1>
           <p className="mt-3 text-sm leading-6 text-[#b6c5bf]">
-            Reunion {race.reunionNumber} - Course {race.courseNumber} - {race.distance} - {race.going ?? "Terrain non renseigne"} - {race.weather}
+            Reunion {race.reunionNumber} - Course {race.courseNumber} - {race.specialty} - {race.distance} - {race.going ?? "Terrain non renseigne"} - {race.weather}
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <Pill icon={Target} text={`Tier ${race.bettingTier}`} />

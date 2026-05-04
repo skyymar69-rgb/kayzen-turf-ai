@@ -13,6 +13,7 @@ type RaceRow = {
   racecourse: string;
   start_time: string;
   discipline: RaceAnalysis["discipline"];
+  specialty: string | null;
   distance: string;
   going: string;
   weather: string;
@@ -45,10 +46,12 @@ type EntryRow = {
 };
 
 export async function getRaces(filters?: { date?: string | null; day?: string | null }) {
+  const filterDate = filters?.date ?? (filters?.day ? dateForRelativeDay(filters.day) : null);
+
   if (!hasDatabase()) {
     return raceCards.filter((race) => {
-      if (filters?.date && race.raceDate !== filters.date) return false;
-      if (filters?.day && race.relativeDay !== filters.day) return false;
+      if (filterDate && race.raceDate !== filterDate) return false;
+      if (filters?.day && relativeDayFromDate(race.raceDate) !== filters.day) return false;
       return true;
     });
   }
@@ -69,6 +72,7 @@ export async function getRaces(filters?: { date?: string | null; day?: string | 
         racecourses.name as racecourse,
         races.start_time,
         races.discipline,
+        races.specialty,
         races.distance,
         races.going,
         races.weather,
@@ -80,8 +84,7 @@ export async function getRaces(filters?: { date?: string | null; day?: string | 
         races.bet_types
       from races
       left join racecourses on racecourses.id = races.racecourse_id
-      where (${filters?.date ?? null}::text is null or races.race_date = ${filters?.date ?? null}::date)
-        and (${filters?.day ?? null}::text is null or races.relative_day = ${filters?.day ?? null})
+      where (${filterDate ?? null}::text is null or races.race_date = ${filterDate ?? null}::date)
       order by races.race_date, races.start_time, races.reunion_number nulls last, races.course_number nulls last
     ` as RaceRow[];
   } catch {
@@ -118,6 +121,7 @@ export async function getRaceById(id?: string | null, baseRow?: RaceRow, options
         racecourses.name as racecourse,
         races.start_time,
         races.discipline,
+        races.specialty,
         races.distance,
         races.going,
         races.weather,
@@ -188,7 +192,7 @@ function mapRace(row: RaceRow, entries: EntryRow[]): RaceAnalysis {
     id: row.id,
     name: row.name,
     raceDate: row.race_date,
-    relativeDay: row.relative_day,
+    relativeDay: relativeDayFromDate(row.race_date),
     reunionNumber: row.reunion_number ?? programNumber(row.id, "R"),
     courseNumber: row.course_number ?? programNumber(row.id, "C"),
     programCode: `R${row.reunion_number ?? programNumber(row.id, "R")}C${row.course_number ?? programNumber(row.id, "C")}`,
@@ -196,6 +200,7 @@ function mapRace(row: RaceRow, entries: EntryRow[]): RaceAnalysis {
     racecourse: row.racecourse,
     startTime: row.start_time,
     discipline: row.discipline,
+    specialty: row.specialty ?? row.discipline,
     distance: row.distance,
     going: row.going,
     weather: row.weather,
@@ -207,6 +212,30 @@ function mapRace(row: RaceRow, entries: EntryRow[]): RaceAnalysis {
     betTypes: parseJsonArray<BetOffer>(row.bet_types),
     horses: entries.map(mapHorse),
   };
+}
+
+function dateForRelativeDay(day: string) {
+  if (day !== "yesterday" && day !== "today" && day !== "tomorrow") return null;
+
+  const date = new Date();
+  if (day === "yesterday") date.setDate(date.getDate() - 1);
+  if (day === "tomorrow") date.setDate(date.getDate() + 1);
+  return parisDate(date);
+}
+
+function relativeDayFromDate(date: string): RaceAnalysis["relativeDay"] {
+  if (date === dateForRelativeDay("yesterday")) return "yesterday";
+  if (date === dateForRelativeDay("tomorrow")) return "tomorrow";
+  return "today";
+}
+
+function parisDate(date: Date) {
+  return new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "Europe/Paris",
+    year: "numeric",
+  }).format(date);
 }
 
 function programNumber(id: string, marker: "R" | "C") {

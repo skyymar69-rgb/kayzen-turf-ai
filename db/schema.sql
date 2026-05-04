@@ -19,6 +19,7 @@ create table if not exists races (
   racecourse_id uuid references racecourses(id),
   start_time text not null,
   discipline text not null check (discipline in ('Plat', 'Trot', 'Obstacle')),
+  specialty text,
   distance text not null,
   going text,
   weather text,
@@ -37,6 +38,7 @@ alter table races add column if not exists reunion_number integer;
 alter table races add column if not exists course_number integer;
 alter table races add column if not exists source_country text;
 alter table races add column if not exists bet_types jsonb not null default '[]'::jsonb;
+alter table races add column if not exists specialty text;
 
 create table if not exists horses (
   id text primary key,

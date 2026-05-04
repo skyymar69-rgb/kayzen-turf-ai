@@ -78,6 +78,7 @@ export type RaceAnalysis = {
   racecourse: string;
   startTime: string;
   discipline: "Plat" | "Trot" | "Obstacle";
+  specialty: string;
   distance: string;
   going: string;
   weather: string;

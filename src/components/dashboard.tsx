@@ -46,7 +46,10 @@ type RaceMeeting = {
   key: string;
   reunionNumber: number;
   racecourse: string;
+  startTime: string;
   sourceCountry: string;
+  specialties: string[];
+  highlights: string[];
   races: RaceAnalysis[];
 };
 
@@ -227,13 +230,13 @@ export function Dashboard({ races }: DashboardProps) {
           </label>
         </div>
 
-        <div className="mx-auto mb-4 flex max-w-7xl gap-2 overflow-x-auto kz-scroll">
+        <div className="mx-auto mb-4 grid max-w-7xl gap-3 md:grid-cols-2 xl:grid-cols-4">
           {raceMeetings.map((meeting) => {
             const active = meeting.races.some((item) => item.id === race.id);
 
             return (
               <button
-                className={`shrink-0 rounded-md border px-3 py-2 text-left transition ${
+                className={`rounded-md border p-4 text-left transition ${
                   active
                     ? "border-emerald-300/40 bg-emerald-300/[0.12] text-white"
                     : "border-white/10 bg-white/[0.03] text-[#b6c5bf] hover:bg-white/[0.06]"
@@ -246,12 +249,22 @@ export function Dashboard({ races }: DashboardProps) {
                 }}
                 type="button"
               >
-                <span className="block font-mono text-sm font-semibold text-emerald-300">
-                  R{meeting.reunionNumber}
+                <span className="flex items-start justify-between gap-3">
+                  <span>
+                    <span className="block font-mono text-lg font-semibold text-emerald-300">R{meeting.reunionNumber}</span>
+                    <span className="mt-1 block text-base font-semibold text-white">{meeting.racecourse}</span>
+                  </span>
+                  <span className="font-mono text-sm text-[#d7e4de]">{meeting.startTime}</span>
                 </span>
-                <span className="mt-1 block max-w-36 truncate text-xs">{meeting.racecourse}</span>
-                <span className="mt-1 block text-xs text-[#93a39c]">
-                  C1-C{meeting.races.at(-1)?.courseNumber ?? meeting.races.length}
+                <span className="mt-3 block text-xs text-[#93a39c]">
+                  {meeting.races.length} courses - {meeting.specialties.join(" - ")}
+                </span>
+                <span className="mt-3 flex flex-wrap gap-1.5">
+                  {meeting.highlights.map((highlight) => (
+                    <span className="rounded-md bg-emerald-300 px-2 py-1 text-xs font-semibold text-[#06110e]" key={highlight}>
+                      {highlight}
+                    </span>
+                  ))}
                 </span>
               </button>
             );
@@ -274,9 +287,10 @@ export function Dashboard({ races }: DashboardProps) {
                       R{meeting.reunionNumber}
                     </span>
                     <p className="text-sm font-medium text-white">{meeting.racecourse}</p>
+                    <span className="text-xs text-[#93a39c]">{meeting.startTime}</span>
                     <span className="text-xs text-[#93a39c]">{meeting.sourceCountry}</span>
                   </div>
-                  <p className="text-xs text-[#93a39c]">{meeting.races.length} courses</p>
+                  <p className="text-xs text-[#93a39c]">{meeting.races.length} courses - {meeting.specialties.join(" - ")}</p>
                 </div>
                 <div className="flex gap-2 overflow-x-auto kz-scroll">
                   {meeting.races.map((item) => (
@@ -295,7 +309,14 @@ export function Dashboard({ races }: DashboardProps) {
                       </span>
                       <span className="mt-2 block truncate font-medium text-white">{item.name}</span>
                       <span className="mt-1 block text-xs text-[#93a39c]">
-                        {item.discipline} - {item.distance} - {item.bettingTier}
+                        {item.specialty} - {item.distance} - {item.bettingTier}
+                      </span>
+                      <span className="mt-2 flex flex-wrap gap-1.5">
+                        {raceHighlights(item).map((highlight) => (
+                          <span className="rounded-md border border-emerald-300/30 px-2 py-1 text-xs text-emerald-200" key={highlight}>
+                            {highlight}
+                          </span>
+                        ))}
                       </span>
                     </Link>
                   ))}
@@ -667,18 +688,42 @@ function groupRacesByMeeting(races: RaceAnalysis[]): RaceMeeting[] {
         key,
         reunionNumber: race.reunionNumber,
         racecourse: race.racecourse,
+        startTime: race.startTime,
         sourceCountry: race.sourceCountry,
+        specialties: [],
+        highlights: [],
         races: [race],
       });
     }
   }
 
-  return Array.from(meetings.values()).sort(
-    (a, b) =>
-      minutesFromStartTime(a.races[0]?.startTime ?? "00:00") -
-        minutesFromStartTime(b.races[0]?.startTime ?? "00:00") ||
-      a.reunionNumber - b.reunionNumber,
-  );
+  return Array.from(meetings.values())
+    .map((meeting) => ({
+      ...meeting,
+      highlights: unique(meeting.races.flatMap(raceHighlights)),
+      specialties: unique(meeting.races.map((race) => race.specialty)),
+    }))
+    .sort(
+      (a, b) =>
+        minutesFromStartTime(a.races[0]?.startTime ?? "00:00") -
+          minutesFromStartTime(b.races[0]?.startTime ?? "00:00") ||
+        a.reunionNumber - b.reunionNumber,
+    );
+}
+
+function unique(values: string[]) {
+  return Array.from(new Set(values.filter(Boolean)));
+}
+
+function raceHighlights(race: RaceAnalysis) {
+  const types = race.betTypes.map((bet) => bet.type);
+  const highlights: string[] = [];
+
+  if (types.includes("QUINTE_PLUS")) highlights.push("Quinte+");
+  if (race.betTypes.some((bet) => bet.type === "QUARTE_PLUS" && bet.audience === "REGIONAL")) highlights.push("Quarte regional");
+  if (types.includes("PICK5")) highlights.push("Pick5");
+
+  return highlights;
 }
 
 function HorseRow({
