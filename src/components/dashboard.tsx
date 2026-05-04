@@ -92,6 +92,34 @@ export function Dashboard({ races }: DashboardProps) {
   return (
     <main className="min-h-screen bg-[#f3f5f4] px-3 py-16 text-[#26312e] sm:px-5 sm:py-20 lg:px-8" id="contenu-principal">
       <section className="mx-auto max-w-[1480px]">
+        <section className="mb-4 grid gap-4 rounded-md border border-emerald-900/15 bg-white p-5 shadow-sm lg:grid-cols-[1.15fr_0.85fr] lg:p-7" aria-label="Présentation de Kayzen Turf AI">
+          <div>
+            <p className="text-sm font-bold uppercase text-emerald-700">Plateforme SaaS d’aide à la décision turf</p>
+            <h1 className="mt-3 max-w-4xl text-3xl font-bold leading-tight text-[#26312e] sm:text-5xl">
+              L’IA qui vous montre quoi jouer dans les courses PMU
+            </h1>
+            <p className="mt-4 max-w-3xl text-base leading-7 text-[#52615d] sm:text-lg">
+              Analysez, comprenez et optimisez vos paris turf en quelques secondes avec des probabilités, des signaux value bet et des tickets adaptés à votre niveau de risque.
+            </p>
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+              <a className="kz-primary-action inline-flex min-h-12 items-center justify-center rounded-sm px-5 text-sm font-bold uppercase" href="#programme-title">
+                Voir les courses du jour
+              </a>
+              <Link className="inline-flex min-h-12 items-center justify-center rounded-sm border border-emerald-700 bg-white px-5 text-sm font-bold uppercase text-emerald-800" href="/pronostics">
+                Voir les opportunités du jour
+              </Link>
+            </div>
+            <p className="mt-4 text-xs leading-5 text-[#65746f]">
+              Kayzen Turf AI est un outil d’aide à la décision. Aucun résultat ni gain n’est garanti.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+            <DecisionProof label="ROI estimé" value={`${dayInsights.estimatedRoi > 0 ? "+" : ""}${dayInsights.estimatedRoi}%`} />
+            <DecisionProof label="Courses analysées" value={`${dayRaces.length}`} />
+            <DecisionProof label="Tickets optimisés" value={`${dayInsights.ticketModes}`} />
+          </div>
+        </section>
+
         <div className="flex overflow-hidden rounded-t-sm shadow-sm sm:inline-flex">
           <div className="kz-brand-strong grid h-14 w-14 shrink-0 place-items-center sm:h-16 sm:w-16">
             <Flag size={26} />
@@ -114,7 +142,7 @@ export function Dashboard({ races }: DashboardProps) {
             label="ROI estimé du jour"
             tone="green"
             value={`${dayInsights.estimatedRoi > 0 ? "+" : ""}${dayInsights.estimatedRoi}%`}
-            detail={`${dayInsights.valueRaces} courses avec edge positif détecté`}
+            detail={`${dayInsights.valueRaces} courses avec avantage positif détecté`}
           />
           <InsightCard
             icon={<BellRing size={20} />}
@@ -128,15 +156,46 @@ export function Dashboard({ races }: DashboardProps) {
             label="Lecture marché"
             tone="dark"
             value={dayInsights.marketMood}
-            detail={`${dayInsights.avoidRaces} courses a éviter / ${dayInsights.focusRaces} focus`}
+            detail={`${dayInsights.avoidRaces} courses à éviter / ${dayInsights.focusRaces} focus`}
           />
+        </section>
+
+        <section aria-labelledby="top-courses-title" className="mb-3 rounded-md border border-[#d9e1de] bg-white p-4 shadow-sm">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-sm font-bold uppercase text-emerald-700">Décision rapide</p>
+              <h2 className="mt-1 text-2xl font-bold text-[#26312e]" id="top-courses-title">Top 3 courses à jouer aujourd’hui</h2>
+            </div>
+            <p className="max-w-2xl text-sm leading-6 text-[#65746f]">
+              Classement construit avec consensus IA, qualité de course, value index et volatilité du marché.
+            </p>
+          </div>
+          <div className="mt-4 grid gap-3 lg:grid-cols-3">
+            {dayInsights.topRaces.map((race) => (
+              <Link className="rounded-md border border-[#d9e1de] bg-[#fbfcfc] p-4 transition hover:border-emerald-700 hover:bg-emerald-50" href={`/races/${encodeURIComponent(race.id)}`} key={race.id}>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-mono text-sm font-bold text-emerald-700">{race.programCode} · {race.startTime}</p>
+                    <h3 className="mt-1 text-lg font-bold text-[#26312e]">{titleCase(race.name)}</h3>
+                    <p className="mt-1 text-sm text-[#52615d]">{titleCase(race.racecourse)}</p>
+                  </div>
+                  <span className="rounded-sm bg-[#26312e] px-2 py-1 text-xs font-bold uppercase text-white">{raceIcon(race)}</span>
+                </div>
+                <div className="mt-4 grid grid-cols-3 gap-2">
+                  <Metric label="Signal" value={raceOpportunity(race)} />
+                  <Metric label="Consensus" value={`${race.modelConsensus}%`} />
+                  <Metric label="Risque" value={formatRiskLabel(race.riskLevel)} />
+                </div>
+              </Link>
+            ))}
+          </div>
         </section>
 
         <section aria-labelledby="programme-title" className="overflow-hidden rounded-b-md border border-[#d9e1de] bg-white shadow-sm">
           <div className="grid border-b border-[#d9e1de] lg:grid-cols-[1fr_1fr]">
             <div className="grid min-h-16 grid-cols-[52px_1fr_52px] items-center border-r border-[#d9e1de] sm:min-h-20 sm:grid-cols-[72px_1fr_72px]">
               <button
-                aria-label="Jour precedent"
+                aria-label="Jour précédent"
                 className="grid h-full place-items-center text-[#9aa4a0] transition hover:bg-[#f7f8f8] hover:text-[#26312e]"
                 onClick={() => selectDay(previousDay(dayFilter))}
                 type="button"
@@ -177,7 +236,7 @@ export function Dashboard({ races }: DashboardProps) {
 
           <div className="grid gap-3 border-b border-[#d9e1de] bg-[#fbfcfc] p-3 lg:grid-cols-[1fr_auto] lg:items-center">
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <Metric label="Reunions" value={`${meetings.length}`} />
+              <Metric label="Réunions" value={`${meetings.length}`} />
               <Metric label="Courses" value={`${dayRaces.length}`} />
               <Metric label="Partants" value={`${dayRunnersCount}`} />
               <Metric label="Temps forts" value={`${dayFeatureCount}`} />
@@ -198,7 +257,7 @@ export function Dashboard({ races }: DashboardProps) {
             <div aria-hidden="true" className="hidden min-h-28 place-items-center border-r border-[#d9e1de] text-[#65746f] sm:grid">
               <ChevronLeft size={34} />
             </div>
-            <div aria-label="Reunions disponibles" className="flex overflow-x-auto" role="group">
+            <div aria-label="Réunions disponibles" className="flex overflow-x-auto" role="group">
               {meetings.map((meeting) => {
                 const active = meeting.key === selectedMeeting.key;
                 return (
@@ -414,16 +473,16 @@ export function Dashboard({ races }: DashboardProps) {
                   <Sparkles size={20} />
                 </div>
                 <div>
-                  <p className="text-sm uppercase text-[#65746f]">Synthese IA</p>
+                  <p className="text-sm uppercase text-[#65746f]">Synthèse IA</p>
                   <h2 className="text-xl font-bold">Lecture rapide</h2>
                 </div>
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <Metric label="Consensus" value={`${selectedRace.modelConsensus}%`} />
                 <Metric label="Qualité course" value={`${selectedRace.raceQualityScore}`} />
-                <Metric label="Risque" value={selectedRace.riskLevel} />
+                <Metric label="Risque" value={formatRiskLabel(selectedRace.riskLevel)} />
                 <Metric label="Discipline" value={selectedRace.specialty} />
-                <Metric label="Scenario" value={raceOpportunity(selectedRace)} />
+                <Metric label="Scénario" value={raceOpportunity(selectedRace)} />
                 <Metric label="Stratégie" value={strategyForRace(selectedRace)} />
               </div>
               <div className="mt-4 rounded-md border border-amber-500/30 bg-amber-50 p-3 text-sm text-amber-950">
@@ -433,6 +492,49 @@ export function Dashboard({ races }: DashboardProps) {
             </div>
           </section>
         ) : null}
+
+        <section className="mt-5 grid gap-4 lg:grid-cols-[1fr_1fr]" aria-label="Méthode et conversion">
+          <div className="rounded-md border border-[#d9e1de] bg-white p-5 shadow-sm">
+            <p className="text-sm font-bold uppercase text-emerald-700">Comment ça marche</p>
+            <h2 className="mt-1 text-2xl font-bold text-[#26312e]">De la donnée brute à la décision</h2>
+            <div className="mt-4 grid gap-3">
+              {[
+                ["1", "L’IA analyse les courses", "Historique, forme, jockey, entraîneur, distance, discipline, terrain, météo et signaux de marché."],
+                ["2", "Elle détecte les opportunités", "Comparaison probabilité IA / cote PMU pour isoler les value bets et les courses à éviter."],
+                ["3", "Elle génère vos tickets", "Modes sécurisé, équilibré ou agressif selon budget, confiance et volatilité."],
+              ].map(([step, title, text]) => (
+                <article className="grid grid-cols-[44px_1fr] gap-3 rounded-md border border-[#d9e1de] bg-[#fbfcfc] p-3" key={step}>
+                  <span className="grid h-10 w-10 place-items-center rounded-sm bg-emerald-700 font-mono font-bold text-white">{step}</span>
+                  <div>
+                    <h3 className="font-bold text-[#26312e]">{title}</h3>
+                    <p className="mt-1 text-sm leading-6 text-[#65746f]">{text}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-md border border-[#d9e1de] bg-white p-5 shadow-sm">
+            <p className="text-sm font-bold uppercase text-emerald-700">Offres SaaS</p>
+            <h2 className="mt-1 text-2xl font-bold text-[#26312e]">Monétiser la clarté, pas une promesse de gain</h2>
+            <div className="mt-4 grid gap-3">
+              {[
+                ["Gratuit", "0 EUR", "1 course gratuite par jour, lecture simplifiée et jeu responsable."],
+                ["Starter", "19 EUR/mois", "IA sur 3 courses par jour, bases et alertes prioritaires."],
+                ["Premium", "39 EUR/mois", "Accès complet IA, tickets intelligents, value bets et statistiques avancées."],
+                ["Pro", "79 EUR/mois", "Stratégie bankroll, backtesting, signaux experts et accès API prioritaire."],
+              ].map(([name, price, text]) => (
+                <article className="rounded-md border border-[#d9e1de] bg-[#fbfcfc] p-4" key={name}>
+                  <div className="flex items-start justify-between gap-3">
+                    <h3 className="text-lg font-bold text-[#26312e]">{name}</h3>
+                    <span className="font-mono text-sm font-bold text-emerald-700">{price}</span>
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-[#65746f]">{text}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
       </section>
     </main>
   );
@@ -484,9 +586,11 @@ function buildDayInsights(races: RaceAnalysis[]) {
   const valueRaces = races.filter((race) => race.horses.some((horse) => horse.valueIndex > 10)).length;
   const focusRaces = races.filter((race) => race.bettingTier === "Focus").length;
   const avoidRaces = races.filter((race) => race.bettingTier === "Avoid" || race.riskLevel === "Speculatif").length;
-  const bestRace = races
+  const topRaces = races
     .slice()
-    .sort((a, b) => racePriorityScore(b) - racePriorityScore(a))[0];
+    .sort((a, b) => racePriorityScore(b) - racePriorityScore(a))
+    .slice(0, 3);
+  const bestRace = topRaces[0];
   const estimatedRoi = Math.round((valueRaces * 2.1 + focusRaces * 1.4 - avoidRaces * 0.9) * 10) / 10;
 
   return {
@@ -494,8 +598,10 @@ function buildDayInsights(races: RaceAnalysis[]) {
     bestAlert: bestRace ? priorityLabel(bestRace) : "En attente",
     estimatedRoi,
     focusRaces,
-    marketMood: avoidRaces > focusRaces ? "Selectif" : valueRaces >= 3 ? "Opportuniste" : "Stable",
+    marketMood: avoidRaces > focusRaces ? "Sélectif" : valueRaces >= 3 ? "Opportuniste" : "Stable",
     nextPriority: bestRace,
+    ticketModes: "3 modes",
+    topRaces,
     valueRaces,
   };
 }
@@ -527,7 +633,7 @@ function meetingDifficulty(score: number, races: RaceAnalysis[]): RaceMeeting["d
 
 function meetingStrategy(score: number, races: RaceAnalysis[]) {
   if (meetingDifficulty(score, races) === "Facile") return "Bases simples et couples";
-  if (meetingDifficulty(score, races) === "Complexe") return "Mises reduites, value uniquement";
+  if (meetingDifficulty(score, races) === "Complexe") return "Mises réduites, value uniquement";
   return "Mix place/value, tickets flexi";
 }
 
@@ -537,7 +643,7 @@ function raceOpportunity(race: RaceAnalysis) {
   if (best.valueIndex > 14) return `Value #${best.number} (${best.valueIndex})`;
   if (race.modelConsensus >= 75) return `Base #${best.number}`;
   if (race.riskLevel === "Speculatif") return "Course ouverte";
-  return "A surveiller";
+  return "À surveiller";
 }
 
 function strategyForRace(race: RaceAnalysis) {
@@ -557,13 +663,13 @@ function selectTimelineRace(races: RaceAnalysis[], currentMinute: number) {
 }
 
 function raceStatus(race: RaceAnalysis, currentMinute: number) {
-  if (race.relativeDay === "yesterday") return race.horses.some((horse) => horse.finishPosition) ? "Arrivée disponible" : `Départ a ${race.startTime}`;
-  if (race.relativeDay === "tomorrow") return `Départ a ${race.startTime}`;
+  if (race.relativeDay === "yesterday") return race.horses.some((horse) => horse.finishPosition) ? "Arrivée disponible" : `Départ à ${race.startTime}`;
+  if (race.relativeDay === "tomorrow") return `Départ à ${race.startTime}`;
 
   const startMinute = minutesFromStartTime(race.startTime);
-  if (startMinute < currentMinute) return race.horses.some((horse) => horse.finishPosition) ? "Arrivée disponible" : `Départ a ${race.startTime}`;
+  if (startMinute < currentMinute) return race.horses.some((horse) => horse.finishPosition) ? "Arrivée disponible" : `Départ à ${race.startTime}`;
   if (startMinute - currentMinute <= 30) return `Départ imminent ${race.startTime}`;
-  return `Départ a ${race.startTime}`;
+  return `Départ à ${race.startTime}`;
 }
 
 function minutesFromStartTime(startTime: string) {
@@ -601,7 +707,7 @@ function formatRelativeDay(day: RaceAnalysis["relativeDay"]) {
   if (day === "yesterday") return "Hier";
   if (day === "tomorrow") return "Demain";
   if (day === "other") return "Autre";
-  return "Aujourd'hui";
+  return "Aujourd’hui";
 }
 
 function formatShortDate(date: string) {
@@ -654,10 +760,25 @@ function raceHighlights(offers: BetOffer[]) {
   const highlights: Array<{ label: string; className: string }> = [];
   if (offers.some((offer) => offer.type === "QUINTE_PLUS")) highlights.push({ label: "Quinte+", className: BET_BADGE_COLORS.QUINTE_PLUS });
   if (offers.some((offer) => offer.type === "QUARTE_PLUS" && offer.audience === "REGIONAL")) {
-    highlights.push({ label: "Quarte regional", className: BET_BADGE_COLORS.QUARTE_PLUS });
+    highlights.push({ label: "Quarté régional", className: BET_BADGE_COLORS.QUARTE_PLUS });
   }
   if (offers.some((offer) => offer.type === "PICK5")) highlights.push({ label: "Pick 5", className: BET_BADGE_COLORS.PICK5 });
   return highlights;
+}
+
+function formatRiskLabel(risk: RaceAnalysis["riskLevel"]) {
+  if (risk === "Equilibre") return "Équilibré";
+  if (risk === "Speculatif") return "Spéculatif";
+  return risk;
+}
+
+function DecisionProof({ label, value }: { label: string; value: string }) {
+  return (
+    <article className="rounded-md border border-emerald-900/10 bg-emerald-50 p-4">
+      <p className="text-xs font-bold uppercase text-emerald-800">{label}</p>
+      <p className="mt-2 font-mono text-3xl font-bold text-[#26312e]">{value}</p>
+    </article>
+  );
 }
 
 function unique(values: string[]) {

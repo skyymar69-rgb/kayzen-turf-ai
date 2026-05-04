@@ -52,6 +52,7 @@ export function CourseDetail({ race }: CourseDetailProps) {
   const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>("Partants");
   const selectedHorse = race.horses.find((horse) => horse.id === selectedHorseId) ?? race.horses[0];
   const arrival = useMemo(() => probableArrival(race.horses), [race.horses]);
+  const horseRoles = useMemo(() => buildHorseRoles(arrival), [arrival]);
   const betRecommendations = useMemo(() => buildBetRecommendations(race.horses, race.betTypes), [race.betTypes, race.horses]);
   const ticketPlan = useMemo(() => buildTicketPlan(betRecommendations, ticketMode, ticketBudget), [betRecommendations, ticketBudget, ticketMode]);
   const postRaceAnalysis = useMemo(() => buildPostRaceAnalysis(race), [race]);
@@ -76,7 +77,7 @@ export function CourseDetail({ race }: CourseDetailProps) {
                   </h1>
                   <button className="inline-flex items-center gap-1 text-base font-medium text-[#26312e] underline" type="button">
                     <span className="grid h-5 w-5 place-items-center rounded-full border border-[#26312e] text-xs">i</span>
-                    Details des conditions
+                    Détails des conditions
                   </button>
                 </div>
                 <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-[#52615d] sm:gap-3 sm:text-lg">
@@ -85,7 +86,7 @@ export function CourseDetail({ race }: CourseDetailProps) {
                   <span>-</span>
                   <span>{formatPrize(race.raceQualityScore)}</span>
                   <span>-</span>
-                  <span>{formatMeters(race.distance)} mêtres</span>
+                  <span>{formatMeters(race.distance)} mètres</span>
                   <span>-</span>
                   <span>{partantsCount} Partants</span>
                 </div>
@@ -148,7 +149,7 @@ export function CourseDetail({ race }: CourseDetailProps) {
                   {arrival.slice(0, 6).map((horse) => horse.number).join(" - ")}
                 </p>
                 <p className="mt-3 text-sm text-emerald-900/70">
-                  Base IA calculee avec KZ Score, probabilités gagnant/top 3 et forme recente PMU.
+                  Base IA calculée avec KZ Score, probabilités gagnant/top 3 et forme récente PMU.
                 </p>
               </div>
               <div className="grid gap-2 sm:grid-cols-2">
@@ -156,10 +157,47 @@ export function CourseDetail({ race }: CourseDetailProps) {
                   <div className="rounded-md border border-[#d9e1de] bg-[#fbfcfc] p-3" key={recommendation.type}>
                     <p className="text-sm font-semibold text-[#26312e]">{recommendation.label}</p>
                     <p className="mt-1 font-mono text-base font-semibold text-emerald-700">{recommendation.ticket}</p>
-                    <p className="mt-1 text-xs text-[#65746f]">Confiance {recommendation.confidence}/99 - {recommendation.strategy}</p>
+                    <p className="mt-1 text-xs text-[#65746f]">Confiance {recommendation.confidence}/99 - {formatStrategyLabel(recommendation.strategy)}</p>
                   </div>
                 ))}
               </div>
+            </div>
+            <div className="mt-4 grid gap-3 lg:grid-cols-[0.95fr_1.05fr]">
+              <section className="rounded-md border border-[#d9e1de] bg-[#fbfcfc] p-4" aria-label="Typologie des chevaux">
+                <p className="text-sm font-bold uppercase text-[#65746f]">Typologie IA</p>
+                <div className="mt-3 grid gap-2">
+                  {horseRoles.map((role) => (
+                    <article className="rounded-md border border-[#d9e1de] bg-white p-3" key={role.label}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-bold uppercase text-emerald-700">{role.label}</p>
+                          <h3 className="mt-1 font-bold uppercase text-[#26312e]">#{role.horse.number} {role.horse.horse}</h3>
+                        </div>
+                        <span className="font-mono text-sm font-bold text-[#26312e]">{role.horse.kzScore}</span>
+                      </div>
+                      <p className="mt-2 text-xs leading-5 text-[#65746f]">{role.reason}</p>
+                    </article>
+                  ))}
+                </div>
+              </section>
+
+              <section className="rounded-md border border-[#d9e1de] bg-[#fbfcfc] p-4" aria-label="Heatmap de performance">
+                <p className="text-sm font-bold uppercase text-[#65746f]">Heatmap IA</p>
+                <div className="mt-3 grid gap-2">
+                  {arrival.slice(0, 8).map((horse) => (
+                    <div className="grid grid-cols-[44px_1fr_56px] items-center gap-3" key={horse.id}>
+                      <span className="font-mono text-sm font-bold text-[#26312e]">#{horse.number}</span>
+                      <div className="h-3 overflow-hidden rounded-full bg-[#e6ece9]">
+                        <div
+                          className="h-full rounded-full bg-emerald-700"
+                          style={{ width: `${Math.max(6, Math.min(100, horse.top3Probability))}%` }}
+                        />
+                      </div>
+                      <span className="text-right font-mono text-xs font-bold text-emerald-700">{horse.top3Probability}%</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
             </div>
             <section className="mt-4 rounded-md border border-[#d9e1de] bg-[#fbfcfc] p-4">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
@@ -263,7 +301,7 @@ export function CourseDetail({ race }: CourseDetailProps) {
                 <p className="mt-2 text-sm leading-5 text-[#52615d]">{postRaceAnalysis.summary}</p>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <Result label="Prediction" value={postRaceAnalysis.predictedArrival.join("-") || "-"} />
+                <Result label="Prédiction" value={postRaceAnalysis.predictedArrival.join("-") || "-"} />
                 <Result label="Arrivée" value={postRaceAnalysis.actualArrival.join("-") || "-"} />
                 <Result label="Top 3" value={`${postRaceAnalysis.metrics.top3Hits}/3`} />
                 <Result label="Top 5" value={`${postRaceAnalysis.metrics.top5Hits}/5`} />
@@ -443,9 +481,9 @@ function TabPlaceholder({
     return (
       <SimpleGrid title="Statistiques course">
         <Result label="Consensus IA" value={`${race.modelConsensus}%`} />
-        <Result label="Volatilite marché" value={`${race.marketVolatility}%`} />
+        <Result label="Volatilité marché" value={`${race.marketVolatility}%`} />
         <Result label="Qualité course" value={`${race.raceQualityScore}`} />
-        <Result label="Risque" value={race.riskLevel} />
+        <Result label="Risque" value={formatRiskLabel(race.riskLevel)} />
       </SimpleGrid>
     );
   }
@@ -572,7 +610,7 @@ function formatMeters(distance: string) {
 }
 
 function formatPrize(score: number) {
-  return `${Math.round(score * 500)}EUR`;
+  return `${Math.round(score * 500)} EUR`;
 }
 
 function formatEuros(value?: number | null) {
@@ -588,6 +626,57 @@ function formatSexAge(horse: HorsePrediction) {
 function formatEquipment(value?: string | null) {
   if (!value || value === "SANS_OEILLERES") return "-";
   return value.replaceAll("_", " ").toLowerCase();
+}
+
+function buildHorseRoles(arrival: HorsePrediction[]) {
+  const base = arrival[0];
+  const outsider = arrival.find((horse) => horse.valueIndex >= 10 && horse.odds >= 6) ?? arrival[3] ?? arrival[1];
+  const longshot = arrival
+    .slice()
+    .reverse()
+    .find((horse) => horse.valueIndex >= 5 && horse.top3Probability >= 18) ?? arrival[6] ?? arrival.at(-1);
+
+  const roles = [
+    base
+      ? {
+          horse: base,
+          label: "Base",
+          reason: "Le profil le plus stable du modèle : probabilité gagnant, top 3 et consensus élevés.",
+        }
+      : null,
+    outsider
+      ? {
+          horse: outsider,
+          label: "Outsider",
+          reason: "Potentiel value intéressant si la cote reste supérieure à la probabilité estimée.",
+        }
+      : null,
+    longshot
+      ? {
+          horse: longshot,
+          label: "Tocard surveillé",
+          reason: "Profil plus spéculatif à intégrer uniquement dans les tickets larges ou flexi.",
+        }
+      : null,
+  ].filter((role): role is { horse: HorsePrediction; label: string; reason: string } => Boolean(role));
+
+  const seen = new Set<string>();
+  return roles.filter((role) => {
+    if (seen.has(role.horse.id)) return false;
+    seen.add(role.horse.id);
+    return true;
+  });
+}
+
+function formatRiskLabel(risk: RaceAnalysis["riskLevel"]) {
+  if (risk === "Equilibre") return "Équilibré";
+  if (risk === "Speculatif") return "Spéculatif";
+  return risk;
+}
+
+function formatStrategyLabel(strategy: string) {
+  if (strategy === "Speculatif") return "Spéculatif";
+  return strategy;
 }
 
 
