@@ -1,7 +1,14 @@
 @import "tailwindcss";
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
+@import "@fontsource/playfair-display/600.css";
+@import "@fontsource/playfair-display/700.css";
 
 @theme inline {
   --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: "Playfair Display", Georgia, Cambria, "Times New Roman", serif;
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
 }
 
@@ -51,6 +58,13 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+}
+
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-display);
 }
 
 button,
@@ -157,6 +171,70 @@ tbody tr {
 
 .premium-card {
   backdrop-filter: saturate(1.18) blur(10px);
+}
+
+.site-chrome {
+  background-color: rgba(255, 255, 255, 0.96) !important;
+  color: #26312e !important;
+}
+
+.site-link {
+  color: #33413d !important;
+}
+
+.site-link:hover {
+  background-color: #ecfdf5 !important;
+  color: #065f46 !important;
+}
+
+.site-muted {
+  color: #52615d !important;
+}
+
+.site-panel {
+  background-color: #fbfcfc !important;
+  color: #26312e !important;
+}
+
+.site-tile {
+  background-color: #ffffff !important;
+  color: #26312e !important;
+}
+
+.site-accent-text {
+  color: #065f46 !important;
+}
+
+[data-theme="dark"] .site-chrome {
+  background-color: rgba(16, 28, 25, 0.96) !important;
+  color: #edf7f1 !important;
+}
+
+[data-theme="dark"] .site-link {
+  color: #edf7f1 !important;
+}
+
+[data-theme="dark"] .site-link:hover {
+  background-color: #0f2b24 !important;
+  color: #d1fae5 !important;
+}
+
+[data-theme="dark"] .site-muted {
+  color: #c4d2cc !important;
+}
+
+[data-theme="dark"] .site-panel {
+  background-color: #15231f !important;
+  color: #edf7f1 !important;
+}
+
+[data-theme="dark"] .site-tile {
+  background-color: #101c19 !important;
+  color: #edf7f1 !important;
+}
+
+[data-theme="dark"] .site-accent-text {
+  color: #6ee7b7 !important;
 }
 
 .kz-brand,

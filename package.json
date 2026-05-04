@@ -15,6 +15,8 @@
     "data:import:pmu": "node scripts/import-pmu-day.mjs"
   },
   "dependencies": {
+    "@fontsource/inter": "^5.2.8",
+    "@fontsource/playfair-display": "^5.2.8",
     "@neondatabase/serverless": "^1.1.0",
     "@types/qrcode": "^1.5.6",
     "clsx": "latest",
