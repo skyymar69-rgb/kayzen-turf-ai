@@ -214,6 +214,10 @@ tbody tr {
   background-color: var(--surface) !important;
 }
 
+[data-theme="dark"] .even\:bg-\[\#f5f6f6\]:nth-child(even) {
+  background-color: var(--surface-muted) !important;
+}
+
 [data-theme="dark"] .bg-emerald-50,
 [data-theme="dark"] .bg-cyan-50,
 [data-theme="dark"] .bg-amber-50,
