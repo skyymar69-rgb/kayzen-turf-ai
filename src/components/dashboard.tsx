@@ -700,7 +700,7 @@ function groupRacesByMeeting(races: RaceAnalysis[]): RaceMeeting[] {
   return Array.from(meetings.values())
     .map((meeting) => ({
       ...meeting,
-      highlights: unique(meeting.races.flatMap(raceHighlights)),
+      highlights: unique(meeting.races.flatMap(meetingHighlights)),
       specialties: unique(meeting.races.map((race) => race.specialty)),
     }))
     .sort(
@@ -724,6 +724,10 @@ function raceHighlights(race: RaceAnalysis) {
   if (types.includes("PICK5")) highlights.push("Pick5");
 
   return highlights;
+}
+
+function meetingHighlights(race: RaceAnalysis) {
+  return raceHighlights(race).map((highlight) => `${highlight} ${race.programCode}`);
 }
 
 function HorseRow({
