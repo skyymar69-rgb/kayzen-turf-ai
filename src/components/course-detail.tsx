@@ -54,7 +54,7 @@ export function CourseDetail({ race }: CourseDetailProps) {
   const partantsCount = race.horses.length;
 
   return (
-    <main className="min-h-screen bg-[#f3f5f4] px-3 py-4 text-[#303b38] sm:px-5 lg:px-8">
+    <main className="min-h-screen bg-[#f3f5f4] px-3 py-20 text-[#303b38] sm:px-5 lg:px-8" id="contenu-principal">
       <section className="mx-auto max-w-[1520px]">
         <Link className="mb-4 inline-flex items-center gap-2 rounded-md border border-emerald-700/20 bg-white px-3 py-2 text-sm font-medium text-emerald-800 shadow-sm" href="/">
           <ArrowLeft size={16} />
@@ -75,7 +75,7 @@ export function CourseDetail({ race }: CourseDetailProps) {
                   </button>
                 </div>
                 <div className="mt-4 flex flex-wrap items-center gap-3 text-lg text-[#52615d]">
-                  <span className="text-2xl">{race.discipline === "Trot" ? "♞" : "●"}</span>
+                  <span className="text-base font-semibold">{race.discipline}</span>
                   <span>{race.specialty}</span>
                   <span>-</span>
                   <span>{formatPrize(race.raceQualityScore)}</span>
@@ -254,7 +254,7 @@ function PartantsTable({
       <table className="w-full min-w-[1280px] border-collapse text-left">
         <thead>
           <tr className="bg-[#424342] text-xs uppercase text-white">
-            {["N°", "Chevaux", "Dist.", "Def.", "S/A", "Drivers", "Entraineurs", "R/K", "Gains", "Dernieres performances", "Cotes", "KZ"].map((heading) => (
+            {["No", "Chevaux", "Dist.", "Def.", "S/A", "Drivers", "Entraineurs", "R/K", "Gains", "Dernieres performances", "Cotes", "KZ"].map((heading) => (
               <th className="border-r border-white/20 px-3 py-4 font-semibold" key={heading}>{heading}</th>
             ))}
           </tr>

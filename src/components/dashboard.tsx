@@ -56,7 +56,7 @@ export function Dashboard({ races }: DashboardProps) {
 
   if (!selectedMeeting || !selectedRace) {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#f3f5f4] px-4 text-[#26312e]">
+      <main className="grid min-h-screen place-items-center bg-[#f3f5f4] px-4 text-[#26312e]" id="contenu-principal">
         <div className="rounded-md border border-[#d9e1de] bg-white p-6 text-center shadow-sm">
           <Flag className="mx-auto text-emerald-700" size={34} />
           <h1 className="mt-4 text-2xl font-semibold">KAYZEN TURF AI</h1>
@@ -69,7 +69,7 @@ export function Dashboard({ races }: DashboardProps) {
   const topArrival = probableArrival(selectedRace.horses).slice(0, 5);
 
   return (
-    <main className="min-h-screen bg-[#f3f5f4] px-3 py-5 text-[#26312e] sm:px-5 lg:px-8">
+    <main className="min-h-screen bg-[#f3f5f4] px-3 py-20 text-[#26312e] sm:px-5 lg:px-8" id="contenu-principal">
       <section className="mx-auto max-w-[1480px]">
         <div className="inline-flex overflow-hidden rounded-t-sm shadow-sm">
           <div className="grid h-16 w-16 place-items-center bg-emerald-800 text-white">
@@ -389,14 +389,14 @@ function titleCase(value: string) {
 }
 
 function raceIcon(race: RaceAnalysis) {
-  if (race.discipline === "Trot") return "♞";
-  if (race.discipline === "Obstacle") return "♘";
-  return "♞";
+  if (race.discipline === "Trot") return "Trot";
+  if (race.discipline === "Obstacle") return "Obs.";
+  return "Plat";
 }
 
 function meetingIcon(specialties: string[]) {
-  if (specialties.some((specialty) => specialty.includes("Attele") || specialty.includes("Monte"))) return "♞";
-  return "♘";
+  if (specialties.some((specialty) => specialty.includes("Attele") || specialty.includes("Monte"))) return "T";
+  return "P";
 }
 
 function raceHighlights(offers: BetOffer[]) {
