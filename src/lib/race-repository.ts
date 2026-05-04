@@ -29,6 +29,14 @@ type EntryRow = {
   id: string;
   number: number;
   horse: string;
+  age: number | null;
+  sex: string | null;
+  music: string | null;
+  earnings: string | null;
+  handicap_distance: number | null;
+  reduction_km: string | null;
+  equipment: string | null;
+  silks_url: string | null;
   jockey: string;
   trainer: string;
   odds: string;
@@ -147,6 +155,14 @@ export async function getRaceById(id?: string | null, baseRow?: RaceRow, options
       entries.id,
       entries.number,
       horses.name as horse,
+      coalesce(entries.age, horses.age) as age,
+      entries.sex,
+      entries.music,
+      entries.earnings::text,
+      entries.handicap_distance,
+      entries.reduction_km,
+      entries.equipment,
+      entries.silks_url,
       jockeys.name as jockey,
       trainers.name as trainer,
       entries.odds::text,
@@ -258,6 +274,14 @@ function mapHorse(row: EntryRow): HorsePrediction {
     id: row.id,
     number: row.number,
     horse: row.horse,
+    age: row.age,
+    sex: row.sex,
+    music: row.music,
+    earnings: row.earnings === null ? null : Number(row.earnings),
+    handicapDistance: row.handicap_distance,
+    reductionKm: row.reduction_km,
+    equipment: row.equipment,
+    silksUrl: row.silks_url,
     jockey: row.jockey,
     trainer: row.trainer,
     odds: Number(row.odds),

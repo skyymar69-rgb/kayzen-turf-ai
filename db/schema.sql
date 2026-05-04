@@ -62,6 +62,14 @@ create table if not exists entries (
   race_id text not null references races(id) on delete cascade,
   horse_id text not null references horses(id),
   number integer not null,
+  age integer,
+  sex text,
+  music text,
+  earnings numeric,
+  handicap_distance integer,
+  reduction_km text,
+  equipment text,
+  silks_url text,
   jockey_id uuid references jockeys(id),
   trainer_id uuid references trainers(id),
   odds numeric not null,
@@ -77,6 +85,15 @@ create table if not exists entries (
   created_at timestamptz not null default now(),
   unique (race_id, number)
 );
+
+alter table entries add column if not exists age integer;
+alter table entries add column if not exists sex text;
+alter table entries add column if not exists music text;
+alter table entries add column if not exists earnings numeric;
+alter table entries add column if not exists handicap_distance integer;
+alter table entries add column if not exists reduction_km text;
+alter table entries add column if not exists equipment text;
+alter table entries add column if not exists silks_url text;
 
 create table if not exists odds_snapshots (
   id uuid primary key default gen_random_uuid(),

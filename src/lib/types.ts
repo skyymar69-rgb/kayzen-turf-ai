@@ -4,6 +4,14 @@ export type HorsePrediction = {
   id: string;
   number: number;
   horse: string;
+  age?: number | null;
+  sex?: string | null;
+  music?: string | null;
+  earnings?: number | null;
+  handicapDistance?: number | null;
+  reductionKm?: string | null;
+  equipment?: string | null;
+  silksUrl?: string | null;
   jockey: string;
   trainer: string;
   odds: number;

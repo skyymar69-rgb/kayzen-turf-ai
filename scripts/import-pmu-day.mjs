@@ -391,18 +391,33 @@ async function importDate(sql, pmuDate, maxRaces) {
 
         await sql`
           insert into entries (
-            id, race_id, horse_id, number, jockey_id, trainer_id, odds, fair_odds,
+            id, race_id, horse_id, number, age, sex, music, earnings,
+            handicap_distance, reduction_km, equipment, silks_url,
+            jockey_id, trainer_id, odds, fair_odds,
             market_edge, win_probability, top3_probability, top5_probability,
             kz_score, value_index, confidence, factors
           )
           values (
-            ${entryId}, ${raceId}, ${id}, ${participant.numPmu}, ${jockeyId}, ${trainerId},
+            ${entryId}, ${raceId}, ${id}, ${participant.numPmu},
+            ${participant.age ?? null}, ${participant.sexe ?? null}, ${participant.musique ?? null},
+            ${Number(participant?.gainsParticipant?.gainsCarriere ?? 0) / 100},
+            ${participant.handicapDistance ?? null}, ${participant.reductionKilometrique ?? participant.record ?? null},
+            ${participant.oeilleres ?? participant.deferre ?? null}, ${participant.urlCasaque ?? null},
+            ${jockeyId}, ${trainerId},
             ${prediction.odds}, ${prediction.fairOdds}, ${prediction.marketEdge},
             ${prediction.winProbability}, ${prediction.top3Probability}, ${prediction.top5Probability},
             ${prediction.kzScore}, ${prediction.valueIndex}, ${prediction.confidence},
             ${JSON.stringify(prediction.factors)}
           )
           on conflict (id) do update set
+            age = excluded.age,
+            sex = excluded.sex,
+            music = excluded.music,
+            earnings = excluded.earnings,
+            handicap_distance = excluded.handicap_distance,
+            reduction_km = excluded.reduction_km,
+            equipment = excluded.equipment,
+            silks_url = excluded.silks_url,
             odds = excluded.odds,
             fair_odds = excluded.fair_odds,
             market_edge = excluded.market_edge,
