@@ -85,13 +85,13 @@ export function Dashboard({ races }: DashboardProps) {
   }
 
   return (
-    <main className="min-h-screen bg-[#f3f5f4] px-3 py-20 text-[#26312e] sm:px-5 lg:px-8" id="contenu-principal">
+    <main className="min-h-screen bg-[#f3f5f4] px-3 py-16 text-[#26312e] sm:px-5 sm:py-20 lg:px-8" id="contenu-principal">
       <section className="mx-auto max-w-[1480px]">
-        <div className="inline-flex overflow-hidden rounded-t-sm shadow-sm">
-          <div className="kz-brand-strong grid h-16 w-16 place-items-center">
-            <Flag size={30} />
+        <div className="flex overflow-hidden rounded-t-sm shadow-sm sm:inline-flex">
+          <div className="kz-brand-strong grid h-14 w-14 shrink-0 place-items-center sm:h-16 sm:w-16">
+            <Flag size={26} />
           </div>
-          <h1 className="kz-brand flex h-16 items-center px-6 text-2xl font-bold uppercase tracking-normal sm:text-3xl" id="programme-title">
+          <h1 className="kz-brand flex min-h-14 flex-1 items-center px-4 text-lg font-bold uppercase tracking-normal sm:h-16 sm:px-6 sm:text-3xl" id="programme-title">
             Resultats PMU : Arrivees & Rapports
           </h1>
         </div>
@@ -102,17 +102,17 @@ export function Dashboard({ races }: DashboardProps) {
 
         <section aria-labelledby="programme-title" className="overflow-hidden rounded-b-md border border-[#d9e1de] bg-white shadow-sm">
           <div className="grid border-b border-[#d9e1de] lg:grid-cols-[1fr_1fr]">
-            <div className="grid min-h-20 grid-cols-[72px_1fr_72px] items-center border-r border-[#d9e1de]">
+            <div className="grid min-h-16 grid-cols-[52px_1fr_52px] items-center border-r border-[#d9e1de] sm:min-h-20 sm:grid-cols-[72px_1fr_72px]">
               <button
                 aria-label="Jour precedent"
                 className="grid h-full place-items-center text-[#9aa4a0] transition hover:bg-[#f7f8f8] hover:text-[#26312e]"
                 onClick={() => selectDay(previousDay(dayFilter))}
                 type="button"
               >
-                <ChevronLeft aria-hidden="true" size={34} />
+                <ChevronLeft aria-hidden="true" size={30} />
               </button>
-              <div aria-live="polite" className="flex items-center justify-center gap-5 text-2xl text-[#52615d]">
-                <CalendarDays aria-hidden="true" size={36} />
+              <div aria-live="polite" className="flex items-center justify-center gap-3 text-lg text-[#52615d] sm:gap-5 sm:text-2xl">
+                <CalendarDays aria-hidden="true" size={28} />
                 <span>{formatShortDate(selectedRace.raceDate)}</span>
               </div>
               <button
@@ -121,15 +121,15 @@ export function Dashboard({ races }: DashboardProps) {
                 onClick={() => selectDay(nextDay(dayFilter))}
                 type="button"
               >
-                <ChevronRight aria-hidden="true" size={34} />
+                <ChevronRight aria-hidden="true" size={30} />
               </button>
             </div>
 
-            <div aria-label="Choix de la date du programme" className="kz-dark-tabs grid grid-cols-3 text-lg font-semibold uppercase" role="group">
+            <div aria-label="Choix de la date du programme" className="kz-dark-tabs grid grid-cols-3 text-sm font-semibold uppercase sm:text-lg" role="group">
               {DAY_ORDER.map((day) => (
                 <button
                   aria-pressed={dayFilter === day}
-                  className={`min-h-20 transition ${dayFilter === day ? "kz-dark-tab-active" : "kz-dark-tab"}`}
+                  className={`min-h-16 px-1 transition sm:min-h-20 ${dayFilter === day ? "kz-dark-tab-active" : "kz-dark-tab"}`}
                   key={day}
                   onClick={() => {
                     selectDay(day);
@@ -144,13 +144,13 @@ export function Dashboard({ races }: DashboardProps) {
           </div>
 
           <div className="grid gap-3 border-b border-[#d9e1de] bg-[#fbfcfc] p-3 lg:grid-cols-[1fr_auto] lg:items-center">
-            <div className="grid gap-2 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               <Metric label="Reunions" value={`${meetings.length}`} />
               <Metric label="Courses" value={`${dayRaces.length}`} />
               <Metric label="Partants" value={`${dayRunnersCount}`} />
               <Metric label="Temps forts" value={`${dayFeatureCount}`} />
             </div>
-            <label className="flex min-h-12 min-w-[260px] items-center gap-2 rounded-sm border border-[#d9e1de] bg-white px-3 text-sm font-medium text-[#52615d]">
+            <label className="flex min-h-12 w-full items-center gap-2 rounded-sm border border-[#d9e1de] bg-white px-3 text-sm font-medium text-[#52615d] lg:min-w-[260px]">
               <Search aria-hidden="true" size={18} />
               <span className="sr-only">Filtrer les courses de la reunion selectionnee</span>
               <input
@@ -162,8 +162,8 @@ export function Dashboard({ races }: DashboardProps) {
             </label>
           </div>
 
-          <div className="grid grid-cols-[56px_1fr_56px] border-b border-[#d9e1de]">
-            <div aria-hidden="true" className="grid min-h-28 place-items-center border-r border-[#d9e1de] text-[#65746f]">
+          <div className="grid grid-cols-[1fr] border-b border-[#d9e1de] sm:grid-cols-[56px_1fr_56px]">
+            <div aria-hidden="true" className="hidden min-h-28 place-items-center border-r border-[#d9e1de] text-[#65746f] sm:grid">
               <ChevronLeft size={34} />
             </div>
             <div aria-label="Reunions disponibles" className="flex overflow-x-auto" role="group">
@@ -172,7 +172,7 @@ export function Dashboard({ races }: DashboardProps) {
                 return (
                   <button
                     aria-pressed={active}
-                    className={`relative min-h-28 min-w-[220px] border-r border-[#d9e1de] px-4 py-3 text-left transition ${
+                    className={`relative min-h-24 min-w-[178px] border-r border-[#d9e1de] px-3 py-3 text-left transition sm:min-h-28 sm:min-w-[220px] sm:px-4 ${
                       active ? "kz-meeting-active" : "bg-white text-[#52615d] hover:bg-[#f7f8f8]"
                     }`}
                     key={meeting.key}
@@ -180,10 +180,10 @@ export function Dashboard({ races }: DashboardProps) {
                     type="button"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="text-3xl">{meetingIcon(meeting.specialties)}</span>
+                      <span className="text-2xl sm:text-3xl">{meetingIcon(meeting.specialties)}</span>
                       <span>
-                        <span className={`block text-2xl font-bold ${active ? "kz-meeting-active-title" : "text-[#3f403f]"}`}>R{meeting.reunionNumber}</span>
-                        <span className="block text-xl leading-6">{titleCase(meeting.racecourse)}</span>
+                        <span className={`block text-xl font-bold sm:text-2xl ${active ? "kz-meeting-active-title" : "text-[#3f403f]"}`}>R{meeting.reunionNumber}</span>
+                        <span className="block text-base leading-5 sm:text-xl sm:leading-6">{titleCase(meeting.racecourse)}</span>
                       </span>
                     </div>
                     <div className="mt-2 flex flex-wrap gap-1">
@@ -197,12 +197,54 @@ export function Dashboard({ races }: DashboardProps) {
                 );
               })}
             </div>
-            <div aria-hidden="true" className="grid min-h-28 place-items-center border-l border-[#d9e1de] text-[#b0b8b5]">
+            <div aria-hidden="true" className="hidden min-h-28 place-items-center border-l border-[#d9e1de] text-[#b0b8b5] sm:grid">
               <ChevronRight size={34} />
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="grid gap-3 p-3 md:hidden">
+            {visibleMeetingRaces.map((race) => {
+              const active = race.id === selectedRace.id;
+              return (
+                <article
+                  aria-current={active ? "true" : undefined}
+                  className={`rounded-md border border-[#d9e1de] p-3 shadow-sm ${active ? "bg-emerald-50" : "bg-white"}`}
+                  key={race.id}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-mono text-sm font-bold text-[#65746f]">{race.programCode}</p>
+                      <h2 className="mt-1 text-base font-bold text-[#26312e]">{titleCase(race.name)}</h2>
+                    </div>
+                    <span className="rounded-sm bg-[#3f403f] px-2 py-1 text-xs font-bold uppercase text-white">{raceIcon(race)}</span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-1">
+                    {raceHighlights(race.betTypes).map((highlight) => (
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-bold italic ${highlight.className}`} key={highlight.label}>
+                        {highlight.label}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-[#52615d]">{raceStatus(race, currentMinute)}</p>
+                    <Link
+                      className="inline-flex min-h-11 items-center justify-center rounded-sm border-2 border-rose-400 bg-white px-4 text-sm font-bold uppercase text-rose-500"
+                      href={`/races/${encodeURIComponent(race.id)}`}
+                    >
+                      Analyser
+                    </Link>
+                  </div>
+                </article>
+              );
+            })}
+            {visibleMeetingRaces.length === 0 ? (
+              <p className="rounded-md border border-[#d9e1de] bg-white p-4 text-center text-sm text-[#65746f]">
+                Aucune course ne correspond au filtre.
+              </p>
+            ) : null}
+          </div>
+
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[980px] border-collapse text-left">
               <caption className="sr-only">
                 Courses de la reunion {selectedMeeting.racecourse}, avec depart, type de pari important et lien vers l&apos;analyse.
@@ -262,7 +304,7 @@ export function Dashboard({ races }: DashboardProps) {
             </table>
           </div>
 
-          <label className="flex items-center gap-3 px-3 py-3 text-xl italic text-[#26312e]">
+          <label className="flex items-center gap-3 px-3 py-3 text-base italic text-[#26312e] sm:text-xl">
             <input checked={showRunners} className="h-5 w-5 accent-emerald-700" onChange={(event) => setShowRunners(event.target.checked)} type="checkbox" />
             Afficher les partants/montes de cette reunion
           </label>
@@ -274,15 +316,15 @@ export function Dashboard({ races }: DashboardProps) {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-sm uppercase text-[#65746f]">Course active</p>
-                  <h2 className="mt-1 text-2xl font-bold text-[#26312e]">
+                  <h2 className="mt-1 text-xl font-bold text-[#26312e] sm:text-2xl">
                     {selectedRace.programCode} - {titleCase(selectedRace.name)}
                   </h2>
                 </div>
-                <Link className="kz-primary-action rounded-sm px-5 py-3 text-sm font-bold uppercase" href={`/races/${encodeURIComponent(selectedRace.id)}`}>
+                <Link className="kz-primary-action inline-flex min-h-11 w-full items-center justify-center rounded-sm px-5 py-3 text-center text-sm font-bold uppercase sm:w-auto" href={`/races/${encodeURIComponent(selectedRace.id)}`}>
                   Voir tous les partants
                 </Link>
               </div>
-              <div className="mt-4 overflow-x-auto">
+              <div className="mt-4 hidden overflow-x-auto sm:block">
                 <table className="w-full min-w-[720px] border-collapse text-left">
                   <caption className="sr-only">Top 5 des chevaux reperes par KAYZEN pour la course active.</caption>
                   <thead>
@@ -308,6 +350,21 @@ export function Dashboard({ races }: DashboardProps) {
                     ))}
                   </tbody>
                 </table>
+              </div>
+              <div className="mt-4 grid gap-2 sm:hidden">
+                {topArrival.map((horse) => (
+                  <div className="grid grid-cols-[44px_1fr_auto] items-center gap-3 rounded-md border border-[#d9e1de] bg-[#fbfcfc] p-3" key={horse.id}>
+                    <span className="font-mono text-lg font-bold text-[#26312e]">{horse.number}</span>
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold uppercase text-[#26312e]">{horse.horse}</p>
+                      <p className="truncate text-xs text-[#65746f]">{horse.jockey}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-mono text-sm font-bold text-emerald-700">{horse.kzScore}</p>
+                      <p className="text-xs text-[#65746f]">Top3 {horse.top3Probability}%</p>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 

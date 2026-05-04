@@ -54,9 +54,9 @@ export function CourseDetail({ race }: CourseDetailProps) {
   const partantsCount = race.horses.length;
 
   return (
-    <main className="min-h-screen bg-[#f3f5f4] px-3 py-20 text-[#303b38] sm:px-5 lg:px-8" id="contenu-principal">
+    <main className="min-h-screen bg-[#f3f5f4] px-3 py-16 text-[#303b38] sm:px-5 sm:py-20 lg:px-8" id="contenu-principal">
       <section className="mx-auto max-w-[1520px]">
-        <Link className="mb-4 inline-flex items-center gap-2 rounded-md border border-emerald-700/20 bg-white px-3 py-2 text-sm font-medium text-emerald-800 shadow-sm" href="/">
+        <Link className="mb-4 inline-flex min-h-11 items-center gap-2 rounded-md border border-emerald-700/20 bg-white px-3 py-2 text-sm font-medium text-emerald-800 shadow-sm" href="/">
           <ArrowLeft size={16} />
           Programme
         </Link>
@@ -66,7 +66,7 @@ export function CourseDetail({ race }: CourseDetailProps) {
             <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
               <div>
                 <div className="flex flex-wrap items-center gap-3">
-                  <h1 className="text-2xl font-semibold tracking-normal text-[#26312e]">
+                  <h1 className="text-xl font-semibold tracking-normal text-[#26312e] sm:text-2xl">
                     Partants - {formatLongDate(race.raceDate)}
                   </h1>
                   <button className="inline-flex items-center gap-1 text-base font-medium text-[#26312e] underline" type="button">
@@ -74,7 +74,7 @@ export function CourseDetail({ race }: CourseDetailProps) {
                     Details des conditions
                   </button>
                 </div>
-                <div className="mt-4 flex flex-wrap items-center gap-3 text-lg text-[#52615d]">
+                <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-[#52615d] sm:gap-3 sm:text-lg">
                   <span className="text-base font-semibold">{race.discipline}</span>
                   <span>{race.specialty}</span>
                   <span>-</span>
@@ -87,32 +87,32 @@ export function CourseDetail({ race }: CourseDetailProps) {
               </div>
 
               <div className="flex flex-col items-start gap-4 xl:items-end">
-                <div className="inline-flex items-center gap-3 text-2xl font-semibold italic text-emerald-700">
-                  <Clock3 size={30} />
+                <div className="inline-flex items-center gap-3 text-xl font-semibold italic text-emerald-700 sm:text-2xl">
+                  <Clock3 size={26} />
                   Depart {race.startTime}
                 </div>
-                <button className="inline-flex h-12 items-center gap-3 rounded-md bg-emerald-700 px-5 text-sm font-semibold uppercase text-white shadow-md shadow-emerald-900/20" type="button">
+                <button className="inline-flex min-h-12 w-full items-center justify-center gap-3 rounded-md bg-emerald-700 px-5 text-sm font-semibold uppercase text-white shadow-md shadow-emerald-900/20 sm:w-auto" type="button">
                   <MessageSquareText size={22} />
                   Commenter cette course
                 </button>
               </div>
             </div>
 
-            <div className="mt-6 flex flex-wrap gap-5">
+            <div className="mt-6 flex gap-3 overflow-x-auto pb-1 sm:flex-wrap sm:gap-5">
               {visibleBetBadges(race.betTypes).map((bet) => (
-                <span className={`inline-flex min-w-20 justify-center rounded-tl-2xl rounded-br-2xl px-4 py-1 text-sm font-bold italic text-white shadow-sm ${BET_COLORS[bet.type] ?? "bg-emerald-700"}`} key={`${bet.type}-${bet.audience ?? "N"}`}>
+                <span className={`inline-flex min-w-20 shrink-0 justify-center rounded-tl-2xl rounded-br-2xl px-4 py-1 text-sm font-bold italic text-white shadow-sm ${BET_COLORS[bet.type] ?? "bg-emerald-700"}`} key={`${bet.type}-${bet.audience ?? "N"}`}>
                   {shortBetLabel(bet)}
                 </span>
               ))}
             </div>
           </div>
 
-          <nav aria-label="Sections de la course" className="grid border-t border-[#dfe5e3] bg-[#f7f8f8] md:grid-cols-3 xl:grid-cols-6" role="tablist">
+          <nav aria-label="Sections de la course" className="flex overflow-x-auto border-t border-[#dfe5e3] bg-[#f7f8f8] xl:grid xl:grid-cols-6" role="tablist">
             {TABS.map((tab) => (
               <button
                 aria-controls="course-tab-panel"
                 aria-selected={activeTab === tab}
-                className={`h-16 border-r border-[#dfe5e3] text-base font-medium transition ${
+                className={`h-14 min-w-[156px] border-r border-[#dfe5e3] px-3 text-sm font-medium transition sm:h-16 sm:text-base xl:min-w-0 ${
                   activeTab === tab ? "bg-[#454545] text-white" : "bg-[#f7f8f8] text-[#52615d] hover:bg-white"
                 }`}
                 key={tab}
@@ -253,8 +253,47 @@ function PartantsTable({
   selectedHorseId?: string;
 }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[1280px] border-collapse text-left">
+    <>
+      <div className="grid gap-3 p-3 md:hidden">
+        {horses.map((horse) => (
+          <button
+            aria-pressed={selectedHorseId === horse.id}
+            className={`rounded-md border border-[#d9e1de] p-3 text-left shadow-sm transition ${
+              selectedHorseId === horse.id ? "bg-emerald-50" : "bg-white"
+            }`}
+            key={horse.id}
+            onClick={() => onSelect(horse.id)}
+            type="button"
+          >
+            <div className="grid grid-cols-[44px_1fr_auto] items-start gap-3">
+              {horse.silksUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img alt={`Casaque de ${horse.horse}`} className="h-10 w-10 rounded-sm object-contain" src={horse.silksUrl} />
+              ) : (
+                <span className="grid h-10 w-10 place-items-center rounded-sm bg-emerald-100 font-mono font-bold text-emerald-800">{horse.number}</span>
+              )}
+              <div className="min-w-0">
+                <p className="truncate font-bold uppercase text-[#111]">#{horse.number} {horse.horse}</p>
+                <p className="mt-1 truncate text-sm text-[#52615d]">{horse.jockey}</p>
+                <p className="truncate text-xs text-[#65746f]">{horse.trainer}</p>
+              </div>
+              <div className="text-right">
+                <p className="font-mono text-sm font-bold text-emerald-700">{horse.kzScore}</p>
+                <p className="text-xs text-[#65746f]">KZ</p>
+              </div>
+            </div>
+            <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+              <Result label="Cote" value={horse.odds > 1 ? `${horse.odds}` : "-"} />
+              <Result label="Top 3" value={`${horse.top3Probability}%`} />
+              <Result label="Gains" value={formatEuros(horse.earnings)} />
+            </div>
+            <p className="mt-3 line-clamp-2 text-xs text-[#52615d]">{horse.music ?? "Performances non disponibles"}</p>
+          </button>
+        ))}
+      </div>
+
+      <div className="hidden overflow-x-auto md:block">
+        <table className="w-full min-w-[1280px] border-collapse text-left">
         <caption className="sr-only">
           Tableau des partants avec numero, cheval, driver, entraineur, gains, performances recentes, cotes et score KAYZEN.
         </caption>
@@ -307,8 +346,9 @@ function PartantsTable({
             </tr>
           ))}
         </tbody>
-      </table>
-    </div>
+        </table>
+      </div>
+    </>
   );
 }
 
