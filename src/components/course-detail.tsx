@@ -107,14 +107,17 @@ export function CourseDetail({ race }: CourseDetailProps) {
             </div>
           </div>
 
-          <nav className="grid border-t border-[#dfe5e3] bg-[#f7f8f8] md:grid-cols-3 xl:grid-cols-6">
+          <nav aria-label="Sections de la course" className="grid border-t border-[#dfe5e3] bg-[#f7f8f8] md:grid-cols-3 xl:grid-cols-6" role="tablist">
             {TABS.map((tab) => (
               <button
+                aria-controls="course-tab-panel"
+                aria-selected={activeTab === tab}
                 className={`h-16 border-r border-[#dfe5e3] text-base font-medium transition ${
                   activeTab === tab ? "bg-[#454545] text-white" : "bg-[#f7f8f8] text-[#52615d] hover:bg-white"
                 }`}
                 key={tab}
                 onClick={() => setActiveTab(tab)}
+                role="tab"
                 type="button"
               >
                 {tab}
@@ -123,7 +126,7 @@ export function CourseDetail({ race }: CourseDetailProps) {
           </nav>
         </header>
 
-        <section className="mt-5 overflow-hidden rounded-md border border-[#d9e1de] bg-white shadow-sm">
+        <section className="mt-5 overflow-hidden rounded-md border border-[#d9e1de] bg-white shadow-sm" id="course-tab-panel" role="tabpanel">
           {activeTab === "Partants" ? (
             <PartantsTable horses={arrival} onSelect={setSelectedHorseId} selectedHorseId={selectedHorse?.id} />
           ) : (
@@ -252,28 +255,39 @@ function PartantsTable({
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[1280px] border-collapse text-left">
+        <caption className="sr-only">
+          Tableau des partants avec numero, cheval, driver, entraineur, gains, performances recentes, cotes et score KAYZEN.
+        </caption>
         <thead>
           <tr className="bg-[#424342] text-xs uppercase text-white">
             {["No", "Chevaux", "Dist.", "Def.", "S/A", "Drivers", "Entraineurs", "R/K", "Gains", "Dernieres performances", "Cotes", "KZ"].map((heading) => (
-              <th className="border-r border-white/20 px-3 py-4 font-semibold" key={heading}>{heading}</th>
+              <th className="border-r border-white/20 px-3 py-4 font-semibold" key={heading} scope="col">{heading}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {horses.map((horse, index) => (
             <tr
+              aria-label={`Selectionner ${horse.horse}, numero ${horse.number}`}
               className={`cursor-pointer border-b border-[#dfe5e3] text-sm transition hover:bg-emerald-50 ${
                 selectedHorseId === horse.id ? "bg-emerald-50" : index % 2 === 0 ? "bg-white" : "bg-[#f5f6f6]"
               }`}
               key={horse.id}
               onClick={() => onSelect(horse.id)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onSelect(horse.id);
+                }
+              }}
+              tabIndex={0}
             >
-              <td className="px-3 py-3 font-mono text-[#52615d]">{horse.number}</td>
+              <th className="px-3 py-3 font-mono text-[#52615d]" scope="row">{horse.number}</th>
               <td className="px-3 py-3">
                 <div className="flex min-w-[230px] items-center gap-3">
                   {horse.silksUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img alt="" className="h-9 w-9 rounded-sm object-contain" src={horse.silksUrl} />
+                    <img alt={`Casaque de ${horse.horse}`} className="h-9 w-9 rounded-sm object-contain" src={horse.silksUrl} />
                   ) : (
                     <span className="grid h-9 w-9 place-items-center rounded-sm bg-emerald-100 font-mono text-emerald-800">{horse.number}</span>
                   )}

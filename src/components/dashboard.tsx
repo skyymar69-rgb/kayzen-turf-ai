@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarDays, ChevronLeft, ChevronRight, Flag, ShieldCheck, Sparkles } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Flag, Search, ShieldCheck, Sparkles } from "lucide-react";
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { probableArrival } from "@/lib/bet-recommendations";
 import type { BetOffer, RaceAnalysis } from "@/lib/types";
@@ -36,6 +36,7 @@ export function Dashboard({ races }: DashboardProps) {
   const [dayFilter, setDayFilter] = useState<RaceAnalysis["relativeDay"]>("today");
   const [selectedMeetingKey, setSelectedMeetingKey] = useState("");
   const [showRunners, setShowRunners] = useState(true);
+  const [query, setQuery] = useState("");
 
   const dayRaces = useMemo(
     () =>
@@ -53,6 +54,11 @@ export function Dashboard({ races }: DashboardProps) {
   const selectedRace = timelineRace && selectedMeeting?.races.some((race) => race.id === timelineRace.id)
     ? timelineRace
     : selectedMeeting?.races[0];
+  const normalizedQuery = query.trim().toLowerCase();
+  const visibleMeetingRaces = selectedMeeting?.races.filter((race) => {
+    if (!normalizedQuery) return true;
+    return `${race.programCode} ${race.name} ${race.specialty} ${race.startTime}`.toLowerCase().includes(normalizedQuery);
+  }) ?? [];
 
   if (!selectedMeeting || !selectedRace) {
     return (
@@ -67,6 +73,8 @@ export function Dashboard({ races }: DashboardProps) {
   }
 
   const topArrival = probableArrival(selectedRace.horses).slice(0, 5);
+  const dayRunnersCount = dayRaces.reduce((total, race) => total + race.horses.length, 0);
+  const dayFeatureCount = dayRaces.filter((race) => raceHighlights(race.betTypes).length > 0).length;
 
   return (
     <main className="min-h-screen bg-[#f3f5f4] px-3 py-20 text-[#26312e] sm:px-5 lg:px-8" id="contenu-principal">
@@ -80,7 +88,7 @@ export function Dashboard({ races }: DashboardProps) {
           </h1>
         </div>
 
-        <section className="overflow-hidden rounded-b-md border border-[#d9e1de] bg-white shadow-sm">
+        <section aria-labelledby="programme-title" className="overflow-hidden rounded-b-md border border-[#d9e1de] bg-white shadow-sm">
           <div className="grid border-b border-[#d9e1de] lg:grid-cols-[1fr_1fr]">
             <div className="grid min-h-20 grid-cols-[72px_1fr_72px] items-center border-r border-[#d9e1de]">
               <button
@@ -89,10 +97,10 @@ export function Dashboard({ races }: DashboardProps) {
                 onClick={() => setDayFilter(previousDay(dayFilter))}
                 type="button"
               >
-                <ChevronLeft size={34} />
+                <ChevronLeft aria-hidden="true" size={34} />
               </button>
-              <div className="flex items-center justify-center gap-5 text-2xl text-[#52615d]">
-                <CalendarDays size={36} />
+              <div aria-live="polite" className="flex items-center justify-center gap-5 text-2xl text-[#52615d]">
+                <CalendarDays aria-hidden="true" size={36} />
                 <span>{formatShortDate(selectedRace.raceDate)}</span>
               </div>
               <button
@@ -101,13 +109,14 @@ export function Dashboard({ races }: DashboardProps) {
                 onClick={() => setDayFilter(nextDay(dayFilter))}
                 type="button"
               >
-                <ChevronRight size={34} />
+                <ChevronRight aria-hidden="true" size={34} />
               </button>
             </div>
 
-            <div className="grid grid-cols-3 bg-[#3f403f] text-lg font-semibold uppercase text-white">
+            <div aria-label="Choix de la date du programme" className="grid grid-cols-3 bg-[#3f403f] text-lg font-semibold uppercase text-white" role="group">
               {DAY_ORDER.map((day) => (
                 <button
+                  aria-pressed={dayFilter === day}
                   className={`min-h-20 transition ${dayFilter === day ? "bg-[#3f403f]" : "bg-[#565756] hover:bg-[#4b4c4b]"}`}
                   key={day}
                   onClick={() => {
@@ -122,15 +131,35 @@ export function Dashboard({ races }: DashboardProps) {
             </div>
           </div>
 
+          <div className="grid gap-3 border-b border-[#d9e1de] bg-[#fbfcfc] p-3 lg:grid-cols-[1fr_auto] lg:items-center">
+            <div className="grid gap-2 sm:grid-cols-4">
+              <Metric label="Reunions" value={`${meetings.length}`} />
+              <Metric label="Courses" value={`${dayRaces.length}`} />
+              <Metric label="Partants" value={`${dayRunnersCount}`} />
+              <Metric label="Temps forts" value={`${dayFeatureCount}`} />
+            </div>
+            <label className="flex min-h-12 min-w-[260px] items-center gap-2 rounded-sm border border-[#d9e1de] bg-white px-3 text-sm font-medium text-[#52615d]">
+              <Search aria-hidden="true" size={18} />
+              <span className="sr-only">Filtrer les courses de la reunion selectionnee</span>
+              <input
+                className="min-w-0 flex-1 bg-transparent text-[#26312e] outline-none"
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Filtrer C, prix, discipline"
+                value={query}
+              />
+            </label>
+          </div>
+
           <div className="grid grid-cols-[56px_1fr_56px] border-b border-[#d9e1de]">
-            <button className="grid min-h-28 place-items-center border-r border-[#d9e1de] text-[#65746f]" type="button">
+            <div aria-hidden="true" className="grid min-h-28 place-items-center border-r border-[#d9e1de] text-[#65746f]">
               <ChevronLeft size={34} />
-            </button>
-            <div className="flex overflow-x-auto">
+            </div>
+            <div aria-label="Reunions disponibles" className="flex overflow-x-auto" role="group">
               {meetings.map((meeting) => {
                 const active = meeting.key === selectedMeeting.key;
                 return (
                   <button
+                    aria-pressed={active}
                     className={`relative min-h-28 min-w-[220px] border-r border-[#d9e1de] px-4 py-3 text-left transition ${
                       active ? "bg-emerald-700 text-white" : "bg-white text-[#52615d] hover:bg-[#f7f8f8]"
                     }`}
@@ -156,29 +185,32 @@ export function Dashboard({ races }: DashboardProps) {
                 );
               })}
             </div>
-            <button className="grid min-h-28 place-items-center border-l border-[#d9e1de] text-[#b0b8b5]" type="button">
+            <div aria-hidden="true" className="grid min-h-28 place-items-center border-l border-[#d9e1de] text-[#b0b8b5]">
               <ChevronRight size={34} />
-            </button>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full min-w-[980px] border-collapse text-left">
+              <caption className="sr-only">
+                Courses de la reunion {selectedMeeting.racecourse}, avec depart, type de pari important et lien vers l&apos;analyse.
+              </caption>
               <thead>
                 <tr className="bg-[#3f403f] text-sm uppercase text-white">
-                  <th className="px-7 py-4 font-bold">Course</th>
-                  <th className="px-5 py-4 font-bold">Discipline</th>
-                  <th className="px-5 py-4 font-bold">Prix</th>
-                  <th className="px-5 py-4 font-bold">Depart & Arrivee</th>
-                  <th className="px-5 py-4 text-center font-bold">NP</th>
-                  <th className="px-5 py-4 text-right font-bold">Action</th>
+                  <th className="px-7 py-4 font-bold" scope="col">Course</th>
+                  <th className="px-5 py-4 font-bold" scope="col">Discipline</th>
+                  <th className="px-5 py-4 font-bold" scope="col">Prix</th>
+                  <th className="px-5 py-4 font-bold" scope="col">Depart & Arrivee</th>
+                  <th className="px-5 py-4 text-center font-bold" scope="col">NP</th>
+                  <th className="px-5 py-4 text-right font-bold" scope="col">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {selectedMeeting.races.map((race) => {
+                {visibleMeetingRaces.map((race) => {
                   const active = race.id === selectedRace.id;
                   return (
-                    <tr className={`${active ? "bg-emerald-50" : "even:bg-[#f5f6f6]"} border-b border-[#e0e5e3] text-lg`} key={race.id}>
-                      <td className="px-7 py-4 font-bold text-[#26312e]">C{race.courseNumber}</td>
+                    <tr aria-current={active ? "true" : undefined} className={`${active ? "bg-emerald-50" : "even:bg-[#f5f6f6]"} border-b border-[#e0e5e3] text-lg`} key={race.id}>
+                      <th className="px-7 py-4 font-bold text-[#26312e]" scope="row">C{race.courseNumber}</th>
                       <td className="px-5 py-4 text-2xl">{raceIcon(race)}</td>
                       <td className="px-5 py-4">
                         <Link className="font-bold text-[#26312e] hover:text-emerald-700" href={`/races/${encodeURIComponent(race.id)}`}>
@@ -207,6 +239,13 @@ export function Dashboard({ races }: DashboardProps) {
                     </tr>
                   );
                 })}
+                {visibleMeetingRaces.length === 0 ? (
+                  <tr>
+                    <td className="px-7 py-6 text-center text-[#65746f]" colSpan={6}>
+                      Aucune course ne correspond au filtre.
+                    </td>
+                  </tr>
+                ) : null}
               </tbody>
             </table>
           </div>
@@ -233,20 +272,21 @@ export function Dashboard({ races }: DashboardProps) {
               </div>
               <div className="mt-4 overflow-x-auto">
                 <table className="w-full min-w-[720px] border-collapse text-left">
+                  <caption className="sr-only">Top 5 des chevaux reperes par KAYZEN pour la course active.</caption>
                   <thead>
                     <tr className="bg-[#3f403f] text-xs uppercase text-white">
-                      <th className="px-3 py-3">N</th>
-                      <th className="px-3 py-3">Cheval</th>
-                      <th className="px-3 py-3">Driver</th>
-                      <th className="px-3 py-3">Cote</th>
-                      <th className="px-3 py-3">KZ</th>
-                      <th className="px-3 py-3">Top 3</th>
+                      <th className="px-3 py-3" scope="col">N</th>
+                      <th className="px-3 py-3" scope="col">Cheval</th>
+                      <th className="px-3 py-3" scope="col">Driver</th>
+                      <th className="px-3 py-3" scope="col">Cote</th>
+                      <th className="px-3 py-3" scope="col">KZ</th>
+                      <th className="px-3 py-3" scope="col">Top 3</th>
                     </tr>
                   </thead>
                   <tbody>
                     {topArrival.map((horse) => (
                       <tr className="border-b border-[#e0e5e3] text-sm even:bg-[#f5f6f6]" key={horse.id}>
-                        <td className="px-3 py-3 font-mono font-bold">{horse.number}</td>
+                        <th className="px-3 py-3 font-mono font-bold" scope="row">{horse.number}</th>
                         <td className="px-3 py-3 font-semibold uppercase">{horse.horse}</td>
                         <td className="px-3 py-3 text-[#65746f]">{horse.jockey}</td>
                         <td className="px-3 py-3 font-mono">{horse.odds}</td>

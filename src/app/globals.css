@@ -63,6 +63,18 @@ a {
   color: inherit;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 button,
 a,
 input,
@@ -116,6 +128,14 @@ select:focus-visible {
 
 .theme-toggle:hover {
   border-color: var(--accent);
+}
+
+table {
+  font-variant-numeric: tabular-nums;
+}
+
+tbody tr {
+  transition: background-color 120ms ease;
 }
 
 .kz-scroll {
