@@ -14,7 +14,7 @@ export function classifyValueSignal(edgePercent: number): BetSimulation["recomme
   if (edgePercent > 22) return "Value bet";
   if (edgePercent > 8) return "Miser prudemment";
   if (edgePercent > -5) return "Observer";
-  return "Eviter";
+  return "Éviter";
 }
 
 export function getDrawdownMultiplier(drawdown: number) {
@@ -119,24 +119,24 @@ export function classifyRaceTier(score: number): RaceAnalysis["bettingTier"] {
 
 export const modelCard: ModelCard = {
   version: "0.2.0-mvp",
-  purpose: "Aide a la decision pour analyser une course, estimer les probabilites et controler le risque de mise.",
+  purpose: "Aide à la décision pour analyser une course, estimér les probabilités et controler le risque de mise.",
   modelStack: ["Race pre-filtering", "Horse win probability", "Value bet scoring", "Fractional Kelly bankroll policy"],
   featureFamilies: [
-    "Forme recente cheval/jockey/entraineur",
+    "Forme recente cheval/jockey/entraîneur",
     "Contexte course: distance, piste, terrain, taille du peloton",
     "Historique course et categorie",
-    "Signal marche: cote, cote juste, edge",
+    "Signal marché: cote, cote juste, edge",
     "Garde-fous bankroll: drawdown et plafond de mise",
   ],
   calibration: {
     method: "Shrinkage vers le prior de peloton puis calibration temporelle en backtest",
-    rationale: "Les modeles de classement hippique deviennent vite trop confiants. La calibration doit ramener les favoris vers des probabilites realistes.",
+    rationale: "Les modèles de classement hippique deviennent vite trop confiants. La calibration doit ramener les favoris vers des probabilités realistes.",
   },
   leakageControls: [
     "Split temporel obligatoire pour validation, jamais de split aleatoire comme preuve principale.",
     "Features historiques calculees avec decalage temporel: shift(1), expanding window ou date filtering.",
-    "Aucune statistique globale cheval, jockey, entraineur ou pedigree ne doit utiliser des courses futures.",
-    "Les cotes de marche ne doivent etre jointes qu'au timestamp disponible pour l'utilisateur.",
+    "Aucune statistique globale cheval, jockey, entraîneur ou pedigree ne doit utiliser des courses futures.",
+    "Les cotes de marché ne doivent être jointes qu'au timestamp disponible pour l'utilisateur.",
   ],
   bankrollPolicy: {
     kellyFraction: 0.25,
@@ -151,9 +151,9 @@ export const modelCard: ModelCard = {
   },
   limitations: [
     "Aucune prediction ne garantit un gain.",
-    "Les performances doivent etre jugees sur un grand volume de paris et en conditions live.",
-    "Une value bet peut perdre meme si la decision etait mathematiquement correcte.",
-    "Les donnees hippiques et les cotes peuvent changer rapidement avant le depart.",
+    "Les performances doivent être jugees sur un grand volume de paris et en conditions live.",
+    "Une value bet peut perdre meme si la decision était mathematiquement correcte.",
+    "Les données hippiques et les cotes peuvent changer rapidement avant le départ.",
   ],
 };
 

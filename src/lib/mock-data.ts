@@ -124,7 +124,7 @@ export const raceAnalysis: RaceAnalysis = {
       top5Probability: 49,
       kzScore: 73,
       confidence: "Moyenne",
-      factors: ["Outsider sous-estime", "Distance ideale", "Rythme probable avantageux"],
+      factors: ["Outsider sous-estimé", "Distance idéale", "Rythme probable avantageux"],
       finishPosition: 3,
       won: false,
     }),

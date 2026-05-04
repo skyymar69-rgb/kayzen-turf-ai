@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { BellRing, CalendarDays, ChevronLeft, ChevronRight, Flag, Gauge, Search, ShieldCheck, Sparkles, TrendingUp } from "lucide-react";
@@ -70,7 +70,7 @@ export function Dashboard({ races }: DashboardProps) {
         <div className="rounded-md border border-[#d9e1de] bg-white p-6 text-center shadow-sm">
           <Flag className="mx-auto text-emerald-700" size={34} />
           <h1 className="mt-4 text-2xl font-semibold">KAYZEN TURF AI</h1>
-          <p className="mt-2 text-sm text-[#65746f]">Aucune course francaise disponible sur cette date.</p>
+          <p className="mt-2 text-sm text-[#65746f]">Aucune course française disponible sur cette date.</p>
         </div>
       </main>
     );
@@ -102,7 +102,7 @@ export function Dashboard({ races }: DashboardProps) {
         </div>
 
         <div className="mb-3 mt-3 grid gap-3 rounded-md border border-[#d9e1de] bg-white p-3 text-sm font-medium text-[#52615d] shadow-sm sm:grid-cols-[1fr_auto] sm:items-center">
-          <p>Aujourd&apos;hui = <span className="font-mono font-bold text-[#26312e]">{formatShortDate(todayDate)}</span>. La navigation charge uniquement hier, aujourd&apos;hui et demain.</p>
+          <p>Aujourd’hui = <span className="font-mono font-bold text-[#26312e]">{formatShortDate(todayDate)}</span>. La navigation charge uniquement hier, aujourd’hui et demain.</p>
           <Link className="inline-flex min-h-11 items-center justify-center rounded-sm bg-emerald-700 px-4 text-sm font-bold uppercase text-white" href="/pronostics">
             Tous les pronostics du jour
           </Link>
@@ -111,10 +111,10 @@ export function Dashboard({ races }: DashboardProps) {
         <section aria-label="Cockpit de performance du jour" className="mb-3 grid gap-3 lg:grid-cols-[1fr_1fr_1fr]">
           <InsightCard
             icon={<TrendingUp size={20} />}
-            label="ROI estime du jour"
+            label="ROI estimé du jour"
             tone="green"
             value={`${dayInsights.estimatedRoi > 0 ? "+" : ""}${dayInsights.estimatedRoi}%`}
-            detail={`${dayInsights.valueRaces} courses avec edge positif detecte`}
+            detail={`${dayInsights.valueRaces} courses avec edge positif détecté`}
           />
           <InsightCard
             icon={<BellRing size={20} />}
@@ -125,10 +125,10 @@ export function Dashboard({ races }: DashboardProps) {
           />
           <InsightCard
             icon={<Gauge size={20} />}
-            label="Lecture marche"
+            label="Lecture marché"
             tone="dark"
             value={dayInsights.marketMood}
-            detail={`${dayInsights.avoidRaces} courses a eviter / ${dayInsights.focusRaces} focus`}
+            detail={`${dayInsights.avoidRaces} courses a éviter / ${dayInsights.focusRaces} focus`}
           />
         </section>
 
@@ -184,7 +184,7 @@ export function Dashboard({ races }: DashboardProps) {
             </div>
             <label className="flex min-h-12 w-full items-center gap-2 rounded-sm border border-[#d9e1de] bg-white px-3 text-sm font-medium text-[#52615d] lg:min-w-[260px]">
               <Search aria-hidden="true" size={18} />
-              <span className="sr-only">Filtrer les courses de la reunion selectionnee</span>
+              <span className="sr-only">Filtrer les courses de la réunion sélectionnée</span>
               <input
                 className="min-w-0 flex-1 bg-transparent text-[#26312e] outline-none"
                 onChange={(event) => setQuery(event.target.value)}
@@ -219,8 +219,8 @@ export function Dashboard({ races }: DashboardProps) {
                       </span>
                     </div>
                     <div className="mt-2 grid gap-1 text-xs font-semibold">
-                      <span>Score reunion {meeting.score}/100</span>
-                      <span>Difficulte : {meeting.difficulty}</span>
+                      <span>Score réunion {meeting.score}/100</span>
+                      <span>Difficulté : {meeting.difficulty}</span>
                       <span>{meeting.strategy}</span>
                     </div>
                     <div className="mt-2 flex flex-wrap gap-1">
@@ -285,14 +285,14 @@ export function Dashboard({ races }: DashboardProps) {
           <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[980px] border-collapse text-left">
               <caption className="sr-only">
-                Courses de la reunion {selectedMeeting.racecourse}, avec depart, type de pari important et lien vers l&apos;analyse.
+                Courses de la réunion {selectedMeeting.racecourse}, avec départ, type de pari important et lien vers l’analyse.
               </caption>
               <thead>
                 <tr className="kz-table-head text-sm uppercase">
                   <th className="px-7 py-4 font-bold" scope="col">Course</th>
                   <th className="px-5 py-4 font-bold" scope="col">Discipline</th>
                   <th className="px-5 py-4 font-bold" scope="col">Prix</th>
-                  <th className="px-5 py-4 font-bold" scope="col">Depart & Arrivee</th>
+                  <th className="px-5 py-4 font-bold" scope="col">Départ & Arrivée</th>
                   <th className="px-5 py-4 font-bold" scope="col">Signal IA</th>
                   <th className="px-5 py-4 text-center font-bold" scope="col">NP</th>
                   <th className="px-5 py-4 text-right font-bold" scope="col">Action</th>
@@ -346,7 +346,7 @@ export function Dashboard({ races }: DashboardProps) {
 
           <label className="flex items-center gap-3 px-3 py-3 text-base italic text-[#26312e] sm:text-xl">
             <input checked={showRunners} className="h-5 w-5 accent-emerald-700" onChange={(event) => setShowRunners(event.target.checked)} type="checkbox" />
-            Afficher les partants/montes de cette reunion
+            Afficher les partants/montes de cette réunion
           </label>
         </section>
 
@@ -366,7 +366,7 @@ export function Dashboard({ races }: DashboardProps) {
               </div>
               <div className="mt-4 hidden overflow-x-auto sm:block">
                 <table className="w-full min-w-[720px] border-collapse text-left">
-                  <caption className="sr-only">Top 5 des chevaux reperes par KAYZEN pour la course active.</caption>
+                  <caption className="sr-only">Top 5 des chevaux repérés par KAYZEN pour la course active.</caption>
                   <thead>
                     <tr className="kz-table-head text-xs uppercase">
                       <th className="px-3 py-3" scope="col">N</th>
@@ -420,15 +420,15 @@ export function Dashboard({ races }: DashboardProps) {
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <Metric label="Consensus" value={`${selectedRace.modelConsensus}%`} />
-                <Metric label="Qualite course" value={`${selectedRace.raceQualityScore}`} />
+                <Metric label="Qualité course" value={`${selectedRace.raceQualityScore}`} />
                 <Metric label="Risque" value={selectedRace.riskLevel} />
                 <Metric label="Discipline" value={selectedRace.specialty} />
                 <Metric label="Scenario" value={raceOpportunity(selectedRace)} />
-                <Metric label="Strategie" value={strategyForRace(selectedRace)} />
+                <Metric label="Stratégie" value={strategyForRace(selectedRace)} />
               </div>
               <div className="mt-4 rounded-md border border-amber-500/30 bg-amber-50 p-3 text-sm text-amber-950">
                 <ShieldCheck className="mb-2 text-amber-700" size={18} />
-                Outil d&apos;aide a la decision. Aucun pronostic ne garantit un gain.
+                Outil d’aide à la décision. Aucun pronostic ne garantit un gain.
               </div>
             </div>
           </section>
@@ -541,10 +541,10 @@ function raceOpportunity(race: RaceAnalysis) {
 }
 
 function strategyForRace(race: RaceAnalysis) {
-  if (race.riskLevel === "Prudent") return "Securise";
+  if (race.riskLevel === "Prudent") return "Sécurisé";
   if (race.bettingTier === "Value") return "Value";
   if (race.riskLevel === "Speculatif") return "Agressif";
-  return "Equilibre";
+  return "Équilibré";
 }
 
 function selectTimelineRace(races: RaceAnalysis[], currentMinute: number) {
@@ -557,13 +557,13 @@ function selectTimelineRace(races: RaceAnalysis[], currentMinute: number) {
 }
 
 function raceStatus(race: RaceAnalysis, currentMinute: number) {
-  if (race.relativeDay === "yesterday") return race.horses.some((horse) => horse.finishPosition) ? "Arrivee disponible" : `Depart a ${race.startTime}`;
-  if (race.relativeDay === "tomorrow") return `Depart a ${race.startTime}`;
+  if (race.relativeDay === "yesterday") return race.horses.some((horse) => horse.finishPosition) ? "Arrivée disponible" : `Départ a ${race.startTime}`;
+  if (race.relativeDay === "tomorrow") return `Départ a ${race.startTime}`;
 
   const startMinute = minutesFromStartTime(race.startTime);
-  if (startMinute < currentMinute) return race.horses.some((horse) => horse.finishPosition) ? "Arrivee disponible" : `Depart a ${race.startTime}`;
-  if (startMinute - currentMinute <= 30) return `Depart imminent ${race.startTime}`;
-  return `Depart a ${race.startTime}`;
+  if (startMinute < currentMinute) return race.horses.some((horse) => horse.finishPosition) ? "Arrivée disponible" : `Départ a ${race.startTime}`;
+  if (startMinute - currentMinute <= 30) return `Départ imminent ${race.startTime}`;
+  return `Départ a ${race.startTime}`;
 }
 
 function minutesFromStartTime(startTime: string) {
@@ -703,3 +703,5 @@ function InsightCard({
     </article>
   );
 }
+
+

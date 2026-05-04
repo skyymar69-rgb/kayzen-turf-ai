@@ -3,33 +3,33 @@ import { Brain, GitBranch, LineChart, Network, ShieldCheck, Sparkles } from "luc
 const techniques = [
   {
     icon: LineChart,
-    title: "Modeles tabulaires",
-    body: "Random Forest pour la robustesse baseline, Gradient Boosting type XGBoost/LightGBM pour capturer les interactions non lineaires : forme, distance, piste, gains, musique, jockey et entraineur.",
+    title: "Modèles tabulaires",
+    body: "Random Forest pour la robustesse baseline, Gradient Boosting type XGBoost/LightGBM pour capturer les interactions non lineaires : forme, distance, piste, gains, musique, jockey et entraîneur.",
   },
   {
     icon: Brain,
     title: "Deep learning",
-    body: "MLP et modeles sequentiels pour exploiter les historiques de performances. Les series recentes sont ponderees afin de distinguer forme reelle, irregularite et contexte de course.",
+    body: "MLP et modèles séquentiels pour exploiter les historiques de performances. Les séries récentes sont pondérées afin de distinguer forme réelle, irrégularité et contexte de course.",
   },
   {
     icon: Network,
     title: "Graphes relationnels",
-    body: "Approche Graph Neural Network ciblee pour modeliser les relations cheval-jockey-entraineur-hippodrome, utile lorsque les connexions historiques creent un avantage structurel.",
+    body: "Approche Graph Neural Network ciblee pour modeliser les relations cheval-jockey-entraîneur-hippodrome, utile lorsque les connexions historiques creent un avantage structurel.",
   },
   {
     icon: GitBranch,
     title: "Ensemble learning",
-    body: "Fusion des scores de plusieurs modeles, calibration probabiliste et penalites de risque. Le KZ Score combine probabilite gagnant, Top 3, Top 5, value index et niveau de confiance.",
+    body: "Fusion des scores de plusieurs modèles, calibration probabiliste et pénalités de risque. Le KZ Score combine probabilité gagnant, Top 3, Top 5, value index et niveau de confiance.",
   },
   {
     icon: Sparkles,
     title: "Value bet detector",
-    body: "Comparaison entre probabilite estimee et cote implicite du marche. Une opportunite est marquee lorsque l'ecart probabilite/cote reste positif apres marge de securite.",
+    body: "Comparaison entre probabilité estimée et cote implicite du marché. Une opportunité est marquée lorsque l'écart probabilité/cote reste positif après marge de securite.",
   },
   {
     icon: ShieldCheck,
-    title: "Apprentissage apres course",
-    body: "Apres les resultats, le systeme compare prediction et arrivee, analyse les ecarts, stocke les erreurs et prepare le recalibrage des ponderations pour ameliorer la stabilite.",
+    title: "Apprentissage après course",
+    body: "Après les résultats, le système compare prediction et arrivée, analyse les écarts, stocke les erreurs et prepare le recalibrage des pondérations pour améliorer la stabilité.",
   },
 ];
 
@@ -40,8 +40,8 @@ export default function TechniquesPredictionPage() {
         <p className="text-sm font-bold uppercase text-emerald-700">Kayzen Pronostic Turf PMU</p>
         <h1 className="mt-2 text-3xl font-bold tracking-normal sm:text-5xl">Techniques de prediction utilisees</h1>
         <p className="mt-4 max-w-4xl text-base leading-7 text-[#52615d]">
-          La plateforme combine des methodes statistiques, machine learning et data engineering pour produire des pronostics probabilistes.
-          Aucun modele ne garantit un gain : l&apos;objectif est de mieux quantifier l&apos;incertitude et de rendre les decisions explicables.
+          La plateforme combine des méthodes statistiques, machine learning et data engineering pour produire des pronostics probabilistes.
+          Aucun modèle ne garantit un gain : l’objectif est de mieux quantifier l’incertitude et de rendre les décisions explicables.
         </p>
 
         <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -59,12 +59,12 @@ export default function TechniquesPredictionPage() {
         <section className="mt-8 rounded-md border border-[#d9e1de] bg-white p-5 shadow-sm">
           <h2 className="text-2xl font-bold">Pipeline complet</h2>
           <ol className="mt-4 grid gap-3 text-sm leading-7 text-[#52615d] md:grid-cols-2">
-            <li><strong>1. Collecte</strong> : courses, partants, performances, cotes, piste, meteo, resultats.</li>
-            <li><strong>2. Normalisation</strong> : nettoyage, matching chevaux/jockeys/entraineurs, controle doublons.</li>
+            <li><strong>1. Collecte</strong> : courses, partants, performances, cotes, piste, météo, résultats.</li>
+            <li><strong>2. Normalisation</strong> : nettoyage, matching chevaux/jockeys/entraîneurs, controle doublons.</li>
             <li><strong>3. Feature engineering</strong> : forme, regularite, aptitude distance, gains, specialite, value implicite.</li>
-            <li><strong>4. Prediction</strong> : probabilites gagnant, Top 3, Top 5, KZ Score et niveau de confiance.</li>
-            <li><strong>5. Recommandation</strong> : tickets proposes uniquement selon les paris ouverts sur la course.</li>
-            <li><strong>6. Feedback loop</strong> : analyse apres course, erreurs, recalibrage et surveillance du ROI.</li>
+            <li><strong>4. Prediction</strong> : probabilités gagnant, Top 3, Top 5, KZ Score et niveau de confiance.</li>
+            <li><strong>5. Recommandation</strong> : tickets proposés uniquement selon les paris ouverts sur la course.</li>
+            <li><strong>6. Feedback loop</strong> : analyse après course, erreurs, recalibrage et surveillance du ROI.</li>
           </ol>
         </section>
       </section>

@@ -4,12 +4,12 @@ import { COMPANY } from "@/lib/site-config";
 const legalLinks = [
   { href: "/pronostics", label: "Pronostics du jour" },
   { href: "/techniques-prediction", label: "Techniques IA" },
-  { href: "/mentions-legales", label: "Mentions legales" },
+  { href: "/mentions-légales", label: "Mentions légales" },
   { href: "/cgu", label: "CGU" },
   { href: "/cgv", label: "CGV" },
-  { href: "/confidentialite", label: "RGPD" },
+  { href: "/confidentialité", label: "RGPD" },
   { href: "/cookies", label: "Cookies" },
-  { href: "/accessibilite", label: "Accessibilite" },
+  { href: "/accèssibilité", label: "Accessibilité" },
 ];
 
 export function SiteFooter() {
@@ -19,7 +19,7 @@ export function SiteFooter() {
         <div>
           <p className="font-display text-xl font-bold tracking-normal">{COMPANY.brand}</p>
           <p className="site-muted mt-2 max-w-3xl text-sm leading-6">
-            Outil d&apos;aide a la decision pour pronostics hippiques. Les jeux d&apos;argent comportent des risques :
+            Outil d’aide à la décision pour pronostics hippiques. Les jeux d’argent comportent des risques :
             endettement, isolement, dependance. Aucun pronostic ne garantit un gain.
           </p>
           <p className="site-muted mt-3 text-sm">
@@ -37,7 +37,7 @@ export function SiteFooter() {
       <div className="site-muted mx-auto mt-6 flex max-w-[1480px] flex-col gap-2 border-t border-[#d9e1de] pt-4 text-sm sm:flex-row sm:items-center sm:justify-between">
         <p>(c) {new Date().getFullYear()} {COMPANY.editor}. Tous droits reserves.</p>
         <a className="site-accent-text font-semibold underline-offset-4 hover:underline" href={COMPANY.agencyUrl} rel="noopener noreferrer" target="_blank">
-          Fierement realise par Kayzen Web
+          Fièrement réalisé par Kayzen Web
         </a>
       </div>
     </footer>

@@ -16,8 +16,8 @@ export default async function PronosticsPage() {
           <p className="text-sm font-bold uppercase text-emerald-700">Toutes les courses du jour</p>
           <h1 className="mt-2 text-3xl font-bold tracking-normal sm:text-5xl">Pronostics Turf - PMU du jour</h1>
           <p className="mt-4 max-w-4xl text-base leading-7 text-[#52615d]">
-            Recapitulatif horaire de toutes les courses francaises disponibles aujourd&apos;hui, avec ordre probable, base IA,
-            value bet prioritaire et tickets proposes lorsque les paris sont ouverts.
+            Récapitulatif horaire de toutes les courses françaises disponibles aujourd’hui, avec ordre probable, base IA,
+            value bet prioritaire et tickets proposés lorsque les paris sont ouverts.
           </p>
         </div>
 
@@ -76,3 +76,4 @@ function RecapBox({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+

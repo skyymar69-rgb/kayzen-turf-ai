@@ -68,7 +68,7 @@ export type PostRaceAnalysis = {
     averagePositionError: number | null;
     confidenceScore: number;
   };
-  verdict: "Bon signal" | "Partiel" | "Erreur modele" | "En attente";
+  verdict: "Bon signal" | "Partiel" | "Erreur modèle" | "En attente";
   summary: string;
   lessons: string[];
   nextModelActions: string[];
@@ -109,7 +109,7 @@ export type BetSimulation = {
   drawdownAdjustedStake: number;
   fairOdds: number;
   marketEdge: number;
-  recommendation: "Eviter" | "Observer" | "Miser prudemment" | "Value bet";
+  recommendation: "Éviter" | "Observer" | "Miser prudemment" | "Value bet";
 };
 
 export type ModelCard = {

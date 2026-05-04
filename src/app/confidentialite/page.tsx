@@ -1,12 +1,12 @@
 import { LegalPage, editorSection } from "@/components/legal-page";
 import { PrivacyForm } from "@/components/privacy-form";
 
-export default function ConfidentialitePage() {
+export default function ConfidentialitéPage() {
   return (
     <>
       <LegalPage
-        title="Politique de confidentialite RGPD"
-        intro="Information des utilisateurs sur les traitements de donnees personnelles, les bases legales, les durees de conservation et les droits RGPD."
+        title="Politique de confidentialité RGPD"
+        intro="Information des utilisateurs sur les traitements de données personnelles, les bases légales, les durées de conservation et les droits RGPD."
         sections={[
           editorSection,
           {
@@ -16,27 +16,27 @@ export default function ConfidentialitePage() {
             ],
           },
           {
-            title: "Finalites et bases legales",
+            title: "Finalités et bases légales",
             body: [
-              "Gestion du compte et de l'abonnement : execution contractuelle. Reponse aux demandes : interet legitime ou mesures precontractuelles. Securite, logs techniques et prevention de la fraude : interet legitime. Prospection : consentement ou interet legitime selon le contexte.",
+              "Gestion du compte et de l'abonnement : exécution contractuelle. Reponse aux demandes : intérêt légitime ou mesures précontractuelles. Sécurité, logs techniques et prévention de la fraude : intérêt légitime. Prospection : consentement ou intérêt légitime selon le contexte.",
             ],
           },
           {
             title: "Minimisation et conservation",
             body: [
-              "Les donnees collectees doivent etre limitees au strict necessaire. Les donnees de compte sont conservees pendant la relation contractuelle puis archivees selon les obligations legales. Les donnees prospects sont conservees pour une duree raisonnable ou jusqu'au retrait du consentement.",
+              "Les données collectées doivent être limitées au strict nécessaire. Les données de compte sont conservees pendant la relation contractuelle puis archivees selon les obligations légales. Les données prospects sont conservees pour une durée raisonnable ou jusqu'au retrait du consentement.",
             ],
           },
           {
             title: "Droits des personnes",
             body: [
-              "Les utilisateurs disposent des droits d'acces, rectification, effacement, opposition, limitation, portabilite et retrait du consentement. Ils peuvent saisir la CNIL en cas de difficulte.",
+              "Les utilisateurs disposent des droits d'accès, rectification, effacement, opposition, limitation, portabilite et retrait du consentement. Ils peuvent saisir la CNIL en cas de difficulté.",
             ],
           },
           {
             title: "Sous-traitants et transferts",
             body: [
-              "Les sous-traitants techniques peuvent inclure l'hebergeur, la base de donnees, l'emailing, les paiements et l'analytics. Les transferts hors UE doivent etre encadres par une decision d'adequation ou des garanties appropriees.",
+              "Les sous-traitants techniques peuvent inclure l'hébergeur, la base de données, l'emailing, les paiements et l'analytics. Les transferts hors UE doivent être encadrés par une decision d'adéquation ou des garanties appropriees.",
             ],
           },
         ]}

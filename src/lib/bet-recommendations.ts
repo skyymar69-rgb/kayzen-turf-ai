@@ -1,4 +1,4 @@
-import type { BetOffer, BetRecommendation, HorsePrediction } from "@/lib/types";
+﻿import type { BetOffer, BetRecommendation, HorsePrediction } from "@/lib/types";
 
 const SUPPORTED_TYPES = [
   "SIMPLE_GAGNANT",
@@ -89,6 +89,8 @@ function rationaleFor(type: string, horses: HorsePrediction[]) {
   if (type === "SIMPLE_PLACE") return `Base place sur le meilleur compromis KZ Score / Top 3: ${lead.horse}.`;
   if (type.includes("ORDRE")) return "Ticket ordre uniquement propose car le PMU ouvre ce pari sur cette course.";
   if (type === "DEUX_SUR_QUATRE") return "Couverture sur les deux bases les plus regulieres du classement probable.";
-  if (type === "QUARTE_PLUS" || type === "QUINTE_PLUS") return "Selection elargie, a jouer prudemment avec flexi si disponible.";
-  return `Selection issue de l'ordre d'arrivee le plus probable, leader: ${lead.horse}.`;
+  if (type === "QUARTE_PLUS" || type === "QUINTE_PLUS") return "Sélection élargie, a jouer prudemment avec flexi si disponible.";
+  return `Sélection issue de l'ordre d'arrivée le plus probable, leader: ${lead.horse}.`;
 }
+
+

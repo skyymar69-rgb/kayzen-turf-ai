@@ -20,9 +20,9 @@ export function buildPostRaceAnalysis(race: RaceAnalysis): PostRaceAnalysis {
         confidenceScore: 0,
       },
       verdict: "En attente",
-      summary: "Resultat officiel non encore disponible. L'analyse post-course sera calculee des que l'arrivee est importee.",
+      summary: "Resultat officiel non encore disponible. L'analyse post-course sera calculee des que l'arrivée est importee.",
       lessons: [],
-      nextModelActions: ["Attendre l'arrivee officielle PMU puis comparer prediction, tickets proposes et resultat."],
+      nextModelActions: ["Attendre l'arrivée officielle PMU puis comparer prediction, tickets proposés et resultat."],
     };
   }
 
@@ -35,7 +35,7 @@ export function buildPostRaceAnalysis(race: RaceAnalysis): PostRaceAnalysis {
   const top5Hits = countIntersection(predictedTop5, actualTop5);
   const averagePositionError = averageError(predicted, actual);
   const confidenceScore = scoreReview(winnerHit, top3Hits, top5Hits, averagePositionError);
-  const verdict = confidenceScore >= 72 ? "Bon signal" : confidenceScore >= 45 ? "Partiel" : "Erreur modele";
+  const verdict = confidenceScore >= 72 ? "Bon signal" : confidenceScore >= 45 ? "Partiel" : "Erreur modèle";
 
   return {
     status: "complete",
@@ -92,11 +92,11 @@ function summaryFor(
   const predictedWinner = predicted[0];
 
   if (verdict === "Bon signal") {
-    return `${race.programCode}: lecture solide. Le modele place ${top3Hits}/3 dans le Top 3 et ${top5Hits}/5 dans le Top 5.`;
+    return `${race.programCode}: lecture solide. Le modèle place ${top3Hits}/3 dans le Top 3 et ${top5Hits}/5 dans le Top 5.`;
   }
 
   if (winner && predictedWinner && winner.number !== predictedWinner.number) {
-    return `${race.programCode}: le gagnant reel #${winner.number} ${winner.horse} devance notre base #${predictedWinner.number} ${predictedWinner.horse}. On doit analyser le signal sous-estime.`;
+    return `${race.programCode}: le gagnant reel #${winner.number} ${winner.horse} devance notre base #${predictedWinner.number} ${predictedWinner.horse}. On doit analyser le signal sous-estimé.`;
   }
 
   return `${race.programCode}: resultat partiellement conforme, mais l'ordre exact reste insuffisant pour les paris ordre.`;
@@ -111,7 +111,7 @@ function lessonsFor(actual: HorsePrediction[], predicted: HorsePrediction[]) {
 
   const winnerRank = predicted.findIndex((horse) => horse.number === winner.number) + 1;
   if (winnerRank > 3) {
-    lessons.push(`Le gagnant #${winner.number} etait classe ${winnerRank}e par le modele: penalite a remonter dans le feedback.`);
+    lessons.push(`Le gagnant #${winner.number} était classé ${winnerRank}e par le modèle: pénalité à remonter dans le feedback.`);
   }
 
   if (winner.valueIndex > 10) {
@@ -123,7 +123,7 @@ function lessonsFor(actual: HorsePrediction[], predicted: HorsePrediction[]) {
   }
 
   if (lessons.length === 0) {
-    lessons.push("Les principaux signaux etaient coherents; conserver la calibration actuelle sur ce profil de course.");
+    lessons.push("Les principaux signaux étaient coherents; conserver la calibration actuelle sur ce profil de course.");
   }
 
   return lessons;
@@ -133,11 +133,11 @@ function nextActionsFor(actual: HorsePrediction[], predicted: HorsePrediction[],
   const winner = actual[0];
   const predictedWinner = predicted[0];
   const actions = [
-    "Enregistrer l'ecart prediction/resultat dans le jeu d'apprentissage quotidien.",
-    "Recalculer les poids KZ Score sur les courses terminees avant le prochain batch modele.",
+    "Enregistrer l'écart prediction/resultat dans le jeu d'apprentissage quotidien.",
+    "Recalculer les poids KZ Score sur les courses terminées avant le prochain batch modèle.",
   ];
 
-  if (verdict === "Erreur modele") {
+  if (verdict === "Erreur modèle") {
     actions.push("Baisser l'agressivite des tickets ordre sur ce profil tant que la calibration n'est pas corrigee.");
   }
 

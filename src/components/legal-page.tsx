@@ -16,7 +16,7 @@ export function LegalPage({ intro, sections, title }: { intro: string; sections:
         <p className="mt-4 max-w-3xl text-base leading-7 text-[#52615d]">{intro}</p>
         <div className="mt-5 rounded-md border border-amber-500/30 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
           <AlertTriangle className="mb-2 text-amber-700" size={18} />
-          Document operationnel de conformite. Une validation par un avocat ou conseil habilite reste recommandee avant exploitation commerciale definitive.
+          Document opérationnel de conformité. Une validation par un avocat ou conseil habilité reste recommandée avant exploitation commerciale définitive.
         </div>
         <div className="mt-8 grid gap-5">
           {sections.map((section) => (
@@ -56,7 +56,7 @@ export function LegalPage({ intro, sections, title }: { intro: string; sections:
 }
 
 export const editorSection: Section = {
-  title: "Identification de l'editeur",
+  title: "Identification de l'éditeur",
   body: [
     `${COMPANY.editor}, ${COMPANY.legalForm}, SIREN/SIRET ${COMPANY.siren}, RCS ${COMPANY.rcs}, TVA intracommunautaire ${COMPANY.vat}, code APE ${COMPANY.ape}.`,
     `Siege social : ${COMPANY.address}. Telephone : ${COMPANY.phone}. Email : ${COMPANY.email}. Agence web : ${COMPANY.agencyUrl}.`,

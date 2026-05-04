@@ -13,7 +13,7 @@ export function PrivacyForm() {
       setStatus("Votre demande a ete prise en compte.");
       return;
     }
-    setStatus("Formulaire pret : branchement email/API a finaliser avant collecte reelle.");
+    setStatus("Formulaire pret : branchement email/API a finaliser avant collecte réelle.");
   }
 
   return (
@@ -26,7 +26,7 @@ export function PrivacyForm() {
       <label className="text-sm font-semibold text-[#52615d]">
         Objet de la demande
         <select className="mt-1 min-h-11 w-full rounded-sm border border-[#cdd7d3] px-3 text-[#26312e]" name="requestType" required>
-          <option value="access">Droit d&apos;acces</option>
+          <option value="access">Droit d’accès</option>
           <option value="rectification">Rectification</option>
           <option value="erasure">Effacement</option>
           <option value="opposition">Opposition</option>
@@ -42,7 +42,7 @@ export function PrivacyForm() {
         <input autoComplete="off" name="website" tabIndex={-1} />
       </label>
       <p className="text-xs leading-5 text-[#65746f]">
-        Les champs sont limites au strict necessaire. Ce formulaire contient un honeypot anti-spam invisible aux utilisateurs.
+        Les champs sont limités au strict nécessaire. Ce formulaire contient un honeypot anti-spam invisible aux utilisateurs.
       </p>
       <button className="min-h-11 rounded-sm bg-emerald-700 px-4 font-bold text-white" type="submit">
         Preparer la demande

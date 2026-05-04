@@ -34,19 +34,19 @@ export async function SiteHeader() {
         <nav aria-label="Navigation principale" className="flex gap-2 overflow-x-auto text-sm font-semibold">
           <Link className="site-link min-h-10 shrink-0 rounded-sm px-3 py-2" href="/pronostics">Pronostics du jour</Link>
           <Link className="site-link min-h-10 shrink-0 rounded-sm px-3 py-2" href="/techniques-prediction">Techniques IA</Link>
-          <Link className="site-link min-h-10 shrink-0 rounded-sm px-3 py-2" href="/accessibilite">Accessibilite</Link>
+          <Link className="site-link min-h-10 shrink-0 rounded-sm px-3 py-2" href="/accèssibilité">Accessibilité</Link>
         </nav>
         <details className="site-panel group rounded-md border border-[#d9e1de]">
           <summary className="site-accent-text flex min-h-11 cursor-pointer list-none items-center gap-2 px-3 text-sm font-bold">
             <WalletCards size={18} />
-            Carte de contact numerique
+            Carte de contact numérique
           </summary>
           <div className="grid gap-3 border-t border-[#d9e1de] p-3 sm:grid-cols-3">
             <QrTile href={SITE_URL} icon={<QrCode size={17} />} label="QR site" svg={siteQr} />
             <QrTile href={CONTACT_LINKS.maps} icon={<MapPin size={17} />} label="QR Maps" svg={mapsQr} />
             <QrTile href={CONTACT_LINKS.reviews} icon={<Star size={17} />} label="QR Avis" svg={reviewsQr} />
             <a className="site-tile site-accent-text sm:col-span-3 rounded-sm border border-emerald-700/20 px-3 py-2 text-center text-sm font-bold hover:bg-emerald-50" href={CONTACT_LINKS.vcard}>
-              Telecharger la vCard
+              Télécharger la vCard
             </a>
           </div>
         </details>

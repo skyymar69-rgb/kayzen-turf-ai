@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -26,7 +26,7 @@ type CourseDetailProps = {
 
 type TicketMode = "agressif" | "equilibre" | "securise";
 
-const TABS = ["Partants", "Cotes", "Pronostics IA", "Statistiques", "Les Plus Joues", "Arrivees et Rapports"] as const;
+const TABS = ["Partants", "Cotes", "Pronostics IA", "Statistiques", "Les Plus Joués", "Arrivées et Rapports"] as const;
 
 const BET_COLORS: Record<string, string> = {
   SIMPLE_GAGNANT: "bg-cyan-500",
@@ -85,7 +85,7 @@ export function CourseDetail({ race }: CourseDetailProps) {
                   <span>-</span>
                   <span>{formatPrize(race.raceQualityScore)}</span>
                   <span>-</span>
-                  <span>{formatMeters(race.distance)} metres</span>
+                  <span>{formatMeters(race.distance)} mêtres</span>
                   <span>-</span>
                   <span>{partantsCount} Partants</span>
                 </div>
@@ -94,7 +94,7 @@ export function CourseDetail({ race }: CourseDetailProps) {
               <div className="flex flex-col items-start gap-4 xl:items-end">
                 <div className="inline-flex items-center gap-3 text-xl font-semibold italic text-emerald-700 sm:text-2xl">
                   <Clock3 size={26} />
-                  Depart {race.startTime}
+                  Départ {race.startTime}
                 </div>
                 <button className="inline-flex min-h-12 w-full items-center justify-center gap-3 rounded-md bg-emerald-700 px-5 text-sm font-semibold uppercase text-white shadow-md shadow-emerald-900/20 sm:w-auto" type="button">
                   <MessageSquareText size={22} />
@@ -143,12 +143,12 @@ export function CourseDetail({ race }: CourseDetailProps) {
           <LightPanel title="Pronostic KAYZEN" icon={Trophy}>
             <div className="grid gap-3 lg:grid-cols-[0.9fr_1.1fr]">
               <div className="rounded-md border border-emerald-700/20 bg-emerald-50 p-4">
-                <p className="text-sm font-medium text-emerald-900">Ordre d&apos;arrivee le plus probable</p>
+                <p className="text-sm font-medium text-emerald-900">Ordre d’arrivée le plus probable</p>
                 <p className="mt-2 font-mono text-2xl font-semibold text-emerald-800">
                   {arrival.slice(0, 6).map((horse) => horse.number).join(" - ")}
                 </p>
                 <p className="mt-3 text-sm text-emerald-900/70">
-                  Base IA calculee avec KZ Score, probabilites gagnant/top 3 et forme recente PMU.
+                  Base IA calculee avec KZ Score, probabilités gagnant/top 3 et forme recente PMU.
                 </p>
               </div>
               <div className="grid gap-2 sm:grid-cols-2">
@@ -164,11 +164,11 @@ export function CourseDetail({ race }: CourseDetailProps) {
             <section className="mt-4 rounded-md border border-[#d9e1de] bg-[#fbfcfc] p-4">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                  <p className="text-sm font-bold uppercase text-[#65746f]">Generateur de tickets intelligent</p>
+                  <p className="text-sm font-bold uppercase text-[#65746f]">Générateur de tickets intelligent</p>
                   <h3 className="mt-1 text-lg font-bold text-[#26312e]">Mode {ticketModeLabel(ticketMode)} - budget {ticketBudget} EUR</h3>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-                  <div aria-label="Mode de strategie ticket" className="grid grid-cols-3 rounded-sm border border-[#d9e1de] bg-white text-xs font-bold" role="group">
+                  <div aria-label="Mode de stratégie ticket" className="grid grid-cols-3 rounded-sm border border-[#d9e1de] bg-white text-xs font-bold" role="group">
                     {(["securise", "equilibre", "agressif"] as TicketMode[]).map((mode) => (
                       <button
                         aria-pressed={ticketMode === mode}
@@ -214,11 +214,11 @@ export function CourseDetail({ race }: CourseDetailProps) {
             </section>
           </LightPanel>
 
-          <LightPanel title="Simulation et responsabilite" icon={Gauge}>
+          <LightPanel title="Simulation et responsabilité" icon={Gauge}>
             {selectedHorse && simulation ? (
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block text-sm font-medium text-[#52615d]">
-                  Cheval selectionne
+                  Cheval sélectionné
                   <select
                     className="mt-2 h-11 w-full rounded-md border border-[#cdd7d3] bg-white px-3 text-[#26312e] outline-none"
                     onChange={(event) => setSelectedHorseId(event.target.value)}
@@ -241,17 +241,17 @@ export function CourseDetail({ race }: CourseDetailProps) {
                     value={stake}
                   />
                 </label>
-                <Result label="EV estimee" value={`${simulation.expectedValue} EUR`} />
+                <Result label="EV estimée" value={`${simulation.expectedValue} EUR`} />
                 <Result label="Kelly prudent" value={`${simulation.kellyStake} EUR`} />
-                <Result label="Edge marche" value={`${simulation.marketEdge}%`} />
-                <Result label="Decision" value={simulation.recommendation} />
+                <Result label="Edge marché" value={`${simulation.marketEdge}%`} />
+                <Result label="Décision" value={simulation.recommendation} />
               </div>
             ) : null}
           </LightPanel>
         </div>
 
         <div className="mt-5 grid gap-4 xl:grid-cols-3">
-          <LightPanel title="Analyse apres course" icon={Sparkles}>
+          <LightPanel title="Analyse après course" icon={Sparkles}>
             <div className="space-y-3">
               <div className="rounded-md border border-[#d9e1de] bg-[#fbfcfc] p-3">
                 <div className="flex items-center justify-between gap-3">
@@ -264,7 +264,7 @@ export function CourseDetail({ race }: CourseDetailProps) {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <Result label="Prediction" value={postRaceAnalysis.predictedArrival.join("-") || "-"} />
-                <Result label="Arrivee" value={postRaceAnalysis.actualArrival.join("-") || "-"} />
+                <Result label="Arrivée" value={postRaceAnalysis.actualArrival.join("-") || "-"} />
                 <Result label="Top 3" value={`${postRaceAnalysis.metrics.top3Hits}/3`} />
                 <Result label="Top 5" value={`${postRaceAnalysis.metrics.top5Hits}/5`} />
               </div>
@@ -282,14 +282,14 @@ export function CourseDetail({ race }: CourseDetailProps) {
             </div>
           </LightPanel>
 
-          <LightPanel title="Actions modele" icon={ArrowUpRight}>
+          <LightPanel title="Actions modèle" icon={ArrowUpRight}>
             <div className="space-y-3">
               {postRaceAnalysis.nextModelActions.map((action) => (
                 <p className="rounded-md border border-cyan-700/20 bg-cyan-50 p-3 text-sm text-cyan-950" key={action}>{action}</p>
               ))}
               <div className="rounded-md border border-amber-500/30 bg-amber-50 p-3 text-sm text-amber-950">
                 <AlertTriangle className="mb-2 text-amber-700" size={18} />
-                Aucun pronostic ne garantit un gain. Les tickets restent une aide a la decision.
+                Aucun pronostic ne garantit un gain. Les tickets restent une aide à la décision.
               </div>
             </div>
           </LightPanel>
@@ -351,11 +351,11 @@ function PartantsTable({
       <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[1280px] border-collapse text-left">
         <caption className="sr-only">
-          Tableau des partants avec numero, cheval, driver, entraineur, gains, performances recentes, cotes et score KAYZEN.
+          Tableau des partants avec numéro, cheval, driver, entraîneur, gains, performances récentes, cotes et score KAYZEN.
         </caption>
         <thead>
           <tr className="bg-[#424342] text-xs uppercase text-white">
-            {["No", "Chevaux", "Dist.", "Def.", "S/A", "Drivers", "Entraineurs", "R/K", "Gains", "Dernieres performances", "Cotes", "KZ"].map((heading) => (
+            {["N°", "Chevaux", "Dist.", "Déf.", "S/A", "Drivers", "Entraîneurs", "R/K", "Gains", "Dernières performances", "Cotes", "KZ"].map((heading) => (
               <th className="border-r border-white/20 px-3 py-4 font-semibold" key={heading} scope="col">{heading}</th>
             ))}
           </tr>
@@ -363,7 +363,7 @@ function PartantsTable({
         <tbody>
           {horses.map((horse, index) => (
             <tr
-              aria-label={`Selectionner ${horse.horse}, numero ${horse.number}`}
+              aria-label={`Sélectionner ${horse.horse}, numéro ${horse.number}`}
               className={`cursor-pointer border-b border-[#dfe5e3] text-sm transition hover:bg-emerald-50 ${
                 selectedHorseId === horse.id ? "bg-emerald-50" : index % 2 === 0 ? "bg-white" : "bg-[#f5f6f6]"
               }`}
@@ -431,7 +431,7 @@ function TabPlaceholder({
 
   if (activeTab === "Pronostics IA") {
     return (
-      <SimpleGrid title="Tickets proposes">
+      <SimpleGrid title="Tickets proposés">
         {recommendations.map((item) => (
           <Result key={item.type} label={item.label} value={item.ticket} />
         ))}
@@ -443,8 +443,8 @@ function TabPlaceholder({
     return (
       <SimpleGrid title="Statistiques course">
         <Result label="Consensus IA" value={`${race.modelConsensus}%`} />
-        <Result label="Volatilite marche" value={`${race.marketVolatility}%`} />
-        <Result label="Qualite course" value={`${race.raceQualityScore}`} />
+        <Result label="Volatilite marché" value={`${race.marketVolatility}%`} />
+        <Result label="Qualité course" value={`${race.raceQualityScore}`} />
         <Result label="Risque" value={race.riskLevel} />
       </SimpleGrid>
     );
@@ -520,9 +520,9 @@ function ticketWeight(strategy: string, mode: TicketMode) {
 }
 
 function ticketModeLabel(mode: TicketMode) {
-  if (mode === "securise") return "Securise";
+  if (mode === "securise") return "Sécurisé";
   if (mode === "agressif") return "Agressif";
-  return "Equilibre";
+  return "Équilibré";
 }
 
 function visibleBetBadges(offers: BetOffer[]) {
@@ -589,3 +589,5 @@ function formatEquipment(value?: string | null) {
   if (!value || value === "SANS_OEILLERES") return "-";
   return value.replaceAll("_", " ").toLowerCase();
 }
+
+

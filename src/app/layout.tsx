@@ -7,7 +7,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Kayzen Pronostic Turf PMU",
-  description: "Pronostics PMU, analyses IA et aide a la decision pour les courses hippiques francaises.",
+  description: "Pronostics PMU, analyses IA et aide à la décision pour les courses hippiques françaises.",
 };
 
 export default function RootLayout({

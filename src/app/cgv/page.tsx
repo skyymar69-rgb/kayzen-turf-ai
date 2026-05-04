@@ -4,37 +4,37 @@ export default function CgvPage() {
   return (
     <LegalPage
       title="Conditions generales de vente"
-      intro="Les presentes CGV structurent le futur modele SaaS payant : abonnements, services numeriques, API et offres B2B."
+      intro="Les présentes CGV structurent le futur modèle SaaS payant : abonnements, services numériques, API et offres B2B."
       sections={[
         editorSection,
         {
           title: "Produits et services",
           body: [
-            "Kayzen pourra commercialiser des abonnements d'acces aux pronostics premium, alertes, tableaux de bord, API et services B2B. Les caracteristiques essentielles seront presentees avant paiement.",
+            "Kayzen pourra commercialiser des abonnements d'accès aux pronostics premium, alertes, tableaux de bord, API et services B2B. Les caractéristiques essentielles seront présentées avant paiement.",
           ],
         },
         {
           title: "Prix et paiement",
           body: [
-            "Les prix seront indiques en euros toutes taxes comprises pour les consommateurs et, le cas echeant, hors taxes pour les professionnels. Le paiement sera realise via un prestataire securise.",
+            "Les prix seront indiqués en euros toutes taxes comprises pour les consommateurs et, le cas échéant, hors taxes pour les professionnels. Le paiement sera réalisé via un prestataire sécurisé.",
           ],
         },
         {
-          title: "Abonnement et resiliation",
+          title: "Abonnement et résiliation",
           body: [
-            "Les abonnements pourront etre mensuels ou annuels. Les modalites de renouvellement, resiliation et eventuelle periode d'essai devront etre precisees dans l'ecran de paiement.",
+            "Les abonnements pourront être mensuels ou annuels. Les modalités de renouvellement, résiliation et éventuelle période d'essai devront être précisées dans l'écran de paiement.",
           ],
         },
         {
-          title: "Droit de retractation",
+          title: "Droit de rétractation",
           body: [
-            "Pour les contenus et services numeriques fournis immediatement, l'execution avant la fin du delai de retractation pourra necessiter l'accord prealable du client et sa renonciation expresse au droit de retractation, lorsque la loi le permet.",
+            "Pour les contenus et services numériques fournis immédiatement, l'exécution avant la fin du délai de rétractation pourra nécessiter l'accord préalable du client et sa renonciation expresse au droit de rétractation, lorsque la loi le permet.",
           ],
         },
         {
-          title: "Mediation et reclamations",
+          title: "Médiation et réclamations",
           body: [
-            "Toute reclamation peut etre adressee a contact@kayzen-lyon.fr. Pour les consommateurs, un mediateur de la consommation devra etre designe avant ouverture commerciale effective.",
+            "Toute reclamation peut être adressee a contact@kayzen-lyon.fr. Pour les consommateurs, un mediateur de la consommation devra être designe avant ouverture commerciale effective.",
           ],
         },
       ]}

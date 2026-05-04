@@ -32,16 +32,16 @@ export const LEGAL_SOURCES = [
     href: "https://www.cnil.fr/fr/cookies-et-autres-traceurs/regles/cookies",
   },
   {
-    label: "CNIL - donnees personnelles",
-    href: "https://cnil.fr/fr/donnees-personnelles",
+    label: "CNIL - données personnelles",
+    href: "https://cnil.fr/fr/données-personnelles",
   },
   {
-    label: "RGAA 4.1.2 - 106 criteres",
-    href: "https://accessibilite.numerique.gouv.fr/",
+    label: "RGAA 4.1.2 - 106 critères",
+    href: "https://accèssibilité.numérique.gouv.fr/",
   },
   {
-    label: "France Num - obligations accessibilite e-commerce",
-    href: "https://www.francenum.gouv.fr/guides-et-conseils/developpement-commercial/site-e-commerce/accessibilite-des-sites-de-e-commerce",
+    label: "France Num - obligations accèssibilité e-commerce",
+    href: "https://www.francenum.gouv.fr/guides-et-conseils/developpement-commercial/site-e-commerce/accèssibilité-des-sites-de-e-commerce",
   },
   {
     label: "DGCCRF - conditions generales de vente",

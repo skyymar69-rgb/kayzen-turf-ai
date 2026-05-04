@@ -4,8 +4,8 @@ import { COMPANY } from "@/lib/site-config";
 export default function MentionsLegalesPage() {
   return (
     <LegalPage
-      title="Mentions legales"
-      intro="Informations obligatoires d'identification de l'editeur, de l'hebergeur et du responsable du site, conformement a la LCEN et aux recommandations institutionnelles francaises."
+      title="Mentions légales"
+      intro="Informations obligatoires d’identification de l’éditeur, de l’hébergeur et du responsable du site, conformément à la LCEN et aux recommandations institutionnelles françaises."
       sections={[
         editorSection,
         {
@@ -17,21 +17,21 @@ export default function MentionsLegalesPage() {
         {
           title: "Hebergement",
           body: [
-            "Le site est heberge par Vercel Inc., solution cloud de deploiement d'applications web. Les donnees techniques peuvent etre traitees dans l'Union europeenne ou dans des pays disposant de garanties appropriees selon les services actives.",
+            "Le site est hébergé par Vercel Inc., solution cloud de déploiement d'applications web. Les données techniques peuvent être traitées dans l'Union européenne ou dans des pays disposant de garanties appropriees selon les services activés.",
           ],
         },
         {
           title: "Propriete intellectuelle",
           body: [
-            "Le code source du projet est open source selon la licence du depot. Les marques, textes, interfaces, bases de donnees, modeles, scores et elements distinctifs Kayzen restent proteges par le droit applicable lorsqu'ils ne sont pas expressement places sous licence libre.",
-            "Toute reutilisation commerciale de la marque, du nom ou des elements graphiques Kayzen necessite une autorisation ecrite prealable.",
+            "Le code source du projet est open source selon la licence du dépôt. Les marques, textes, interfaces, bases de données, modèles, scores et éléments distinctifs Kayzen restent protégés par le droit applicable lorsqu'ils ne sont pas expressément placés sous licence libre.",
+            "Toute réutilisation commerciale de la marque, du nom ou des éléments graphiques Kayzen nécessite une autorisation écrite préalable.",
           ],
         },
         {
           title: "Jeu responsable",
           body: [
-            "Kayzen Pronostic Turf PMU est un outil d'aide a la decision. Aucun contenu ne constitue une promesse de gain, une garantie de performance ou une incitation au jeu excessif.",
-            "Les jeux d'argent comportent des risques : endettement, isolement, dependance. Les utilisateurs doivent rester responsables de leurs decisions et de leur budget.",
+            "Kayzen Pronostic Turf PMU est un outil d'aide à la décision. Aucun contenu ne constitue une promesse de gain, une garantie de performance ou une incitation au jeu excessif.",
+            "Les jeux d’argent comportent des risques : endettement, isolement, dépendance. Les utilisateurs doivent rester responsables de leurs décisions et de leur budget.",
           ],
         },
       ]}
