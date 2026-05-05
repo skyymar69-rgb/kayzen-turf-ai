@@ -113,116 +113,172 @@ export function Dashboard({ races }: DashboardProps) {
     <main className="min-h-screen bg-bg pb-20" id="contenu-principal">
       <div className="mx-auto max-w-[1480px] px-4 sm:px-6 lg:px-8">
 
-        {/* ── HERO ──────────────────────────────────────────────── */}
-        <section aria-label="Présentation" className="pt-8 pb-6">
+        {/* ── HERO PROGRAMME ────────────────────────────────────── */}
+        <section aria-label="Programme PMU" className="pt-6 pb-4" id="programme">
           <div
-            className="relative overflow-hidden rounded-2xl p-6 lg:p-10"
-            style={{ background: "linear-gradient(135deg, #0c2318 0%, #0f3022 40%, #0a1e14 100%)" }}
+            className="relative overflow-hidden rounded-2xl"
+            style={{ background: "linear-gradient(160deg, #0c2318 0%, #0f3022 50%, #0a1e14 100%)" }}
           >
-            {/* Motif subtil en fond */}
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 opacity-[0.04]"
-              style={{ backgroundImage: "repeating-linear-gradient(45deg, #fff 0, #fff 1px, transparent 0, transparent 50%)", backgroundSize: "20px 20px" }}
-            />
+            {/* Motif diagonal fond */}
+            <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-[0.035]"
+              style={{ backgroundImage: "repeating-linear-gradient(45deg,#fff 0,#fff 1px,transparent 0,transparent 50%)", backgroundSize: "18px 18px" }} />
 
-            <div className="relative grid gap-8 lg:grid-cols-[1fr_auto]">
-              <div>
-                <span className="inline-flex items-center gap-2 rounded-full border border-cta/40 bg-cta/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-cta">
-                  <Sparkles size={11} />
-                  Plateforme SaaS d'aide à la décision turf
-                </span>
-                <h1 className="mt-4 font-display text-4xl font-bold leading-tight text-white sm:text-5xl lg:text-6xl">
-                  Analysez chaque course<br className="hidden sm:block" /> avec l'IA PMU
-                </h1>
-                <p className="mt-4 max-w-2xl text-base leading-7 text-white/65 sm:text-lg">
-                  Hier, aujourd'hui, demain — toutes les réunions françaises analysées en temps réel.
-                  Probabilités, value bets, tickets optimisés et auto-apprentissage sur les arrivées officielles.
-                </p>
-                <div className="mt-6 flex flex-wrap gap-3">
-                  <a
-                    href="#programme"
-                    className="inline-flex items-center gap-2 rounded-xl bg-cta px-5 py-3 text-sm font-bold text-cta-text transition hover:bg-cta-hi"
-                  >
-                    Programme du jour
-                    <ArrowRight size={15} />
-                  </a>
-                  <Link
-                    href="/pronostics"
-                    className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/20"
-                  >
-                    Tous les pronostics
+            <div className="relative">
+
+              {/* ── Bandeau titre + sélecteur jour ──────────────────── */}
+              <div className="flex flex-col gap-0 border-b border-white/10 sm:flex-row sm:items-stretch">
+                {/* Titre */}
+                <div className="flex flex-col justify-center gap-1 px-5 py-4 sm:min-w-[220px] sm:border-r sm:border-white/10">
+                  <h1 className="font-display text-xl font-bold leading-tight text-white">
+                    Programme PMU
+                  </h1>
+                  <p className="text-xs text-white/45">
+                    {meetings.length} réunion{meetings.length > 1 ? "s" : ""} · {dayRaces.length} courses · {dayRunnerCount} partants
+                  </p>
+                </div>
+
+                {/* Sélecteur Hier / Aujourd'hui / Demain */}
+                <div className="flex flex-1">
+                  {DAY_ORDER.map((day) => {
+                    const active = dayFilter === day;
+                    const date   = dateForDay(races, day);
+                    const count  = races.filter((r) => r.relativeDay === day).length;
+                    return (
+                      <button
+                        key={day}
+                        aria-pressed={active}
+                        className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 py-3 text-center transition sm:py-4 ${
+                          active ? "bg-white/10" : "hover:bg-white/5"
+                        }`}
+                        onClick={() => selectDay(day)}
+                        type="button"
+                      >
+                        <span className={`text-[10px] font-bold uppercase tracking-widest ${active ? "text-cta" : "text-white/40"}`}>
+                          {formatRelativeDay(day)}
+                        </span>
+                        <span className={`font-display text-base font-bold sm:text-lg ${active ? "text-white" : "text-white/55"}`}>
+                          {formatShortDate(date)}
+                        </span>
+                        <span className={`text-[10px] ${active ? "text-white/55" : "text-white/30"}`}>
+                          {count > 0 ? `${count} course${count > 1 ? "s" : ""}` : "—"}
+                        </span>
+                        {active && <span className="absolute bottom-0 left-2 right-2 h-0.5 rounded-t-full bg-cta" />}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Lien pronostics */}
+                <div className="hidden items-center border-l border-white/10 px-4 sm:flex">
+                  <Link href="/pronostics" className="flex items-center gap-1.5 text-xs font-semibold text-white/50 transition hover:text-white">
+                    Pronostics <ArrowRight size={12} />
                   </Link>
                 </div>
-                <p className="mt-4 text-xs text-white/35">
-                  Outil d'aide à la décision — aucun résultat ni gain n'est garanti.
-                </p>
               </div>
 
-              {/* Stats bloc */}
-              <div className="grid grid-cols-3 gap-3 lg:grid-cols-1 lg:gap-4 lg:min-w-[200px]">
-                <HeroStat label="Réunions" value={`${meetings.length}`}   icon={<Flag size={18} />} dark />
-                <HeroStat label="Courses"  value={`${dayRaces.length}`}   icon={<CalendarDays size={18} />} dark />
-                <HeroStat label="Partants" value={`${dayRunnerCount}`}    icon={<BarChart3 size={18} />} dark />
+              {/* ── Corps : réunions à gauche, courses à droite ─────── */}
+              <div className="grid lg:grid-cols-[280px_1fr]">
+
+                {/* Colonne réunions */}
+                <div className="border-b border-white/10 lg:border-b-0 lg:border-r lg:border-white/10">
+                  <div className="flex overflow-x-auto lg:flex-col kz-scroll">
+                    {meetings.map((meeting) => {
+                      const active = meeting.key === selectedMeeting.key;
+                      return (
+                        <button
+                          key={meeting.key}
+                          aria-pressed={active}
+                          className={`flex min-w-[160px] shrink-0 flex-col gap-0.5 border-r border-white/8 px-4 py-3 text-left transition lg:min-w-0 lg:border-b lg:border-r-0 lg:border-white/8 ${
+                            active ? "bg-white/12" : "hover:bg-white/6"
+                          }`}
+                          onClick={() => setSelectedMeetingKey(meeting.key)}
+                          type="button"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className={`font-display text-lg font-bold ${active ? "text-cta" : "text-white/70"}`}>
+                              R{meeting.reunionNumber}
+                            </span>
+                            <DifficultyPip difficulty={meeting.difficulty} active={active} />
+                          </div>
+                          <span className={`text-xs font-semibold leading-tight ${active ? "text-white" : "text-white/55"}`}>
+                            {titleCase(meeting.racecourse)}
+                          </span>
+                          <span className={`text-[10px] ${active ? "text-white/50" : "text-white/30"}`}>
+                            {meeting.races.length} courses
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Colonne courses */}
+                <div className="kz-scroll max-h-[420px] overflow-y-auto lg:max-h-[440px]">
+                  {visibleRaces.length === 0 ? (
+                    <p className="px-5 py-8 text-center text-sm text-white/40">Aucune course disponible.</p>
+                  ) : (
+                    <div className="divide-y divide-white/8">
+                      {visibleRaces.map((race) => {
+                        const active  = race.id === selectedRace?.id;
+                        const status  = raceStatus(race, currentMinute);
+                        const signal  = raceOpportunity(race);
+                        const highlights = raceHighlights(race.betTypes);
+                        return (
+                          <Link
+                            key={race.id}
+                            href={`/races/${encodeURIComponent(race.id)}`}
+                            className={`group flex items-center gap-3 px-4 py-3 transition hover:bg-white/8 ${active ? "bg-white/10" : ""}`}
+                          >
+                            {/* Badge course */}
+                            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg font-display text-xs font-bold ${
+                              active ? "bg-cta text-cta-text" : "bg-white/10 text-white/70"
+                            }`}>
+                              C{race.courseNumber}
+                            </span>
+
+                            {/* Info */}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="truncate text-sm font-semibold text-white">{titleCase(race.name)}</span>
+                                {highlights.slice(0, 1).map((h) => (
+                                  <span key={h.label} className={`hidden shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold sm:inline ${h.className}`}>{h.label}</span>
+                                ))}
+                              </div>
+                              <div className="mt-0.5 flex items-center gap-2 text-[11px] text-white/45">
+                                <span>{race.startTime}</span>
+                                <span>·</span>
+                                <span>{titleCase(race.specialty)}</span>
+                                <span>·</span>
+                                <span>{race.horses.length} partants</span>
+                              </div>
+                            </div>
+
+                            {/* Signal IA + status */}
+                            <div className="flex shrink-0 flex-col items-end gap-1">
+                              <span className={`text-xs font-bold ${
+                                signal === "Signal fort" ? "text-cta" :
+                                signal === "Opportunité" ? "text-yellow-400" : "text-white/35"
+                              }`}>{signal}</span>
+                              <StatusChip status={status} dark />
+                            </div>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
               </div>
+
+              {/* ── Footer hero ──────────────────────────────────────── */}
+              <div className="flex items-center justify-between border-t border-white/10 px-5 py-2.5">
+                <p className="text-[10px] text-white/30">Outil d'aide à la décision — aucun résultat ni gain garanti</p>
+                <Link href="/tarifs" className="text-[10px] font-semibold text-cta transition hover:text-cta-hi">
+                  Accès premium →
+                </Link>
+              </div>
+
             </div>
-          </div>
-        </section>
-
-        {/* ── COMMENT ÇA MARCHE — bande pédagogique ────────────── */}
-        <section className="mb-6 overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
-          <div className="grid divide-y divide-border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-            {[
-              { n: "01", icon: <Brain size={18} />,    title: "L'IA analyse",   desc: "Forme, jockey, terrain, cote PMU vs probabilité réelle — 30+ signaux par cheval." },
-              { n: "02", icon: <Zap size={18} />,      title: "Elle détecte",   desc: "Value bets, bases solides, courses à éviter. Mise à jour à chaque réunion." },
-              { n: "03", icon: <Trophy size={18} />,   title: "Elle apprend",   desc: "Chaque arrivée officielle recalibre le modèle. Hier → Aujourd'hui → Demain en mémoire." },
-            ].map(({ n, icon, title, desc }) => (
-              <div key={n} className="flex gap-4 px-5 py-4">
-                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-lo text-accent-text">
-                  {icon}
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted">{n}</p>
-                  <p className="font-semibold text-fg">{title}</p>
-                  <p className="mt-1 text-sm leading-5 text-muted">{desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* ── SÉLECTEUR JOUR ────────────────────────────────────── */}
-        <section aria-label="Navigation par date" id="programme" className="mb-4 scroll-mt-20">
-          <div className="flex overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
-            {DAY_ORDER.map((day) => {
-              const active = dayFilter === day;
-              const date   = dateForDay(races, day);
-              const count  = races.filter((r) => r.relativeDay === day).length;
-              return (
-                <button
-                  key={day}
-                  aria-pressed={active}
-                  className={`relative flex flex-1 flex-col items-center gap-1 py-4 text-center transition sm:py-5 ${
-                    active
-                      ? "bg-accent text-white"
-                      : "text-muted hover:bg-surface-sub hover:text-fg"
-                  }`}
-                  onClick={() => selectDay(day)}
-                  type="button"
-                >
-                  <span className={`text-xs font-bold uppercase tracking-widest ${active ? "text-white/70" : "text-muted"}`}>
-                    {formatRelativeDay(day)}
-                  </span>
-                  <span className={`font-display text-xl font-bold sm:text-2xl ${active ? "text-white" : "text-fg"}`}>
-                    {formatShortDate(date)}
-                  </span>
-                  <span className={`text-xs font-medium ${active ? "text-white/70" : "text-muted"}`}>
-                    {count > 0 ? `${count} course${count > 1 ? "s" : ""}` : "—"}
-                  </span>
-                  {active && <span className="absolute bottom-0 left-1/4 right-1/4 h-0.5 rounded-full bg-white/60" />}
-                </button>
-              );
-            })}
           </div>
         </section>
 
@@ -724,9 +780,17 @@ function DifficultyPip({ difficulty, active }: { difficulty: RaceMeeting["diffic
   return <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${cls}`}>{difficulty}</span>;
 }
 
-function StatusChip({ status }: { status: string }) {
-  const isImminent = status.includes("imminent");
+function StatusChip({ status, dark }: { status: string; dark?: boolean }) {
+  const isImminent  = status.includes("imminent");
   const isAvailable = status.includes("disponible");
+  if (dark) {
+    return (
+      <span className={`text-[10px] font-semibold ${isImminent ? "text-cta font-bold" : "text-white/30"}`}>
+        {isImminent && <span className="mr-1 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-cta align-middle" />}
+        {status}
+      </span>
+    );
+  }
   return (
     <span className={`text-xs font-semibold ${
       isImminent  ? "text-accent-text font-bold" :
