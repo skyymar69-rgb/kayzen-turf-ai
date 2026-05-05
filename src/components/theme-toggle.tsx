@@ -35,7 +35,7 @@ export function ThemeToggle() {
     <button
       aria-label={theme === "dark" ? "Activer le mode clair" : "Activer le mode sombre"}
       aria-pressed={theme === "dark"}
-      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface text-muted transition hover:border-accent hover:text-accent-text"
+      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-white/80 transition hover:bg-white/20 hover:text-white"
       onClick={toggleTheme}
       type="button"
     >

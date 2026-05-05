@@ -33,21 +33,21 @@ export function SiteHeader() {
   useEffect(() => { setMobileOpen(false); setContactOpen(false); }, [pathname]);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-surface/95 backdrop-blur-md">
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-surface-inv">
       <div className="mx-auto flex max-w-[1480px] items-center gap-4 px-4 py-0 sm:px-6 lg:px-8">
 
         {/* Logo */}
         <Link
           href="/"
-          className="flex shrink-0 items-center gap-3 py-4 text-fg transition-opacity hover:opacity-80"
+          className="flex shrink-0 items-center gap-3 py-4 transition-opacity hover:opacity-80"
           aria-label="Kayzen Turf AI — accueil"
         >
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-accent font-display text-sm font-bold text-white">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-cta font-display text-sm font-bold text-white">
             KZ
           </span>
           <span className="hidden flex-col sm:flex">
-            <span className="font-display text-base font-bold leading-tight tracking-tight text-fg">Kayzen</span>
-            <span className="text-[11px] font-medium uppercase tracking-widest text-muted">Pronostic Turf PMU</span>
+            <span className="font-display text-base font-bold leading-tight tracking-tight text-white">Kayzen</span>
+            <span className="text-[11px] font-medium uppercase tracking-widest text-white/55">Pronostic Turf PMU</span>
           </span>
         </Link>
 
@@ -61,13 +61,13 @@ export function SiteHeader() {
                 href={href}
                 className={`relative rounded-lg px-3.5 py-2 text-sm font-medium transition ${
                   active
-                    ? "bg-accent-lo text-accent-text"
-                    : "text-muted hover:bg-surface-sub hover:text-fg"
+                    ? "bg-white/15 text-white"
+                    : "text-white/70 hover:bg-white/10 hover:text-white"
                 }`}
               >
                 {label}
                 {active && (
-                  <span className="absolute bottom-0 left-1/2 h-0.5 w-4 -translate-x-1/2 rounded-full bg-accent" />
+                  <span className="absolute bottom-0 left-1/2 h-0.5 w-4 -translate-x-1/2 rounded-full bg-cta" />
                 )}
               </Link>
             );
@@ -84,7 +84,7 @@ export function SiteHeader() {
             <button
               aria-expanded={contactOpen}
               aria-haspopup="true"
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-muted transition hover:border-accent hover:text-accent-text"
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-3 text-sm font-medium text-white/80 transition hover:bg-white/20 hover:text-white"
               onClick={() => setContactOpen((v) => !v)}
               type="button"
             >
@@ -121,7 +121,7 @@ export function SiteHeader() {
           <button
             aria-expanded={mobileOpen}
             aria-label="Menu de navigation"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface text-muted transition hover:border-accent hover:text-accent-text lg:hidden"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-white/80 transition hover:bg-white/20 hover:text-white lg:hidden"
             onClick={() => setMobileOpen((v) => !v)}
             type="button"
           >
@@ -132,7 +132,7 @@ export function SiteHeader() {
 
       {/* Mobile nav panel */}
       {mobileOpen && (
-        <div className="border-t border-border bg-surface px-4 pb-4 pt-2 lg:hidden">
+        <div className="border-t border-white/10 bg-surface-inv px-4 pb-4 pt-2 lg:hidden">
           <nav aria-label="Navigation mobile" className="flex flex-col gap-1">
             {NAV_LINKS.map(({ href, label }) => {
               const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -142,18 +142,18 @@ export function SiteHeader() {
                   href={href}
                   className={`rounded-lg px-4 py-2.5 text-sm font-medium transition ${
                     active
-                      ? "bg-accent-lo text-accent-text"
-                      : "text-muted hover:bg-surface-sub hover:text-fg"
+                      ? "bg-white/15 text-white"
+                      : "text-white/70 hover:bg-white/10 hover:text-white"
                   }`}
                 >
                   {label}
                 </Link>
               );
             })}
-            <div className="mt-2 border-t border-border pt-2">
-              <ContactItem href={SITE_URL}              icon={<Globe2 size={14} />} label="Site officiel" />
-              <ContactItem href={CONTACT_LINKS.maps}    icon={<MapPin size={14} />} label="Itinéraire" />
-              <ContactItem href={CONTACT_LINKS.reviews} icon={<Star size={14} />}   label="Avis Google" />
+            <div className="mt-2 border-t border-white/10 pt-2">
+              <MobileContactItem href={SITE_URL}              icon={<Globe2 size={14} />} label="Site officiel" />
+              <MobileContactItem href={CONTACT_LINKS.maps}    icon={<MapPin size={14} />} label="Itinéraire" />
+              <MobileContactItem href={CONTACT_LINKS.reviews} icon={<Star size={14} />}   label="Avis Google" />
             </div>
           </nav>
         </div>
@@ -169,6 +169,20 @@ function ContactItem({ href, icon, label }: { href: string; icon: React.ReactNod
       rel="noopener noreferrer"
       target="_blank"
       className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-muted transition hover:bg-surface-sub hover:text-fg"
+    >
+      {icon}
+      <span>{label}</span>
+    </a>
+  );
+}
+
+function MobileContactItem({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
+  return (
+    <a
+      href={href}
+      rel="noopener noreferrer"
+      target="_blank"
+      className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-white/70 transition hover:bg-white/10 hover:text-white"
     >
       {icon}
       <span>{label}</span>

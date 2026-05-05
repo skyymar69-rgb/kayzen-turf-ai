@@ -3,24 +3,25 @@
 @import "@fontsource/inter/500.css";
 @import "@fontsource/inter/600.css";
 @import "@fontsource/inter/700.css";
-@import "@fontsource/playfair-display/600.css";
-@import "@fontsource/playfair-display/700.css";
 
 /* ─── Design tokens ─────────────────────────────────────────────── */
 :root {
   color-scheme: light;
-  --bg:            #f0f4f2;
-  --fg:            #1a2b26;
+  --bg:            #f7f8fa;   /* neutral off-white, no green tint */
+  --fg:            #111827;   /* near-black neutral */
   --surface:       #ffffff;
-  --surface-sub:   #f6f8f7;
-  --surface-inv:   #2a3832;
-  --muted:         #5a6b65;
-  --border:        #dde5e2;
-  --border-strong: #b8c9c3;
-  --accent:        #047857;
-  --accent-hi:     #065f46;
-  --accent-lo:     #ecfdf5;
-  --accent-text:   #065f46;
+  --surface-sub:   #f1f3f8;   /* light neutral blue-gray */
+  --surface-inv:   #0d1035;   /* PMU dark navy (nav bar color) */
+  --muted:         #6b7280;   /* neutral gray — 4.5:1 on bg */
+  --border:        #e2e5ed;
+  --border-strong: #c5cad6;
+  --accent:        #003082;   /* PMU deep blue — 14.6:1 on white */
+  --accent-hi:     #002264;   /* darker blue for hover states */
+  --accent-lo:     #e8eef8;   /* very light blue tint */
+  --accent-text:   #003082;   /* blue text on light backgrounds */
+  --cta:           #E8731A;   /* PMU orange — primary CTA color */
+  --cta-hi:        #C55E0A;   /* darker orange for hover */
+  --cta-text:      #ffffff;   /* white on orange (large/bold text) */
   --focus:         #1d4ed8;
   --danger:        #be123c;
   --warn:          #b45309;
@@ -29,18 +30,21 @@
 
 [data-theme="dark"] {
   color-scheme: dark;
-  --bg:            #07100e;
-  --fg:            #e6f2ec;
-  --surface:       #0d1b18;
-  --surface-sub:   #111f1b;
-  --surface-inv:   #1e2e29;
-  --muted:         #b0c4bc;
-  --border:        rgba(230, 242, 236, 0.15);
-  --border-strong: rgba(230, 242, 236, 0.30);
-  --accent:        #34d399;
-  --accent-hi:     #10b981;
-  --accent-lo:     #082218;
-  --accent-text:   #6ee7b7;
+  --bg:            #0e1420;   /* deep navy, replaces dark green */
+  --fg:            #e8ecf4;   /* light neutral, no green tint */
+  --surface:       #151d30;
+  --surface-sub:   #1a2340;
+  --surface-inv:   #2a3665;
+  --muted:         #8e9ab5;   /* neutral blue-gray — 6.4:1 on bg */
+  --border:        rgba(232, 236, 244, 0.15);
+  --border-strong: rgba(232, 236, 244, 0.30);
+  --accent:        #5b8dee;   /* bright blue for dark bg — 5.9:1 */
+  --accent-hi:     #7aa4f5;   /* lighter blue for hover */
+  --accent-lo:     #0d1a38;   /* very dark blue tint */
+  --accent-text:   #93b8ff;   /* light blue text — 9.6:1 on bg */
+  --cta:           #f0883a;   /* lighter orange for dark bg */
+  --cta-hi:        #e8731a;
+  --cta-text:      #ffffff;
   --focus:         #93c5fd;
   --danger:        #fb7185;
   --warn:          #fbbf24;
@@ -50,7 +54,7 @@
 /* ─── Tailwind v4 theme tokens ───────────────────────────────────── */
 @theme inline {
   --font-sans:    Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-display: "Playfair Display", Georgia, Cambria, serif;
+  --font-display: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono:    "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
 
   --color-bg:           var(--bg);
@@ -65,6 +69,9 @@
   --color-accent-hi:    var(--accent-hi);
   --color-accent-lo:    var(--accent-lo);
   --color-accent-text:  var(--accent-text);
+  --color-cta:          var(--cta);
+  --color-cta-hi:       var(--cta-hi);
+  --color-cta-text:     var(--cta-text);
   --color-focus:        var(--focus);
   --color-danger:       var(--danger);
   --color-warn:         var(--warn);
@@ -84,7 +91,6 @@ body  {
   -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3, h4, .font-display { font-family: var(--font-display); }
 button, input, select, textarea { font: inherit; }
 a { color: inherit; }
 table { font-variant-numeric: tabular-nums; }
@@ -140,13 +146,13 @@ tbody tr { transition: background-color 100ms ease; }
 
 /* ─── Horse silk image ───────────────────────────────────────────── */
 .premium-silk {
-  background: linear-gradient(145deg, rgba(255,255,255,.96), rgba(236,253,245,.74));
-  box-shadow: 0 8px 20px rgba(4,19,15,.10);
+  background: linear-gradient(145deg, rgba(255,255,255,.96), rgba(232,238,248,.74));
+  box-shadow: 0 8px 20px rgba(0,30,80,.10);
   filter: saturate(1.08) contrast(1.04);
   transition: filter 160ms ease, transform 160ms ease, box-shadow 160ms ease;
 }
 .premium-silk:hover {
-  box-shadow: 0 12px 26px rgba(4,19,15,.16);
+  box-shadow: 0 12px 26px rgba(0,30,80,.16);
   filter: saturate(1.18) contrast(1.08);
   transform: translateY(-1px) scale(1.03);
 }
