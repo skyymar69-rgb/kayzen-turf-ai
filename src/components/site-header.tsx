@@ -1,51 +1,175 @@
+"use client";
+
 import Link from "next/link";
-import type { ReactNode } from "react";
-import { Globe2, MapPin, Star, WalletCards } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { Globe2, MapPin, Menu, Star, WalletCards, X } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { COMPANY, CONTACT_LINKS, SITE_URL } from "@/lib/site-config";
 
-export async function SiteHeader() {
+const NAV_LINKS = [
+  { href: "/",                  label: "Programme" },
+  { href: "/pronostics",        label: "Pronostics" },
+  { href: "/tarifs",            label: "Tarifs" },
+  { href: "/techniques-prediction", label: "Notre IA" },
+] as const;
+
+export function SiteHeader() {
+  const pathname = usePathname();
+  const [contactOpen, setContactOpen] = useState(false);
+  const [mobileOpen, setMobileOpen]   = useState(false);
+  const contactRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") { setContactOpen(false); setMobileOpen(false); } }
+    function onClick(e: MouseEvent) {
+      if (contactRef.current && !contactRef.current.contains(e.target as Node)) setContactOpen(false);
+    }
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onClick);
+    return () => { document.removeEventListener("keydown", onKey); document.removeEventListener("mousedown", onClick); };
+  }, []);
+
+  useEffect(() => { setMobileOpen(false); setContactOpen(false); }, [pathname]);
+
   return (
-    <header className="site-chrome border-b border-[#d9e1de] px-3 py-3 shadow-sm backdrop-blur-md">
-      <div className="mx-auto flex max-w-[1480px] flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <Link className="site-link inline-flex min-h-11 items-center gap-3 rounded-sm font-bold uppercase" href="/">
-          <span className="grid h-10 w-10 place-items-center rounded-sm bg-emerald-700 text-white">KZ</span>
-          <span className="font-display text-lg tracking-normal">{COMPANY.brand}</span>
+    <header className="sticky top-0 z-50 border-b border-border bg-surface/95 backdrop-blur-md">
+      <div className="mx-auto flex max-w-[1480px] items-center gap-4 px-4 py-0 sm:px-6 lg:px-8">
+
+        {/* Logo */}
+        <Link
+          href="/"
+          className="flex shrink-0 items-center gap-3 py-4 text-fg transition-opacity hover:opacity-80"
+          aria-label="Kayzen Turf AI — accueil"
+        >
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-accent font-display text-sm font-bold text-white">
+            KZ
+          </span>
+          <span className="hidden flex-col sm:flex">
+            <span className="font-display text-base font-bold leading-tight tracking-tight text-fg">Kayzen</span>
+            <span className="text-[11px] font-medium uppercase tracking-widest text-muted">Pronostic Turf PMU</span>
+          </span>
         </Link>
 
-        <nav aria-label="Navigation principale" className="flex gap-2 overflow-x-auto text-sm font-semibold">
-          <Link className="site-link min-h-10 shrink-0 rounded-sm px-3 py-2" href="/pronostics">
-            Pronostics du jour
-          </Link>
-          <Link className="site-link min-h-10 shrink-0 rounded-sm px-3 py-2" href="/techniques-prediction">
-            Techniques IA
-          </Link>
-          <Link className="site-link min-h-10 shrink-0 rounded-sm px-3 py-2" href="/accessibilite">
-            Accessibilité
-          </Link>
+        {/* Desktop nav */}
+        <nav aria-label="Navigation principale" className="ml-4 hidden items-center gap-1 lg:flex">
+          {NAV_LINKS.map(({ href, label }) => {
+            const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={`relative rounded-lg px-3.5 py-2 text-sm font-medium transition ${
+                  active
+                    ? "bg-accent-lo text-accent-text"
+                    : "text-muted hover:bg-surface-sub hover:text-fg"
+                }`}
+              >
+                {label}
+                {active && (
+                  <span className="absolute bottom-0 left-1/2 h-0.5 w-4 -translate-x-1/2 rounded-full bg-accent" />
+                )}
+              </Link>
+            );
+          })}
         </nav>
 
-        <details className="site-panel group rounded-md border border-[#d9e1de]">
-          <summary className="site-accent-text flex min-h-11 cursor-pointer list-none items-center gap-2 px-3 text-sm font-bold">
-            <WalletCards size={18} />
-            Carte de contact numérique
-          </summary>
-          <div className="grid min-w-[260px] gap-2 border-t border-[#d9e1de] p-3 sm:min-w-[420px] sm:grid-cols-2">
-            <ContactTile href={SITE_URL} icon={<Globe2 size={17} />} label="Site officiel" />
-            <ContactTile href={CONTACT_LINKS.maps} icon={<MapPin size={17} />} label="Itinéraire Maps" />
-            <ContactTile href={CONTACT_LINKS.reviews} icon={<Star size={17} />} label="Avis Google" />
-            <a className="site-tile site-accent-text rounded-sm border border-emerald-700/20 px-3 py-2 text-center text-sm font-bold hover:bg-emerald-50" href={CONTACT_LINKS.vcard}>
-              Télécharger la vCard
-            </a>
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Actions */}
+        <div className="flex items-center gap-2">
+          {/* Contact dropdown */}
+          <div className="relative hidden sm:block" ref={contactRef}>
+            <button
+              aria-expanded={contactOpen}
+              aria-haspopup="true"
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-muted transition hover:border-accent hover:text-accent-text"
+              onClick={() => setContactOpen((v) => !v)}
+              type="button"
+            >
+              <WalletCards size={15} />
+              <span className="hidden md:inline">Contact</span>
+            </button>
+            {contactOpen && (
+              <div
+                role="menu"
+                className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-xl border border-border bg-surface shadow-xl"
+              >
+                <div className="border-b border-border px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted">{COMPANY.editor}</p>
+                  <p className="mt-0.5 text-sm font-medium text-fg">{COMPANY.brand}</p>
+                </div>
+                <div className="p-2">
+                  <ContactItem href={SITE_URL}              icon={<Globe2 size={14} />} label="Site officiel" />
+                  <ContactItem href={CONTACT_LINKS.maps}    icon={<MapPin size={14} />} label="Itinéraire" />
+                  <ContactItem href={CONTACT_LINKS.reviews} icon={<Star size={14} />}   label="Avis Google" />
+                  <a
+                    href={CONTACT_LINKS.vcard}
+                    className="mt-1 block w-full rounded-lg border border-accent/30 bg-accent-lo px-3 py-2 text-center text-sm font-semibold text-accent-text transition hover:bg-accent hover:text-white"
+                  >
+                    Télécharger la vCard
+                  </a>
+                </div>
+              </div>
+            )}
           </div>
-        </details>
+
+          <ThemeToggle />
+
+          {/* Mobile menu button */}
+          <button
+            aria-expanded={mobileOpen}
+            aria-label="Menu de navigation"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface text-muted transition hover:border-accent hover:text-accent-text lg:hidden"
+            onClick={() => setMobileOpen((v) => !v)}
+            type="button"
+          >
+            {mobileOpen ? <X size={16} /> : <Menu size={16} />}
+          </button>
+        </div>
       </div>
+
+      {/* Mobile nav panel */}
+      {mobileOpen && (
+        <div className="border-t border-border bg-surface px-4 pb-4 pt-2 lg:hidden">
+          <nav aria-label="Navigation mobile" className="flex flex-col gap-1">
+            {NAV_LINKS.map(({ href, label }) => {
+              const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={`rounded-lg px-4 py-2.5 text-sm font-medium transition ${
+                    active
+                      ? "bg-accent-lo text-accent-text"
+                      : "text-muted hover:bg-surface-sub hover:text-fg"
+                  }`}
+                >
+                  {label}
+                </Link>
+              );
+            })}
+            <div className="mt-2 border-t border-border pt-2">
+              <ContactItem href={SITE_URL}              icon={<Globe2 size={14} />} label="Site officiel" />
+              <ContactItem href={CONTACT_LINKS.maps}    icon={<MapPin size={14} />} label="Itinéraire" />
+              <ContactItem href={CONTACT_LINKS.reviews} icon={<Star size={14} />}   label="Avis Google" />
+            </div>
+          </nav>
+        </div>
+      )}
     </header>
   );
 }
 
-function ContactTile({ href, icon, label }: { href: string; icon: ReactNode; label: string }) {
+function ContactItem({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
   return (
-    <a className="site-tile flex min-h-11 items-center justify-center gap-2 rounded-sm border border-[#d9e1de] px-3 py-2 text-sm font-bold transition hover:-translate-y-0.5 hover:shadow-md" href={href} rel="noopener noreferrer" target="_blank">
+    <a
+      href={href}
+      rel="noopener noreferrer"
+      target="_blank"
+      className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-muted transition hover:bg-surface-sub hover:text-fg"
+    >
       {icon}
       <span>{label}</span>
     </a>

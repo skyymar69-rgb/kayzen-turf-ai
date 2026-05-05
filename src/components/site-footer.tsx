@@ -1,44 +1,98 @@
 import Link from "next/link";
 import { COMPANY } from "@/lib/site-config";
 
-const legalLinks = [
-  { href: "/pronostics", label: "Pronostics du jour" },
-  { href: "/techniques-prediction", label: "Techniques IA" },
-  { href: "/mentions-légales", label: "Mentions légales" },
-  { href: "/cgu", label: "CGU" },
-  { href: "/cgv", label: "CGV" },
-  { href: "/confidentialité", label: "RGPD" },
-  { href: "/cookies", label: "Cookies" },
-  { href: "/accèssibilité", label: "Accessibilité" },
+const PRODUCT_LINKS = [
+  { href: "/",                      label: "Programme du jour" },
+  { href: "/pronostics",            label: "Pronostics PMU" },
+  { href: "/tarifs",                label: "Tarifs & offres" },
+  { href: "/techniques-prediction", label: "Notre IA" },
+];
+
+const LEGAL_LINKS = [
+  { href: "/mentions-legales",  label: "Mentions légales" },
+  { href: "/cgu",               label: "CGU" },
+  { href: "/cgv",               label: "CGV" },
+  { href: "/confidentialite",   label: "RGPD" },
+  { href: "/cookies",           label: "Cookies" },
+  { href: "/accessibilite",     label: "Accessibilité" },
 ];
 
 export function SiteFooter() {
   return (
-    <footer className="site-chrome border-t border-[#d9e1de] px-4 py-8">
-      <div className="mx-auto grid max-w-[1480px] gap-6 lg:grid-cols-[1fr_auto]">
-        <div>
-          <p className="font-display text-xl font-bold tracking-normal">{COMPANY.brand}</p>
-          <p className="site-muted mt-2 max-w-3xl text-sm leading-6">
-            Outil d’aide à la décision pour pronostics hippiques. Les jeux d’argent comportent des risques :
-            endettement, isolement, dependance. Aucun pronostic ne garantit un gain.
-          </p>
-          <p className="site-muted mt-3 text-sm">
-            {COMPANY.editor} - {COMPANY.legalForm} - {COMPANY.address}
-          </p>
+    <footer className="border-t border-border bg-surface">
+      <div className="mx-auto max-w-[1480px] px-4 py-12 sm:px-6 lg:px-8">
+        <div className="grid gap-10 lg:grid-cols-[1.4fr_1fr_1fr]">
+
+          {/* Brand block */}
+          <div>
+            <div className="flex items-center gap-3">
+              <span className="grid h-9 w-9 place-items-center rounded-lg bg-accent font-display text-sm font-bold text-white">KZ</span>
+              <div>
+                <p className="font-display text-base font-bold leading-tight text-fg">Kayzen</p>
+                <p className="text-[11px] font-medium uppercase tracking-widest text-muted">Pronostic Turf PMU</p>
+              </div>
+            </div>
+            <p className="mt-4 max-w-sm text-sm leading-6 text-muted">
+              Plateforme SaaS d'aide à la décision pour pronostics hippiques.
+              Analyses IA, tickets optimisés et suivi de performance en temps réel.
+            </p>
+            <p className="mt-3 text-xs leading-5 text-muted">
+              <strong className="text-fg">{COMPANY.editor}</strong> — {COMPANY.legalForm}<br />
+              {COMPANY.address}
+            </p>
+            <p className="mt-4 rounded-lg border border-warn/30 bg-warn-lo px-3 py-2 text-xs leading-5 text-warn">
+              Les jeux d'argent comportent des risques : endettement, isolement, dépendance.
+              Aucun pronostic ne garantit un gain. Jouez de manière responsable.
+            </p>
+          </div>
+
+          {/* Product links */}
+          <div>
+            <p className="mb-4 text-xs font-bold uppercase tracking-widest text-muted">Plateforme</p>
+            <ul className="flex flex-col gap-2">
+              {PRODUCT_LINKS.map(({ href, label }) => (
+                <li key={href}>
+                  <Link
+                    href={href}
+                    className="text-sm font-medium text-muted transition hover:text-accent-text"
+                  >
+                    {label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Legal links */}
+          <div>
+            <p className="mb-4 text-xs font-bold uppercase tracking-widest text-muted">Légal</p>
+            <ul className="flex flex-col gap-2">
+              {LEGAL_LINKS.map(({ href, label }) => (
+                <li key={href}>
+                  <Link
+                    href={href}
+                    className="text-sm font-medium text-muted transition hover:text-accent-text"
+                  >
+                    {label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
-        <nav aria-label="Liens legaux" className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4 lg:min-w-[560px]">
-          {legalLinks.map((link) => (
-            <Link className="site-link rounded-sm px-2 py-2 font-medium" href={link.href} key={link.href}>
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-      </div>
-      <div className="site-muted mx-auto mt-6 flex max-w-[1480px] flex-col gap-2 border-t border-[#d9e1de] pt-4 text-sm sm:flex-row sm:items-center sm:justify-between">
-        <p>(c) {new Date().getFullYear()} {COMPANY.editor}. Tous droits reserves.</p>
-        <a className="site-accent-text font-semibold underline-offset-4 hover:underline" href={COMPANY.agencyUrl} rel="noopener noreferrer" target="_blank">
-          Fièrement réalisé par Kayzen Web
-        </a>
+
+        {/* Bottom bar */}
+        <div className="mt-10 flex flex-col gap-2 border-t border-border pt-6 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
+          <p>© {new Date().getFullYear()} {COMPANY.editor}. Tous droits réservés.</p>
+          <a
+            href={COMPANY.agencyUrl}
+            rel="noopener noreferrer"
+            target="_blank"
+            className="font-semibold text-accent-text transition hover:underline underline-offset-4"
+          >
+            Réalisé par Kayzen Web
+          </a>
+        </div>
       </div>
     </footer>
   );
