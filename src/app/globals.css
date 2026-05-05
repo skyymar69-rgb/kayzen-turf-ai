@@ -7,22 +7,22 @@
 /* ─── Design tokens ─────────────────────────────────────────────── */
 :root {
   color-scheme: light;
-  --bg:            #f7f8fa;   /* neutral off-white, no green tint */
-  --fg:            #111827;   /* near-black neutral */
+  --bg:            #f5f7f5;   /* off-white with faint green tint */
+  --fg:            #0f1f17;   /* near-black with green undertone */
   --surface:       #ffffff;
-  --surface-sub:   #f1f3f8;   /* light neutral blue-gray */
-  --surface-inv:   #0d1035;   /* PMU dark navy (nav bar color) */
-  --muted:         #6b7280;   /* neutral gray — 4.5:1 on bg */
-  --border:        #e2e5ed;
-  --border-strong: #c5cad6;
-  --accent:        #003082;   /* PMU deep blue — 14.6:1 on white */
-  --accent-hi:     #002264;   /* darker blue for hover states */
-  --accent-lo:     #e8eef8;   /* very light blue tint */
-  --accent-text:   #003082;   /* blue text on light backgrounds */
-  --cta:           #E8731A;   /* PMU orange — primary CTA color */
-  --cta-hi:        #C55E0A;   /* darker orange for hover */
-  --cta-text:      #ffffff;   /* white on orange (large/bold text) */
-  --focus:         #1d4ed8;
+  --surface-sub:   #eef4f0;   /* light green-gray */
+  --surface-inv:   #0c2318;   /* PMU dark green — nav bar */
+  --muted:         #5a6e62;   /* warm gray-green — 4.5:1 on bg */
+  --border:        #d8e4da;
+  --border-strong: #b4c8b8;
+  --accent:        #004a38;   /* PMU medium green — 10.2:1 on white */
+  --accent-hi:     #003528;   /* darker green for hover */
+  --accent-lo:     #e3f2e8;   /* light green tint */
+  --accent-text:   #004a38;   /* green text on light backgrounds */
+  --cta:           #1eb854;   /* PMU bright green — primary CTA */
+  --cta-hi:        #189a47;   /* darker green for hover */
+  --cta-text:      #ffffff;   /* white on green */
+  --focus:         #1eb854;
   --danger:        #be123c;
   --warn:          #b45309;
   --warn-lo:       #fffbeb;
@@ -30,22 +30,22 @@
 
 [data-theme="dark"] {
   color-scheme: dark;
-  --bg:            #0e1420;   /* deep navy, replaces dark green */
-  --fg:            #e8ecf4;   /* light neutral, no green tint */
-  --surface:       #151d30;
-  --surface-sub:   #1a2340;
-  --surface-inv:   #2a3665;
-  --muted:         #8e9ab5;   /* neutral blue-gray — 6.4:1 on bg */
-  --border:        rgba(232, 236, 244, 0.15);
-  --border-strong: rgba(232, 236, 244, 0.30);
-  --accent:        #5b8dee;   /* bright blue for dark bg — 5.9:1 */
-  --accent-hi:     #7aa4f5;   /* lighter blue for hover */
-  --accent-lo:     #0d1a38;   /* very dark blue tint */
-  --accent-text:   #93b8ff;   /* light blue text — 9.6:1 on bg */
-  --cta:           #f0883a;   /* lighter orange for dark bg */
-  --cta-hi:        #e8731a;
-  --cta-text:      #ffffff;
-  --focus:         #93c5fd;
+  --bg:            #0c1a11;   /* deep dark green-black */
+  --fg:            #e2ede5;   /* light green-tinted white */
+  --surface:       #1c3325;   /* clearly distinct from bg (+11 L) */
+  --surface-sub:   #243e2e;   /* slightly lighter card hover */
+  --surface-inv:   #0e2318;   /* PMU dark green nav */
+  --muted:         #7fa88c;   /* muted green-gray — 6.2:1 on bg */
+  --border:        rgba(226, 237, 229, 0.14);
+  --border-strong: rgba(226, 237, 229, 0.28);
+  --accent:        #3dca7a;   /* bright green for dark bg — 5.8:1 */
+  --accent-hi:     #5dd690;   /* lighter green for hover */
+  --accent-lo:     #0a2416;   /* very dark green tint */
+  --accent-text:   #6ed99a;   /* light green text — 9.4:1 on bg */
+  --cta:           #2dd468;   /* bright green CTA for dark bg */
+  --cta-hi:        #1eb854;
+  --cta-text:      #0c1a10;   /* dark text on bright green */
+  --focus:         #3dca7a;
   --danger:        #fb7185;
   --warn:          #fbbf24;
   --warn-lo:       #1c1505;

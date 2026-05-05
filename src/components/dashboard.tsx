@@ -98,7 +98,7 @@ export function Dashboard({ races }: DashboardProps) {
           <h1 className="mt-4 font-display text-2xl font-bold text-fg">Kayzen Turf AI</h1>
           <p className="mt-2 text-sm leading-6 text-muted">Aucune course française disponible sur cette date.</p>
           <button
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-accent-hi"
+            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-cta px-5 py-2.5 text-sm font-semibold text-cta-text transition hover:bg-cta-hi"
             onClick={() => selectDay("today")}
             type="button"
           >
@@ -131,7 +131,7 @@ export function Dashboard({ races }: DashboardProps) {
               <div className="mt-6 flex flex-wrap gap-3">
                 <a
                   href="#programme"
-                  className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-bold text-white transition hover:bg-accent-hi"
+                  className="inline-flex items-center gap-2 rounded-xl bg-cta px-5 py-3 text-sm font-bold text-cta-text transition hover:bg-cta-hi"
                 >
                   Programme du jour
                   <ArrowRight size={15} />

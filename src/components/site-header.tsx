@@ -42,7 +42,7 @@ export function SiteHeader() {
           className="flex shrink-0 items-center gap-3 py-4 transition-opacity hover:opacity-80"
           aria-label="Kayzen Turf AI — accueil"
         >
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-cta font-display text-sm font-bold text-white">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-cta font-display text-sm font-bold text-fg">
             KZ
           </span>
           <span className="hidden flex-col sm:flex">
@@ -52,22 +52,22 @@ export function SiteHeader() {
         </Link>
 
         {/* Desktop nav */}
-        <nav aria-label="Navigation principale" className="ml-4 hidden items-center gap-1 lg:flex">
+        <nav aria-label="Navigation principale" className="ml-4 hidden items-center gap-0.5 lg:flex">
           {NAV_LINKS.map(({ href, label }) => {
             const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
             return (
               <Link
                 key={href}
                 href={href}
-                className={`relative rounded-lg px-3.5 py-2 text-sm font-medium transition ${
+                className={`relative px-4 py-5 text-sm font-bold italic tracking-wide transition ${
                   active
-                    ? "bg-white/15 text-white"
-                    : "text-white/70 hover:bg-white/10 hover:text-white"
+                    ? "text-white"
+                    : "text-white/65 hover:text-white"
                 }`}
               >
                 {label}
                 {active && (
-                  <span className="absolute bottom-0 left-1/2 h-0.5 w-4 -translate-x-1/2 rounded-full bg-cta" />
+                  <span className="absolute bottom-0 left-2 right-2 h-[3px] rounded-t-full bg-cta" />
                 )}
               </Link>
             );
