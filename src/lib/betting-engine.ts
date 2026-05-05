@@ -118,19 +118,22 @@ export function classifyRaceTier(score: number): RaceAnalysis["bettingTier"] {
 }
 
 export const modelCard: ModelCard = {
-  version: "0.2.0-mvp",
+  version: "0.3.0-arrival-correlation",
   purpose: "Aide à la décision pour analyser une course, estimér les probabilités et controler le risque de mise.",
-  modelStack: ["Race pre-filtering", "Horse win probability", "Value bet scoring", "Fractional Kelly bankroll policy"],
+  modelStack: ["Race pre-filtering", "Horse win probability", "Top 3 upset detection", "Favorite failure risk", "Value bet scoring", "Fractional Kelly bankroll policy"],
   featureFamilies: [
     "Forme recente cheval/jockey/entraîneur",
     "Contexte course: distance, piste, terrain, taille du peloton",
     "Historique course et categorie",
     "Signal marché: cote, cote juste, edge",
+    "Correlation prediction/resultat: ecart gagnant-place, rang KZ, rang cote, stabilite des rangs",
+    "Tocard surveille: cote outsider, edge positif, reservoir Top 5 et probabilite Top 3",
+    "Favori fragile: cote courte, Top 3 insuffisant, edge negatif et volatilite course",
     "Garde-fous bankroll: drawdown et plafond de mise",
   ],
   calibration: {
-    method: "Shrinkage vers le prior de peloton puis calibration temporelle en backtest",
-    rationale: "Les modèles de classement hippique deviennent vite trop confiants. La calibration doit ramener les favoris vers des probabilités realistes.",
+    method: "Shrinkage vers le prior de peloton, detection des favoris fragiles, remontee des outsiders surveilles puis calibration temporelle en backtest",
+    rationale: "Les modèles de classement hippique deviennent vite trop confiants. La calibration doit ramener les favoris vers des probabilités realistes et mesurer quand un tocard peut entrer dans les trois premiers.",
   },
   leakageControls: [
     "Split temporel obligatoire pour validation, jamais de split aleatoire comme preuve principale.",

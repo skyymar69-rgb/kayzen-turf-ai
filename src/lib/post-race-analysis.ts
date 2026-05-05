@@ -1,4 +1,5 @@
 import { probableArrival } from "@/lib/bet-recommendations";
+import { explainPredictionScore, watchedLongshot } from "@/lib/prediction-math";
 import type { HorsePrediction, PostRaceAnalysis, RaceAnalysis } from "@/lib/types";
 
 export function buildPostRaceAnalysis(race: RaceAnalysis): PostRaceAnalysis {
@@ -106,6 +107,8 @@ function lessonsFor(actual: HorsePrediction[], predicted: HorsePrediction[]) {
   const lessons: string[] = [];
   const winner = actual[0];
   const predictedWinner = predicted[0];
+  const favorite = predicted.slice().sort((a, b) => a.odds - b.odds)[0];
+  const longshot = watchedLongshot(predicted);
 
   if (!winner || !predictedWinner) return lessons;
 
@@ -120,6 +123,16 @@ function lessonsFor(actual: HorsePrediction[], predicted: HorsePrediction[]) {
 
   if (predictedWinner.finishPosition && predictedWinner.finishPosition > 3) {
     lessons.push(`Notre base #${predictedWinner.number} finit ${predictedWinner.finishPosition}e: reduire la confiance des profils similaires.`);
+  }
+
+  if (favorite && favorite.finishPosition && favorite.finishPosition > 3) {
+    const favoriteRisk = explainPredictionScore(favorite, predicted).favoriteFailureRisk;
+    lessons.push(`Favori #${favorite.number} hors Top 3: risque favori fragile mesure a ${favoriteRisk}/60, renforcer cette penalite si le profil se repete.`);
+  }
+
+  if (longshot && longshot.finishPosition && longshot.finishPosition <= 3) {
+    const longshotSignal = explainPredictionScore(longshot, predicted).top3UpsetScore;
+    lessons.push(`Tocard surveille #${longshot.number} dans les trois premiers: signal outsider Top 3 mesure a ${longshotSignal}/60, a remonter dans les tickets larges.`);
   }
 
   if (lessons.length === 0) {

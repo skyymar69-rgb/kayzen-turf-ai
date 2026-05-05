@@ -1,4 +1,5 @@
 import { getSql, hasDatabase } from "@/lib/db";
+import { probableArrival } from "@/lib/bet-recommendations";
 import { raceAnalysis, raceCards, valueBets } from "@/lib/mock-data";
 import type { BetOffer, Confidence, HorsePrediction, RaceAnalysis } from "@/lib/types";
 
@@ -202,15 +203,17 @@ export async function getRaceById(id?: string | null, baseRow?: RaceRow, options
 export async function getPredictions() {
   const races = await getRaces();
   return races
-    .flatMap((race) => race.horses.map((horse) => ({ ...horse, raceId: race.id, raceName: race.name })))
-    .sort((a, b) => b.kzScore - a.kzScore);
+    .flatMap((race) => probableArrival(race.horses).map((horse, index) => ({ ...horse, raceId: race.id, raceName: race.name, arrivalRank: index + 1 })))
+    .sort((a, b) => a.arrivalRank - b.arrivalRank || b.top3Probability - a.top3Probability);
 }
 
 export async function getValueBets() {
   if (!hasDatabase()) return valueBets;
 
   const predictions = await getPredictions();
-  return predictions.filter((horse) => horse.valueIndex > 10).sort((a, b) => b.valueIndex - a.valueIndex);
+  return predictions
+    .filter((horse) => horse.valueIndex > 10 || (horse.odds >= 6 && horse.top3Probability >= 18))
+    .sort((a, b) => b.valueIndex - a.valueIndex || a.arrivalRank - b.arrivalRank);
 }
 
 function mapRace(row: RaceRow, entries: EntryRow[]): RaceAnalysis {

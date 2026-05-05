@@ -55,6 +55,15 @@ export type BetRecommendation = {
   ticket: string;
   confidence: number;
   rationale: string;
+  variants: BetTicketVariant[];
+  variantCount: number;
+};
+
+export type BetTicketVariant = {
+  ticket: string;
+  numbers: number[];
+  confidence: number;
+  rationale: string;
 };
 
 export type PostRaceAnalysis = {

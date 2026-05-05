@@ -148,7 +148,21 @@ function buildPrediction(participant, fieldSize) {
   const fairOdds = Number((100 / winProbability).toFixed(2));
   const rawMarketEdge = odds > 1 ? odds * (winProbability / 100) * 100 - 100 : 0;
   const marketEdge = Number(clamp(rawMarketEdge, -40, 95).toFixed(1));
-  const kzScore = clamp(Math.round(winProbability * 1.35 + top3Probability * 0.35 + Math.max(0, marketEdge) * 0.25), 1, 99);
+  const favoriteFragility = favoriteFailureRisk({ fieldSize, formSignal, marketEdge, odds, top3Probability, winProbability });
+  const longshotSignal = watchedLongshotSignal({ careerPlaceRate, fieldSize, formSignal, marketEdge, odds, top3Probability, top5Probability, winProbability });
+  const kzScore = clamp(
+    Math.round(
+      winProbability * 1.22 +
+        top3Probability * 0.42 +
+        top5Probability * 0.12 +
+        Math.max(0, marketEdge) * 0.18 +
+        formSignal * 16 +
+        longshotSignal * 0.2 -
+        favoriteFragility * 0.28,
+    ),
+    1,
+    99,
+  );
 
   return {
     odds: odds > 1 ? odds : fairOdds,
@@ -164,8 +178,38 @@ function buildPrediction(participant, fieldSize) {
       odds > 1 ? `Cote PMU observee: ${odds}` : "Cote absente, estimation prudente",
       careerRuns > 0 ? `Historique: ${wins}/${careerRuns} victoires` : "Historique limite",
       participant.musique ? `Musique: ${participant.musique}` : "Forme recente non renseignee",
-    ],
+      favoriteFragility >= 18 ? `Favori fragile: risque ${favoriteFragility}/60` : null,
+      longshotSignal >= 18 ? `Tocard surveille: signal Top 3 ${longshotSignal}/60` : null,
+    ].filter(Boolean),
   };
+}
+
+function favoriteFailureRisk({ fieldSize, formSignal, marketEdge, odds, top3Probability, winProbability }) {
+  return clamp(
+    (odds > 1 && odds <= 4 ? 16 : 0) +
+      (top3Probability < 34 ? 12 : 0) +
+      (winProbability < 14 ? 8 : 0) +
+      (marketEdge < -8 ? 12 : 0) +
+      Math.max(0, fieldSize - 10) * 1.3 -
+      formSignal * 18,
+    0,
+    60,
+  );
+}
+
+function watchedLongshotSignal({ careerPlaceRate, fieldSize, formSignal, marketEdge, odds, top3Probability, top5Probability, winProbability }) {
+  return clamp(
+    (odds >= 6 && odds <= 22 ? 14 : 0) +
+      Math.max(0, marketEdge) * 0.22 +
+      Math.max(0, top3Probability - winProbability * 1.9) * 0.3 +
+      Math.max(0, top5Probability - top3Probability) * 0.12 +
+      careerPlaceRate * 16 +
+      formSignal * 12 +
+      Math.max(0, fieldSize - 12) * 0.45 -
+      Math.max(0, odds - 30) * 0.55,
+    0,
+    60,
+  );
 }
 
 function parseMusicSignal(music) {

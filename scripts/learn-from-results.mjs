@@ -7,23 +7,31 @@ const MODEL_VERSION = "kayzen-feedback-v0.2";
 const CANDIDATES = [
   {
     name: "baseline",
-    weights: { win: 1.35, top3: 0.35, top5: 0.0, edge: 0.25, edgeCap: 95, volatility: 0.0 },
+    weights: { win: 1.35, top3: 0.35, top5: 0.0, edge: 0.25, edgeCap: 95, volatility: 0.0, favoriteFragility: 0.18, longshot: 0.08, placeGap: 0.04, orderStability: 0.04 },
   },
   {
     name: "place-top5",
-    weights: { win: 0.8, top3: 0.75, top5: 0.35, edge: 0.06, edgeCap: 35, volatility: 0.0 },
+    weights: { win: 0.8, top3: 0.75, top5: 0.35, edge: 0.06, edgeCap: 35, volatility: 0.0, favoriteFragility: 0.1, longshot: 0.2, placeGap: 0.1, orderStability: 0.08 },
   },
   {
     name: "quinte-coverage",
-    weights: { win: 0.65, top3: 0.9, top5: 0.45, edge: 0.04, edgeCap: 25, volatility: 0.08 },
+    weights: { win: 0.65, top3: 0.9, top5: 0.45, edge: 0.04, edgeCap: 25, volatility: 0.08, favoriteFragility: 0.08, longshot: 0.32, placeGap: 0.14, orderStability: 0.05 },
   },
   {
     name: "balanced",
-    weights: { win: 1.0, top3: 0.6, top5: 0.25, edge: 0.1, edgeCap: 45, volatility: 0.04 },
+    weights: { win: 1.0, top3: 0.6, top5: 0.25, edge: 0.1, edgeCap: 45, volatility: 0.04, favoriteFragility: 0.14, longshot: 0.16, placeGap: 0.09, orderStability: 0.1 },
   },
   {
     name: "value-capped",
-    weights: { win: 1.05, top3: 0.55, top5: 0.25, edge: 0.14, edgeCap: 30, volatility: 0.06 },
+    weights: { win: 1.05, top3: 0.55, top5: 0.25, edge: 0.14, edgeCap: 30, volatility: 0.06, favoriteFragility: 0.12, longshot: 0.22, placeGap: 0.08, orderStability: 0.06 },
+  },
+  {
+    name: "favorite-skeptic",
+    weights: { win: 0.9, top3: 0.72, top5: 0.2, edge: 0.08, edgeCap: 28, volatility: 0.09, favoriteFragility: 0.34, longshot: 0.18, placeGap: 0.12, orderStability: 0.12 },
+  },
+  {
+    name: "tocard-watch",
+    weights: { win: 0.72, top3: 0.84, top5: 0.38, edge: 0.1, edgeCap: 36, volatility: 0.03, favoriteFragility: 0.08, longshot: 0.42, placeGap: 0.16, orderStability: 0.04 },
   },
 ];
 
@@ -107,6 +115,7 @@ async function loadCompletedRaces(sql) {
           'horseId', e.horse_id,
           'number', e.number,
           'win', e.win_probability::float,
+          'odds', e.odds::float,
           'top3', e.top3_probability::float,
           'top5', e.top5_probability::float,
           'edge', e.market_edge::float,
@@ -150,14 +159,47 @@ function segmentFor(race) {
 
 function scoreEntry(entry, weights, race) {
   const cappedEdge = Math.min(Math.max(Number(entry.edge) || 0, 0), weights.edgeCap);
+  const odds = Number(entry.odds) || 99;
+  const favoriteFragility = favoriteFailureRisk(entry, race);
+  const longshot = longshotSignal(entry, race);
+  const placeGap = Math.max(0, Number(entry.top3) - Number(entry.win) * 1.8);
+  const orderStability = Math.max(0, 12 - Math.abs(Number(entry.kz) - Number(entry.win) * 2.6));
   const raw =
     Number(entry.win) * weights.win +
     Number(entry.top3) * weights.top3 +
     Number(entry.top5) * weights.top5 +
     cappedEdge * weights.edge -
-    Number(race.market_volatility ?? 0) * weights.volatility;
+    Number(race.market_volatility ?? 0) * weights.volatility -
+    favoriteFragility * (weights.favoriteFragility ?? 0) +
+    longshot * (weights.longshot ?? 0) +
+    placeGap * (weights.placeGap ?? 0) +
+    orderStability * (weights.orderStability ?? 0) -
+    Math.max(0, odds - 32) * 0.18;
 
   return Math.max(1, Math.min(99, Math.round(raw)));
+}
+
+function favoriteFailureRisk(entry, race) {
+  const odds = Number(entry.odds) || 99;
+  return Math.max(0, Math.min(60,
+    (odds <= 4 ? 16 : 0) +
+      (Number(entry.top3) < 34 ? 12 : 0) +
+      (Number(entry.win) < 14 ? 8 : 0) +
+      (Number(entry.edge) < -8 ? 12 : 0) +
+      Number(race.market_volatility ?? 0) * 0.32,
+  ));
+}
+
+function longshotSignal(entry, race) {
+  const odds = Number(entry.odds) || 99;
+  return Math.max(0, Math.min(60,
+    (odds >= 6 && odds <= 22 ? 14 : 0) +
+      Math.max(0, Number(entry.edge)) * 0.22 +
+      Math.max(0, Number(entry.top3) - Number(entry.win) * 1.9) * 0.3 +
+      Math.max(0, Number(entry.top5) - Number(entry.top3)) * 0.12 +
+      Number(race.market_volatility ?? 0) * 0.15 -
+      Math.max(0, odds - 30) * 0.55,
+  ));
 }
 
 function rankEntries(race, weights) {

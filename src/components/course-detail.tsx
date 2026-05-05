@@ -18,6 +18,7 @@ import { useMemo, useState } from "react";
 import { buildBetRecommendations, probableArrival } from "@/lib/bet-recommendations";
 import { simulateBet } from "@/lib/betting-engine";
 import { buildPostRaceAnalysis } from "@/lib/post-race-analysis";
+import { explainPredictionScore, watchedLongshot } from "@/lib/prediction-math";
 import type { BetOffer, HorsePrediction, RaceAnalysis } from "@/lib/types";
 
 type CourseDetailProps = {
@@ -250,6 +251,7 @@ export function CourseDetail({ race }: CourseDetailProps) {
                 ) : null}
               </div>
             </section>
+            <TicketCombinationsPanel recommendations={betRecommendations} />
           </LightPanel>
 
           <LightPanel title="Simulation et responsabilité" icon={Gauge}>
@@ -469,11 +471,18 @@ function TabPlaceholder({
 
   if (activeTab === "Pronostics IA") {
     return (
-      <SimpleGrid title="Tickets proposés">
+      <div className="p-5">
+        <h2 className="mb-4 text-lg font-semibold text-[#26312e]">Tickets proposes</h2>
         {recommendations.map((item) => (
-          <Result key={item.type} label={item.label} value={item.ticket} />
+          <div className="mb-3 rounded-md border border-[#d9e1de] bg-[#fbfcfc] p-3" key={item.type}>
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <p className="font-semibold text-[#26312e]">{item.label}</p>
+              <p className="font-mono text-sm font-bold text-emerald-700">{item.ticket}</p>
+            </div>
+            <TicketVariantCloud recommendation={item} />
+          </div>
         ))}
-      </SimpleGrid>
+      </div>
     );
   }
 
@@ -502,6 +511,60 @@ function SimpleGrid({ children, title }: { children: ReactNode; title: string })
     <div className="p-5">
       <h2 className="mb-4 text-lg font-semibold text-[#26312e]">{title}</h2>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">{children}</div>
+    </div>
+  );
+}
+
+function TicketCombinationsPanel({ recommendations }: { recommendations: ReturnType<typeof buildBetRecommendations> }) {
+  if (recommendations.length === 0) return null;
+
+  return (
+    <section className="mt-4 rounded-md border border-[#d9e1de] bg-white p-4">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-sm font-bold uppercase text-[#65746f]">Tous les jeux possibles</p>
+          <h3 className="mt-1 text-lg font-bold text-[#26312e]">Combinaisons IA par pari ouvert</h3>
+        </div>
+        <p className="text-xs text-[#65746f]">Champ priorise par l'arrivee probable, favori fragile et tocard surveille.</p>
+      </div>
+      <div className="mt-4 grid gap-3 xl:grid-cols-2">
+        {recommendations.map((recommendation) => (
+          <article className="rounded-md border border-[#d9e1de] bg-[#fbfcfc] p-3" key={`variants-${recommendation.type}`}>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="font-semibold text-[#26312e]">{recommendation.label}</p>
+                <p className="mt-1 text-xs text-[#65746f]">{recommendation.variantCount} combinaisons calculees</p>
+              </div>
+              <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-800">
+                {recommendation.confidence}/99
+              </span>
+            </div>
+            <TicketVariantCloud recommendation={recommendation} />
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function TicketVariantCloud({ recommendation }: { recommendation: ReturnType<typeof buildBetRecommendations>[number] }) {
+  return (
+    <div className="mt-3 flex flex-wrap gap-2">
+      {recommendation.variants.map((variant) => (
+        <span
+          className="inline-flex min-h-8 items-center gap-2 rounded-sm border border-emerald-700/20 bg-white px-2 py-1 font-mono text-xs font-bold text-[#26312e]"
+          key={`${recommendation.type}-${variant.ticket}`}
+          title={`${variant.confidence}/99 - ${variant.rationale}`}
+        >
+          {variant.ticket}
+          <span className="font-sans text-[10px] font-semibold text-emerald-700">{variant.confidence}</span>
+        </span>
+      ))}
+      {recommendation.variantCount > recommendation.variants.length ? (
+        <span className="inline-flex min-h-8 items-center rounded-sm border border-[#d9e1de] bg-[#eef3f1] px-2 py-1 text-xs font-semibold text-[#52615d]">
+          +{recommendation.variantCount - recommendation.variants.length}
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -631,7 +694,7 @@ function formatEquipment(value?: string | null) {
 function buildHorseRoles(arrival: HorsePrediction[]) {
   const base = arrival[0];
   const outsider = arrival.find((horse) => horse.valueIndex >= 10 && horse.odds >= 6) ?? arrival[3] ?? arrival[1];
-  const longshot = arrival
+  const longshot = watchedLongshot(arrival) ?? arrival
     .slice()
     .reverse()
     .find((horse) => horse.valueIndex >= 5 && horse.top3Probability >= 18) ?? arrival[6] ?? arrival.at(-1);
@@ -641,21 +704,21 @@ function buildHorseRoles(arrival: HorsePrediction[]) {
       ? {
           horse: base,
           label: "Base",
-          reason: "Le profil le plus stable du modèle : probabilité gagnant, top 3 et consensus élevés.",
+          reason: `Score enrichi ${explainPredictionScore(base, arrival).score}/99: probabilite gagnant, top 3, cote juste et stabilite des rangs.`,
         }
       : null,
     outsider
       ? {
           horse: outsider,
           label: "Outsider",
-          reason: "Potentiel value intéressant si la cote reste supérieure à la probabilité estimée.",
+          reason: `Signal value ${outsider.valueIndex}% avec cote ${outsider.odds}: interessant si la probabilite estimee reste superieure au marche.`,
         }
       : null,
     longshot
       ? {
           horse: longshot,
           label: "Tocard surveillé",
-          reason: "Profil plus spéculatif à intégrer uniquement dans les tickets larges ou flexi.",
+          reason: `Signal Top 3 surprise ${explainPredictionScore(longshot, arrival).top3UpsetScore}/60: a integrer dans les tickets larges ou flexi.`,
         }
       : null,
   ].filter((role): role is { horse: HorsePrediction; label: string; reason: string } => Boolean(role));
