@@ -115,44 +115,56 @@ export function Dashboard({ races }: DashboardProps) {
 
         {/* ── HERO ──────────────────────────────────────────────── */}
         <section aria-label="Présentation" className="pt-8 pb-6">
-          <div className="grid gap-8 rounded-2xl border border-border bg-surface p-6 shadow-sm lg:grid-cols-[1fr_auto] lg:p-10">
-            <div>
-              <span className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent-lo px-3 py-1 text-xs font-bold uppercase tracking-widest text-accent-text">
-                <Sparkles size={11} />
-                Plateforme SaaS d'aide à la décision turf
-              </span>
-              <h1 className="mt-4 font-display text-4xl font-bold leading-tight text-fg sm:text-5xl lg:text-6xl">
-                Analysez chaque course<br className="hidden sm:block" /> avec l'IA PMU
-              </h1>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-muted sm:text-lg">
-                Hier, aujourd'hui, demain — toutes les réunions françaises analysées en temps réel.
-                Probabilités, value bets, tickets optimisés et auto-apprentissage sur les arrivées officielles.
-              </p>
-              <div className="mt-6 flex flex-wrap gap-3">
-                <a
-                  href="#programme"
-                  className="inline-flex items-center gap-2 rounded-xl bg-cta px-5 py-3 text-sm font-bold text-cta-text transition hover:bg-cta-hi"
-                >
-                  Programme du jour
-                  <ArrowRight size={15} />
-                </a>
-                <Link
-                  href="/pronostics"
-                  className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-5 py-3 text-sm font-bold text-fg transition hover:border-accent hover:text-accent-text"
-                >
-                  Tous les pronostics
-                </Link>
-              </div>
-              <p className="mt-4 text-xs text-muted">
-                Outil d'aide à la décision — aucun résultat ni gain n'est garanti.
-              </p>
-            </div>
+          <div
+            className="relative overflow-hidden rounded-2xl p-6 lg:p-10"
+            style={{ background: "linear-gradient(135deg, #0c2318 0%, #0f3022 40%, #0a1e14 100%)" }}
+          >
+            {/* Motif subtil en fond */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 opacity-[0.04]"
+              style={{ backgroundImage: "repeating-linear-gradient(45deg, #fff 0, #fff 1px, transparent 0, transparent 50%)", backgroundSize: "20px 20px" }}
+            />
 
-            {/* Stats bloc */}
-            <div className="grid grid-cols-3 gap-3 lg:grid-cols-1 lg:gap-4 lg:min-w-[200px]">
-              <HeroStat label="Réunions" value={`${meetings.length}`}      icon={<Flag size={18} />} />
-              <HeroStat label="Courses"  value={`${dayRaces.length}`}      icon={<CalendarDays size={18} />} />
-              <HeroStat label="Partants" value={`${dayRunnerCount}`}       icon={<BarChart3 size={18} />} />
+            <div className="relative grid gap-8 lg:grid-cols-[1fr_auto]">
+              <div>
+                <span className="inline-flex items-center gap-2 rounded-full border border-cta/40 bg-cta/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-cta">
+                  <Sparkles size={11} />
+                  Plateforme SaaS d'aide à la décision turf
+                </span>
+                <h1 className="mt-4 font-display text-4xl font-bold leading-tight text-white sm:text-5xl lg:text-6xl">
+                  Analysez chaque course<br className="hidden sm:block" /> avec l'IA PMU
+                </h1>
+                <p className="mt-4 max-w-2xl text-base leading-7 text-white/65 sm:text-lg">
+                  Hier, aujourd'hui, demain — toutes les réunions françaises analysées en temps réel.
+                  Probabilités, value bets, tickets optimisés et auto-apprentissage sur les arrivées officielles.
+                </p>
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <a
+                    href="#programme"
+                    className="inline-flex items-center gap-2 rounded-xl bg-cta px-5 py-3 text-sm font-bold text-cta-text transition hover:bg-cta-hi"
+                  >
+                    Programme du jour
+                    <ArrowRight size={15} />
+                  </a>
+                  <Link
+                    href="/pronostics"
+                    className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/20"
+                  >
+                    Tous les pronostics
+                  </Link>
+                </div>
+                <p className="mt-4 text-xs text-white/35">
+                  Outil d'aide à la décision — aucun résultat ni gain n'est garanti.
+                </p>
+              </div>
+
+              {/* Stats bloc */}
+              <div className="grid grid-cols-3 gap-3 lg:grid-cols-1 lg:gap-4 lg:min-w-[200px]">
+                <HeroStat label="Réunions" value={`${meetings.length}`}   icon={<Flag size={18} />} dark />
+                <HeroStat label="Courses"  value={`${dayRaces.length}`}   icon={<CalendarDays size={18} />} dark />
+                <HeroStat label="Partants" value={`${dayRunnerCount}`}    icon={<BarChart3 size={18} />} dark />
+              </div>
             </div>
           </div>
         </section>
@@ -483,7 +495,7 @@ export function Dashboard({ races }: DashboardProps) {
                     <StatusChip status={raceStatus(race, currentMinute)} />
                     <Link
                       href={`/races/${encodeURIComponent(race.id)}`}
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-accent px-3.5 py-2 text-xs font-bold text-white"
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-cta px-3.5 py-2 text-xs font-bold text-cta-text"
                     >
                       Analyser <ArrowRight size={12} />
                     </Link>
@@ -641,8 +653,13 @@ export function Dashboard({ races }: DashboardProps) {
 
 /* ─── Sub-components ─────────────────────────────────────────────── */
 
-function HeroStat({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) {
-  return (
+function HeroStat({ label, value, icon, dark }: { label: string; value: string; icon: React.ReactNode; dark?: boolean }) {
+  return dark ? (
+    <div className="rounded-xl border border-white/10 bg-white/8 p-4 backdrop-blur-sm">
+      <div className="flex items-center gap-2 text-white/50">{icon}<span className="text-xs font-bold uppercase tracking-widest">{label}</span></div>
+      <p className="mt-2 font-display text-3xl font-bold text-white">{value}</p>
+    </div>
+  ) : (
     <div className="rounded-xl border border-border bg-surface-sub p-4">
       <div className="flex items-center gap-2 text-muted">{icon}<span className="text-xs font-bold uppercase tracking-widest">{label}</span></div>
       <p className="mt-2 font-display text-3xl font-bold text-fg">{value}</p>

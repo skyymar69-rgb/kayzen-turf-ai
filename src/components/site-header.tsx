@@ -115,6 +115,14 @@ export function SiteHeader() {
             )}
           </div>
 
+          {/* CTA principal */}
+          <Link
+            href="/tarifs"
+            className="hidden h-9 items-center rounded-lg bg-cta px-4 text-sm font-bold text-cta-text transition hover:bg-cta-hi sm:inline-flex"
+          >
+            Commencer
+          </Link>
+
           <ThemeToggle />
 
           {/* Mobile menu button */}
@@ -151,6 +159,12 @@ export function SiteHeader() {
               );
             })}
             <div className="mt-2 border-t border-white/10 pt-2">
+              <Link
+                href="/tarifs"
+                className="mb-2 flex items-center justify-center rounded-lg bg-cta px-4 py-2.5 text-sm font-bold text-cta-text transition hover:bg-cta-hi"
+              >
+                Commencer gratuitement
+              </Link>
               <MobileContactItem href={SITE_URL}              icon={<Globe2 size={14} />} label="Site officiel" />
               <MobileContactItem href={CONTACT_LINKS.maps}    icon={<MapPin size={14} />} label="Itinéraire" />
               <MobileContactItem href={CONTACT_LINKS.reviews} icon={<Star size={14} />}   label="Avis Google" />
