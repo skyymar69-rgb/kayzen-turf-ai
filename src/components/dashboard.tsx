@@ -17,7 +17,7 @@ import {
   Trophy,
   Zap,
 } from "lucide-react";
-import { useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useFavorites } from "@/hooks/use-favorites";
 import { probableArrival, raceToContext } from "@/lib/bet-recommendations";
 import type { BetOffer, RaceAnalysis } from "@/lib/types";
@@ -57,7 +57,8 @@ export function Dashboard({ races }: DashboardProps) {
   const [disciplineFilter, setDisciplineFilter] = useState<DisciplineFilter>("Tous");
   const [selectedMeetingKey, setSelectedMeetingKey] = useState("");
   const [query, setQuery]                   = useState("");
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const debounceRef   = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const dayRaces = useMemo(
     () => races.filter((r) => r.relativeDay === dayFilter)
@@ -108,22 +109,62 @@ export function Dashboard({ races }: DashboardProps) {
     const v = value;
     debounceRef.current = setTimeout(() => setQuery(v), 200);
   }
+  function clearQuery() {
+    setQuery("");
+    if (searchInputRef.current) searchInputRef.current.value = "";
+    searchInputRef.current?.focus();
+  }
+
+  /* amélioration #22 — raccourcis clavier ←/→ pour changer de jour */
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.target as HTMLElement).tagName === "INPUT") return;
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        const idx = DAY_ORDER.indexOf(dayFilter as typeof DAY_ORDER[number]);
+        if (idx === -1) return;
+        const next = DAY_ORDER[idx + (e.key === "ArrowRight" ? 1 : -1)];
+        if (next) selectDay(next);
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dayFilter]);
+
+  /* amélioration #24 — course phare : meilleur score parmi les courses du jour */
+  const starRaceId = useMemo(() => {
+    const best = dayRaces.slice().sort((a, b) => racePriorityScore(b) - racePriorityScore(a))[0];
+    return best?.id ?? null;
+  }, [dayRaces]);
 
   /* ── Empty state ─────────────────────────────────────────────── */
   if (!selectedMeeting || !selectedRace) {
     return (
       <main className="grid min-h-[60vh] place-items-center px-4" id="contenu-principal">
-        <div className="max-w-sm rounded-2xl border border-border bg-surface p-8 text-center shadow-sm">
-          <Flag className="mx-auto text-accent" size={36} />
-          <h1 className="mt-4 font-display text-2xl font-bold text-fg">Kayzen Turf AI</h1>
-          <p className="mt-2 text-sm leading-6 text-muted">Aucune course française disponible sur cette date.</p>
-          <button
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-cta px-5 py-2.5 text-sm font-semibold text-cta-text transition hover:bg-cta-hi"
-            onClick={() => selectDay("today")}
-            type="button"
-          >
-            Voir aujourd'hui
-          </button>
+        <div className="max-w-md rounded-2xl border border-border bg-surface p-10 text-center shadow-sm">
+          <div className="mx-auto mb-5 grid h-16 w-16 place-items-center rounded-2xl border border-border bg-surface-sub">
+            <Flag className="text-accent" size={30} />
+          </div>
+          <h1 className="font-display text-2xl font-bold text-fg">Aucun programme</h1>
+          <p className="mt-2 text-sm leading-6 text-muted">
+            Aucune course française disponible sur cette date.<br />
+            Les données sont mises à jour chaque matin.
+          </p>
+          <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
+            <button
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-cta px-5 py-2.5 text-sm font-semibold text-cta-text transition hover:bg-cta-hi"
+              onClick={() => selectDay("today")}
+              type="button"
+            >
+              Voir aujourd'hui
+            </button>
+            <Link
+              href="/pronostics"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-border px-5 py-2.5 text-sm font-semibold text-fg transition hover:bg-surface-sub"
+            >
+              Pronostics <ArrowRight size={13} />
+            </Link>
+          </div>
         </div>
       </main>
     );
@@ -154,6 +195,11 @@ export function Dashboard({ races }: DashboardProps) {
                   </h1>
                   <p className="text-xs text-white/65">
                     {meetings.length} réunion{meetings.length > 1 ? "s" : ""} · {dayRaces.length} courses · {dayRunnerCount} partants
+                    {favs.size > 0 && (
+                      <span className="ml-2 inline-flex items-center gap-0.5 rounded-full bg-amber-400/20 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">
+                        ★ {favs.size}
+                      </span>
+                    )}
                   </p>
                 </div>
 
@@ -465,16 +511,32 @@ export function Dashboard({ races }: DashboardProps) {
               </div>
               <span className="hidden text-sm text-muted sm:inline">{selectedMeeting.strategy}</span>
             </div>
-            <label className="flex items-center gap-2 rounded-xl border border-border bg-surface-sub px-3 py-2 text-sm sm:min-w-[220px]">
+            <div className="relative flex items-center gap-2 rounded-xl border border-border bg-surface-sub px-3 py-2 text-sm sm:min-w-[220px]" role="search">
               <Search size={14} className="shrink-0 text-muted" />
-              <span className="sr-only">Filtrer</span>
+              <label className="sr-only" htmlFor="race-search">Filtrer les courses</label>
               <input
+                id="race-search"
+                ref={searchInputRef}
                 className="min-w-0 flex-1 bg-transparent text-fg outline-none placeholder:text-muted"
                 placeholder="Filtrer par course, prix…"
                 defaultValue=""
                 onChange={(e) => handleQueryChange(e.target.value)}
               />
-            </label>
+              {query && (
+                <button
+                  aria-label="Effacer la recherche"
+                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted/20 text-muted transition hover:bg-accent/20 hover:text-accent-text"
+                  onClick={clearQuery}
+                  type="button"
+                >
+                  <span aria-hidden="true" className="text-xs font-bold leading-none">×</span>
+                </button>
+              )}
+            </div>
+            {/* amélioration #23 — aria-live pour les résultats de recherche */}
+            <span aria-live="polite" className="sr-only">
+              {query ? `${visibleRaces.length} course${visibleRaces.length > 1 ? "s" : ""} affichée${visibleRaces.length > 1 ? "s" : ""}` : ""}
+            </span>
           </div>
 
           {/* Table desktop */}

@@ -25,12 +25,69 @@ export const metadata: Metadata = {
   },
 };
 
+/* amélioration #11 — JSON-LD structured data */
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://kayzen-turf-ai.vercel.app/#website",
+      url: "https://kayzen-turf-ai.vercel.app/",
+      name: "Kayzen Turf AI",
+      description: "Plateforme d'aide à la décision pour pronostics hippiques PMU assistée par IA.",
+      inLanguage: "fr-FR",
+      potentialAction: {
+        "@type": "SearchAction",
+        target: "https://kayzen-turf-ai.vercel.app/?q={search_term_string}",
+        "query-input": "required name=search_term_string",
+      },
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://kayzen-turf-ai.vercel.app/#organization",
+      name: "Kayzen",
+      url: "https://kayzen-lyon.fr",
+      logo: {
+        "@type": "ImageObject",
+        url: "https://kayzen-turf-ai.vercel.app/logo.png",
+      },
+    },
+  ],
+};
+
+/* amélioration #12 — ThemeScript : évite le flash (FOUC) en dark mode */
+const themeScript = `
+(function(){
+  try {
+    var s = localStorage.getItem('kayzen-theme');
+    var d = document.documentElement;
+    if (s === 'dark' || (!s && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      d.dataset.theme = 'dark';
+    } else {
+      d.dataset.theme = 'light';
+    }
+  } catch(e){}
+})();
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="fr" suppressHydrationWarning>
+      <head>
+        {/* amélioration #13 — preconnect pour les fonts */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* JSON-LD */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body>
+        {/* amélioration #12 — ThemeScript inline (avant tout rendu) */}
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <a className="skip-link" href="#contenu-principal">
           Aller au contenu principal
         </a>

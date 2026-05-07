@@ -4,7 +4,6 @@ import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 
 type Theme = "light" | "dark";
-
 const STORAGE_KEY = "kayzen-theme";
 
 export function ThemeToggle() {
@@ -38,12 +37,25 @@ export function ThemeToggle() {
       className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/30 bg-white/12 text-slate-100 transition hover:bg-white/20 hover:text-white"
       onClick={toggleTheme}
       type="button"
+      title={theme === "dark" ? "Mode clair" : "Mode sombre"}
     >
-      {mounted ? (
-        theme === "dark" ? <Sun aria-hidden="true" size={16} /> : <Moon aria-hidden="true" size={16} />
-      ) : (
-        <Moon aria-hidden="true" size={16} />
-      )}
+      {/* amélioration #18 — transition fluide entre les icônes */}
+      <span
+        className="transition-all duration-300"
+        style={{
+          display: "inline-flex",
+          transform: mounted ? "rotate(0deg) scale(1)" : "rotate(-30deg) scale(0.8)",
+          opacity: mounted ? 1 : 0,
+        }}
+      >
+        {mounted ? (
+          theme === "dark"
+            ? <Sun aria-hidden="true" size={16} />
+            : <Moon aria-hidden="true" size={16} />
+        ) : (
+          <Moon aria-hidden="true" size={16} />
+        )}
+      </span>
     </button>
   );
 }

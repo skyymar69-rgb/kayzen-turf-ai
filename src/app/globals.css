@@ -7,44 +7,49 @@
 /* ─── Design tokens ─────────────────────────────────────────────── */
 :root {
   color-scheme: light;
-  --bg:            #f5f6f5;   /* near-neutral off-white */
-  --fg:            #111827;   /* near-black neutral — 16:1 on bg */
+  --bg:            #f5f6f5;
+  --fg:            #111827;
   --surface:       #ffffff;
-  --surface-sub:   #f0f0ef;   /* neutral light gray, no green tint */
-  --surface-inv:   #0c2318;   /* PMU dark green — nav bar */
-  --muted:         #4b5563;   /* neutral gray — 5.5:1 on bg */
-  --border:        #d1d5db;   /* neutral visible border */
-  --border-strong: #9ca3af;   /* neutral separator */
-  --accent:        #004a38;   /* PMU medium green — 10.2:1 on white */
-  --accent-hi:     #003528;   /* darker green for hover */
-  --accent-lo:     #daeee2;   /* distinct from surface-sub */
-  --accent-text:   #004a38;   /* green text on light backgrounds */
-  --cta:           #1eb854;   /* PMU bright green — primary CTA */
-  --cta-hi:        #189a47;   /* darker green for hover */
-  --cta-text:      #ffffff;   /* white on green */
+  --surface-sub:   #f0f0ef;
+  --surface-inv:   #0c2318;
+  --muted:         #4b5563;
+  --border:        #d1d5db;
+  --border-strong: #9ca3af;
+  --accent:        #004a38;
+  --accent-hi:     #003528;
+  --accent-lo:     #daeee2;
+  --accent-text:   #004a38;
+  --cta:           #1eb854;
+  --cta-hi:        #189a47;
+  --cta-text:      #ffffff;
   --focus:         #1eb854;
   --danger:        #be123c;
   --warn:          #b45309;
   --warn-lo:       #fffbeb;
+
+  /* amélioration #10 — transition durée + easing cohérents */
+  --t-fast:   100ms ease;
+  --t-base:   160ms ease;
+  --t-slow:   240ms ease;
 }
 
 [data-theme="dark"] {
   color-scheme: dark;
-  --bg:            #0c1a11;   /* deep dark green-black */
-  --fg:            #e2ede5;   /* light green-tinted white */
-  --surface:       #1c3325;   /* clearly distinct from bg (+11 L) */
-  --surface-sub:   #243e2e;   /* slightly lighter card hover */
-  --surface-inv:   #0e2318;   /* PMU dark green nav */
-  --muted:         #7fa88c;   /* muted green-gray — 6.2:1 on bg */
+  --bg:            #0c1a11;
+  --fg:            #e2ede5;
+  --surface:       #1c3325;
+  --surface-sub:   #243e2e;
+  --surface-inv:   #0e2318;
+  --muted:         #7fa88c;
   --border:        rgba(226, 237, 229, 0.14);
   --border-strong: rgba(226, 237, 229, 0.28);
-  --accent:        #3dca7a;   /* bright green for dark bg — 5.8:1 */
-  --accent-hi:     #5dd690;   /* lighter green for hover */
-  --accent-lo:     #0a2416;   /* very dark green tint */
-  --accent-text:   #6ed99a;   /* light green text — 9.4:1 on bg */
-  --cta:           #2dd468;   /* bright green CTA for dark bg */
+  --accent:        #3dca7a;
+  --accent-hi:     #5dd690;
+  --accent-lo:     #0a2416;
+  --accent-text:   #6ed99a;
+  --cta:           #2dd468;
   --cta-hi:        #1eb854;
-  --cta-text:      #0c1a10;   /* dark text on bright green */
+  --cta-text:      #0c1a10;
   --focus:         #3dca7a;
   --danger:        #fb7185;
   --warn:          #fbbf24;
@@ -81,20 +86,38 @@
 /* ─── Base ───────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 
-html  { background: var(--bg); scroll-behavior: smooth; }
-body  {
+html {
+  background: var(--bg);
+  scroll-behavior: smooth;
+  /* amélioration #28 — évite le saut de layout quand la scrollbar apparaît */
+  scrollbar-gutter: stable;
+}
+
+body {
   min-height: 100vh;
   margin: 0;
   background: var(--bg);
   color: var(--fg);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  /* amélioration #6 — transition douce au changement de thème */
+  transition: background-color 200ms ease, color 200ms ease;
 }
+
+/* amélioration #5 — text-balance sur les titres */
+h1, h2, h3, h4 { text-wrap: balance; }
 
 button, input, select, textarea { font: inherit; }
 a { color: inherit; }
 table { font-variant-numeric: tabular-nums; }
 img, svg { display: block; }
+
+/* amélioration #7 — hr plus propre */
+hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 0;
+}
 
 /* ─── Focus ──────────────────────────────────────────────────────── */
 button, a, input, select, textarea { outline-offset: 3px; }
@@ -142,7 +165,7 @@ textarea:focus-visible {
 .kz-scroll::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 99px; }
 
 /* ─── Table row hover ────────────────────────────────────────────── */
-tbody tr { transition: background-color 100ms ease; }
+tbody tr { transition: background-color var(--t-fast); }
 
 /* ─── Horse silk image ───────────────────────────────────────────── */
 .premium-silk {
@@ -157,6 +180,105 @@ tbody tr { transition: background-color 100ms ease; }
   transform: translateY(-1px) scale(1.03);
 }
 
+/* ─── amélioration #1 — ::selection couleur PMU ─────────────────── */
+::selection {
+  background: rgba(30, 184, 84, 0.22);
+  color: var(--fg);
+}
+
+/* ─── amélioration #2 & 3 — keyframes animations ────────────────── */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+.animate-fade-in  { animation: fade-in  200ms ease both; }
+.animate-slide-up { animation: slide-up 220ms ease both; }
+.animate-slide-down { animation: slide-down 200ms ease both; }
+.animate-pulse-dot  { animation: pulse-dot 1.8s ease-in-out infinite; }
+
+/* ─── amélioration #4 — skeleton shimmer ────────────────────────── */
+.kz-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface-sub) 25%,
+    var(--border)      50%,
+    var(--surface-sub) 75%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+/* ─── amélioration #8 — gradient text ───────────────────────────── */
+.kz-gradient-text {
+  background: linear-gradient(135deg, var(--cta) 0%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── amélioration #9 — card hover lift ─────────────────────────── */
+.kz-card-lift {
+  transition: transform var(--t-base), box-shadow var(--t-base);
+}
+.kz-card-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.10);
+}
+
+/* ─── amélioration #29 — link underline animate ─────────────────── */
+.kz-link-anim {
+  text-decoration: none;
+  background-image: linear-gradient(var(--accent), var(--accent));
+  background-size: 0 1.5px;
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  transition: background-size var(--t-base);
+}
+.kz-link-anim:hover { background-size: 100% 1.5px; }
+
+/* ─── amélioration #30 — improved pill/badge base ───────────────── */
+.kz-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 9999px;
+  padding: 2px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.6;
+}
+
+/* ─── amélioration #10 — print styles ───────────────────────────── */
+@media print {
+  header, footer, nav, .no-print { display: none !important; }
+  body { background: white !important; color: black !important; }
+  a    { text-decoration: underline; color: black !important; }
+  main { max-width: 100% !important; padding: 0 !important; }
+}
+
 /* ─── Reduced motion ─────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -165,4 +287,5 @@ tbody tr { transition: background-color 100ms ease; }
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }
+  body { transition: none !important; }
 }
