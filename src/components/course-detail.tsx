@@ -59,6 +59,8 @@ export function CourseDetail({ race }: CourseDetailProps) {
   const simulation          = selectedHorse ? simulateBet(stake, selectedHorse.odds, selectedHorse.winProbability, 500, 0) : null;
   const partantsCount       = race.horses.length;
 
+  const topBet = betRecommendations[0];
+
   return (
     <main className="min-h-screen bg-bg pb-20" id="contenu-principal">
       <div className="mx-auto max-w-[1520px] px-4 pt-6 sm:px-6 lg:px-8">
@@ -72,42 +74,28 @@ export function CourseDetail({ race }: CourseDetailProps) {
           Programme
         </Link>
 
-        {/* ── RACE HEADER ────────────────────────────────────────── */}
+        {/* ── RACE HEADER (compact) ── */}
         <header className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
-          <div className="border-t-4 border-accent px-5 py-5 sm:px-7 sm:py-6">
-            <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+          <div className="border-t-4 border-accent px-5 py-4 sm:px-7">
+            <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <h1 className="font-display text-xl font-bold text-fg sm:text-2xl">
-                    Partants — {formatLongDate(race.raceDate)}
-                  </h1>
+                <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
+                  <span className="font-bold text-fg">{race.discipline}</span>
+                  <span>·</span><span>{race.specialty}</span>
+                  <span>·</span><span>{formatMeters(race.distance)} m</span>
+                  <span>·</span><span>{partantsCount} partants</span>
+                  {race.going && <><span>·</span><span>{race.going}</span></>}
                 </div>
-                <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted sm:gap-3 sm:text-base">
-                  <span className="font-semibold text-fg">{race.discipline}</span>
-                  <span>·</span>
-                  <span>{race.specialty}</span>
-                  <span>·</span>
-                  <span>{formatPrize(race.raceQualityScore)}</span>
-                  <span>·</span>
-                  <span>{formatMeters(race.distance)} m</span>
-                  <span>·</span>
-                  <span>{partantsCount} partants</span>
-                </div>
+                <h1 className="mt-1 font-display text-xl font-bold text-fg sm:text-2xl">
+                  {race.racecourse} — {formatLongDate(race.raceDate)}
+                </h1>
               </div>
-
-              <div className="flex flex-col items-start gap-4 xl:items-end">
-                <div className="flex items-center gap-2.5 font-semibold text-accent-text sm:text-xl">
-                  <Clock3 size={22} />
-                  Départ {race.startTime}
-                </div>
-                <span className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2 text-sm text-muted">
-                  {race.going ? `Terrain : ${race.going}` : "État de piste non publié par le PMU"}
-                </span>
+              <div className="flex items-center gap-2 font-bold text-accent-text">
+                <Clock3 size={18} />
+                Départ {race.startTime}
               </div>
             </div>
-
-            {/* Bet type badges */}
-            <div className="mt-5 flex flex-wrap gap-2">
+            <div className="mt-3 flex flex-wrap gap-2">
               {visibleBetBadges(race.betTypes).map((bet) => (
                 <span
                   key={`${bet.type}-${bet.audience ?? "N"}`}
@@ -120,35 +108,79 @@ export function CourseDetail({ race }: CourseDetailProps) {
           </div>
 
           {/* Tab navigation */}
-          <nav
-            aria-label="Sections de la course"
-            className="flex overflow-x-auto border-t border-border bg-surface-sub kz-scroll"
-            role="tablist"
-          >
+          <nav aria-label="Sections de la course" className="flex overflow-x-auto border-t border-border bg-surface-sub kz-scroll" role="tablist">
             {TABS.map((tab) => (
               <button
                 key={tab}
                 aria-controls="course-tab-panel"
                 aria-selected={activeTab === tab}
                 className={`relative h-12 min-w-[140px] shrink-0 border-r border-border px-4 text-sm font-medium transition xl:min-w-0 xl:flex-1 ${
-                  activeTab === tab
-                    ? "bg-surface-inv text-white"
-                    : "text-muted hover:bg-surface hover:text-fg"
+                  activeTab === tab ? "bg-surface-inv text-white" : "text-muted hover:bg-surface hover:text-fg"
                 }`}
                 onClick={() => setActiveTab(tab)}
                 role="tab"
                 type="button"
               >
                 {tab}
-                {activeTab === tab && (
-                  <span className="absolute bottom-0 left-1/4 right-1/4 h-0.5 rounded-full bg-accent" />
-                )}
+                {activeTab === tab && <span className="absolute bottom-0 left-1/4 right-1/4 h-0.5 rounded-full bg-accent" />}
               </button>
             ))}
           </nav>
         </header>
 
-        {/* Tab panel */}
+        {/* ── ZONE DE DÉCISION ── */}
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+
+          {/* 1. Ordre probable */}
+          <div className="rounded-2xl border-2 border-accent/30 bg-accent-lo p-5">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-accent-text">Ordre probable</p>
+            <p className="mt-3 font-mono text-4xl font-bold leading-none tracking-tight text-accent-text">
+              {arrival.slice(0, 5).map((h) => h.number).join(" – ")}
+            </p>
+            <p className="mt-3 text-xs text-accent-text/70">
+              {arrival.length > 5 && `+${arrival.length - 5} autres · `}KZ Score, probabilités, forme
+            </p>
+          </div>
+
+          {/* 2. Ticket recommandé */}
+          {topBet ? (
+            <div className="rounded-2xl border border-border bg-surface p-5">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Ticket recommandé</p>
+              <p className="mt-0.5 text-sm font-semibold text-fg">{topBet.label}</p>
+              <p className="mt-3 font-mono text-3xl font-bold text-accent-text">{topBet.ticket}</p>
+              <p className="mt-3 flex items-center text-xs text-muted">
+                <span>Conf. {topBet.confidence}/99</span>
+                <InfoTip text="Convergence des signaux algorithmiques (probabilités, edge marché, forme). 99 = signaux très alignés. Ne garantit pas le gain." />
+                <span className="ml-1">· {formatStrategyLabel(topBet.strategy)}</span>
+              </p>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center rounded-2xl border border-border bg-surface p-5 text-sm text-muted">
+              Aucun ticket disponible
+            </div>
+          )}
+
+          {/* 3. Signaux clés */}
+          <div className="rounded-2xl border border-border bg-surface p-5">
+            <div className="flex items-center">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Signaux clés</p>
+              <InfoTip text="Base : meilleur score global. Outsider : edge marché positif, cote ≥ 6. Tocard : signal surprise Top 3 malgré cote haute. KZ Score 0-99 = composite probabilités + cote + musique + terrain." />
+            </div>
+            <div className="mt-3 grid gap-2">
+              {horseRoles.map((role) => (
+                <div key={role.label} className="flex items-center justify-between gap-2 rounded-xl bg-surface-sub px-3 py-2.5">
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase text-accent-text">{role.label}</p>
+                    <p className="truncate font-semibold text-fg">#{role.horse.number} {role.horse.horse}</p>
+                  </div>
+                  <span className="shrink-0 font-mono text-xl font-bold text-fg">{fmtScore(role.horse.kzScore)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ── TABLEAU PARTANTS ── */}
         <section
           className="mt-4 overflow-hidden rounded-2xl border border-border bg-surface shadow-sm"
           id="course-tab-panel"
@@ -161,101 +193,99 @@ export function CourseDetail({ race }: CourseDetailProps) {
           )}
         </section>
 
-        {/* ── PRONOSTIC + SIMULATION ─────────────────────────────── */}
-        <div className="mt-4 grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+        {/* ── ANALYSE & DÉTAILS ── */}
+        <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_320px]">
 
-          {/* Pronostic KAYZEN */}
-          <Panel title="Pronostic KAYZEN" icon={Trophy}>
-            {/* Ordre probable + tickets principaux */}
-            <div className="grid gap-3 lg:grid-cols-[0.9fr_1.1fr]">
-              <div className="rounded-2xl border border-accent/20 bg-accent-lo p-5">
-                <p className="text-xs font-bold uppercase tracking-widest text-accent-text">Ordre probable</p>
-                <p className="mt-2 font-mono text-3xl font-bold text-accent-text">
-                  {arrival.slice(0, 6).map((h) => h.number).join(" – ")}
-                </p>
-                <p className="mt-3 text-sm leading-5 text-muted">
-                  Base calculée avec KZ Score, probabilités gagnant/top 3 et forme récente.
-                </p>
-              </div>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {betRecommendations.slice(0, 6).map((r) => (
+          {/* Colonne principale — accordéons */}
+          <div className="grid gap-3">
+
+            {/* Accordion: Tous les tickets */}
+            <details className="overflow-hidden rounded-2xl border border-border bg-surface">
+              <summary className="flex cursor-pointer list-none items-center justify-between p-5">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Tous les paris</p>
+                  <p className="mt-0.5 text-base font-bold text-fg">Tickets proposés par stratégie</p>
+                </div>
+                <span className="shrink-0 rounded-full border border-border bg-surface-sub px-3 py-1 text-xs font-bold text-muted">Voir →</span>
+              </summary>
+              <div className="grid gap-2 px-5 pb-5 sm:grid-cols-2 xl:grid-cols-3">
+                {betRecommendations.map((r) => (
                   <div key={r.type} className="rounded-xl border border-border bg-surface-sub p-3">
                     <p className="text-xs font-semibold text-fg">{r.label}</p>
                     <p className="mt-1 font-mono text-base font-bold text-accent-text">{r.ticket}</p>
-                    <p className="mt-1 flex items-center text-[10px] text-muted">
-                      <span>Conf. {r.confidence}/99</span>
-                      <InfoTip text="Indice de convergence des signaux 0-99 : mesure l'alignement entre probabilité gagnant, edge marché, forme et stabilité des rangs. 99 = tous les signaux pointent dans le même sens. Ne garantit pas le gain." />
-                      <span className="ml-1">· {formatStrategyLabel(r.strategy)}</span>
-                    </p>
+                    <p className="mt-1 text-[10px] text-muted">Conf. {r.confidence}/99 · {formatStrategyLabel(r.strategy)}</p>
                   </div>
                 ))}
               </div>
-            </div>
+            </details>
 
-            {/* Typologie + Heatmap */}
-            <div className="mt-4 grid gap-3 lg:grid-cols-[0.95fr_1.05fr]">
-              <section className="rounded-2xl border border-border bg-surface-sub p-4" aria-label="Typologie IA">
-                <div className="flex items-center">
-                  <p className="text-xs font-bold uppercase tracking-widest text-muted">Typologie IA</p>
-                  <InfoTip text="Base : meilleur score global KZ. Outsider : edge marché positif avec cote ≥ 6 (valeur sous-estimée). Tocard surveillé : signal surprise Top 3 élevé malgré une cote haute. Le KZ Score (0-99) combine probabilités, cote, musique, gains et contexte terrain." />
-                </div>
-                <div className="mt-3 grid gap-2">
-                  {horseRoles.map((role) => (
-                    <article key={role.label} className="rounded-xl border border-border bg-surface p-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-[10px] font-bold uppercase tracking-widest text-accent-text">{role.label}</p>
-                          <h3 className="mt-0.5 font-bold text-fg">#{role.horse.number} {role.horse.horse}</h3>
-                        </div>
-                        <span className="font-mono text-sm font-bold text-fg">{fmtScore(role.horse.kzScore)}</span>
-                      </div>
-                      <p className="mt-2 text-xs leading-5 text-muted">{role.reason}</p>
-                    </article>
-                  ))}
-                </div>
-              </section>
-
-              <section className="rounded-2xl border border-border bg-surface-sub p-4" aria-label="Heatmap Top 3">
-                <div className="flex items-center">
-                  <p className="text-xs font-bold uppercase tracking-widest text-muted">Heatmap Top 3</p>
-                  <InfoTip text="Probabilité que le cheval finisse dans les 3 premiers (modèle Plackett-Luce). Triés du plus élevé au plus bas. L'ordre d'arrivée prédit peut différer car il intègre aussi la probabilité gagnant stricte, la cote et la forme — un cheval peut être 1er même avec une prob. Top 3 plus faible si sa prob. gagnant est dominante." />
-                </div>
-                <p className="mt-0.5 text-[10px] text-muted">Triés par prob. Top 3 ↓</p>
-                <div className="mt-3 grid gap-3">
-                  {arrival.slice(0, 8).slice().sort((a, b) => (b.top3Probability ?? 0) - (a.top3Probability ?? 0)).map((horse) => (
-                    <div key={horse.id} className="grid grid-cols-[36px_1fr_48px] items-center gap-3">
-                      <span className="font-mono text-sm font-bold text-fg">#{horse.number}</span>
-                      <div className="h-2.5 overflow-hidden rounded-full bg-border">
-                        <div
-                          className="h-full rounded-full bg-accent transition-all"
-                          style={{ width: `${safeWidth(horse.top3Probability)}%` }}
-                        />
-                      </div>
-                      <span className="text-right font-mono text-xs font-bold text-accent-text">{fmtProb(horse.top3Probability)}</span>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            </div>
-
-            <PredictionMethodology race={race} arrival={arrival} />
-
-            {/* Générateur de tickets */}
-            <section className="mt-4 rounded-2xl border border-border bg-surface-sub p-5">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            {/* Accordion: Analyse IA — Heatmap + Signaux */}
+            <details className="overflow-hidden rounded-2xl border border-border bg-surface">
+              <summary className="flex cursor-pointer list-none items-center justify-between p-5">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-widest text-muted">Générateur intelligent</p>
-                  <h3 className="mt-1 font-display text-lg font-bold text-fg">
-                    Mode {ticketModeLabel(ticketMode)} · {ticketBudget} €
-                  </h3>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Analyse IA</p>
+                  <p className="mt-0.5 text-base font-bold text-fg">Heatmap Top 3 & Signaux cheval</p>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <div aria-label="Mode de stratégie" className="flex overflow-hidden rounded-xl border border-border bg-surface text-xs font-bold" role="group">
+                <span className="shrink-0 rounded-full border border-border bg-surface-sub px-3 py-1 text-xs font-bold text-muted">Voir →</span>
+              </summary>
+              <div className="grid gap-4 px-5 pb-5 lg:grid-cols-2">
+                {/* Topology */}
+                <section className="rounded-xl border border-border bg-surface-sub p-4">
+                  <p className="text-xs font-bold uppercase tracking-widest text-muted">Rôles IA</p>
+                  <div className="mt-3 grid gap-2">
+                    {horseRoles.map((role) => (
+                      <article key={role.label} className="rounded-xl border border-border bg-surface p-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-accent-text">{role.label}</p>
+                            <h3 className="mt-0.5 font-bold text-fg">#{role.horse.number} {role.horse.horse}</h3>
+                          </div>
+                          <span className="font-mono text-sm font-bold text-fg">{fmtScore(role.horse.kzScore)}</span>
+                        </div>
+                        <p className="mt-2 text-xs leading-5 text-muted">{role.reason}</p>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+
+                {/* Heatmap */}
+                <section className="rounded-xl border border-border bg-surface-sub p-4">
+                  <div className="flex items-center">
+                    <p className="text-xs font-bold uppercase tracking-widest text-muted">Probabilité Top 3</p>
+                    <InfoTip text="Probabilité que le cheval finisse dans les 3 premiers (Plackett-Luce). Triés du plus élevé au plus bas. L'ordre d'arrivée prédit peut différer car il intègre aussi la probabilité gagnant stricte et la cote." />
+                  </div>
+                  <div className="mt-3 grid gap-3">
+                    {arrival.slice(0, 8).slice().sort((a, b) => (b.top3Probability ?? 0) - (a.top3Probability ?? 0)).map((horse) => (
+                      <div key={horse.id} className="grid grid-cols-[36px_1fr_48px] items-center gap-3">
+                        <span className="font-mono text-sm font-bold text-fg">#{horse.number}</span>
+                        <div className="h-2.5 overflow-hidden rounded-full bg-border">
+                          <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${safeWidth(horse.top3Probability)}%` }} />
+                        </div>
+                        <span className="text-right font-mono text-xs font-bold text-accent-text">{fmtProb(horse.top3Probability)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              </div>
+            </details>
+
+            {/* Accordion: Générateur de tickets */}
+            <details className="overflow-hidden rounded-2xl border border-border bg-surface">
+              <summary className="flex cursor-pointer list-none items-center justify-between p-5">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Générateur</p>
+                  <p className="mt-0.5 text-base font-bold text-fg">Tickets sur mesure — budget & stratégie</p>
+                </div>
+                <span className="shrink-0 rounded-full border border-border bg-surface-sub px-3 py-1 text-xs font-bold text-muted">Personnaliser →</span>
+              </summary>
+              <div className="px-5 pb-5">
+                <div className="flex flex-wrap items-center gap-2 mb-4">
+                  <div aria-label="Mode de stratégie" className="flex overflow-hidden rounded-xl border border-border bg-surface-sub text-xs font-bold" role="group">
                     {(["securise", "equilibre", "agressif"] as TicketMode[]).map((mode) => (
                       <button
                         key={mode}
                         aria-pressed={ticketMode === mode}
-                        className={`min-h-10 px-4 transition ${ticketMode === mode ? "bg-accent text-white" : "text-muted hover:bg-surface-sub"}`}
+                        className={`min-h-9 px-4 transition ${ticketMode === mode ? "bg-accent text-white" : "text-muted hover:bg-surface"}`}
                         onClick={() => setTicketMode(mode)}
                         type="button"
                       >
@@ -263,167 +293,151 @@ export function CourseDetail({ race }: CourseDetailProps) {
                       </button>
                     ))}
                   </div>
-                  <label className="flex flex-col gap-1 text-xs font-bold uppercase tracking-widest text-muted">
-                    Budget (€)
+                  <label className="flex items-center gap-2 text-xs font-bold text-muted">
+                    Budget €
                     <input
-                      className="h-10 w-28 rounded-xl border border-border bg-surface px-3 text-fg outline-none"
-                      min={5}
-                      onChange={(e) => setTicketBudget(Number(e.target.value))}
-                      step={5}
-                      type="number"
+                      className="h-9 w-24 rounded-xl border border-border bg-surface px-3 text-fg outline-none"
+                      min={5} step={5} type="number"
                       value={ticketBudget}
+                      onChange={(e) => setTicketBudget(Number(e.target.value))}
                     />
                   </label>
                 </div>
-              </div>
-              <div className="mt-4 grid gap-2 md:grid-cols-3">
-                {ticketPlan.map((ticket) => (
-                  <div key={ticket.type} className="rounded-xl border border-border bg-surface p-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="font-semibold text-fg">{ticket.label}</p>
-                      <span className="rounded-full bg-accent-lo px-2 py-0.5 text-xs font-bold text-accent-text">{ticket.stake} €</span>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {ticketPlan.map((ticket) => (
+                    <div key={ticket.type} className="rounded-xl border border-border bg-surface-sub p-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-xs font-semibold text-fg">{ticket.label}</p>
+                        <span className="shrink-0 rounded-full bg-accent-lo px-2 py-0.5 text-xs font-bold text-accent-text">{ticket.stake} €</span>
+                      </div>
+                      <p className="mt-2 font-mono text-lg font-bold text-accent-text">{ticket.ticket}</p>
+                      <p className="mt-1 text-xs leading-5 text-muted">{ticket.rationale}</p>
                     </div>
-                    <p className="mt-2 font-mono text-lg font-bold text-accent-text">{ticket.ticket}</p>
-                    <p className="mt-1 text-xs leading-5 text-muted">{ticket.rationale}</p>
-                  </div>
-                ))}
-                {ticketPlan.length === 0 && (
-                  <p className="col-span-3 rounded-xl border border-border bg-surface p-4 text-sm text-muted">
-                    Aucun ticket disponible pour ce mode avec les paris ouverts connus.
-                  </p>
-                )}
+                  ))}
+                  {ticketPlan.length === 0 && (
+                    <p className="col-span-3 p-4 text-sm text-muted">Aucun ticket disponible pour ce mode.</p>
+                  )}
+                </div>
               </div>
-            </section>
+            </details>
 
+            {/* Jeux disponibles */}
             <TicketCombinationsPanel recommendations={betRecommendations} />
 
-            {/* FAQ Comprendre les indices */}
-            <details className="mt-4 rounded-2xl border border-border bg-surface-sub p-5">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
+            {/* Pourquoi ce pronostic */}
+            <PredictionMethodology race={race} arrival={arrival} />
+
+            {/* FAQ */}
+            <details className="overflow-hidden rounded-2xl border border-border bg-surface">
+              <summary className="flex cursor-pointer list-none items-center justify-between p-5">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-widest text-muted">Comprendre ces chiffres</p>
-                  <p className="mt-0.5 text-sm font-medium text-fg">Pourquoi ces chevaux ? Que signifient les indices ?</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Comprendre</p>
+                  <p className="mt-0.5 text-base font-bold text-fg">À quoi correspondent ces chiffres ?</p>
                 </div>
-                <span className="shrink-0 rounded-full border border-border bg-surface px-3 py-1 text-xs font-bold text-muted">Ouvrir →</span>
+                <span className="shrink-0 rounded-full border border-border bg-surface-sub px-3 py-1 text-xs font-bold text-muted">Ouvrir →</span>
               </summary>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 px-5 pb-5 sm:grid-cols-2">
                 {[
-                  {
-                    q: "Que signifie Conf. X/99 sur un ticket ?",
-                    a: "Indice de convergence algorithmique 0-99. Il mesure l'alignement entre la probabilité gagnant, l'edge marché (cote PMU vs cote juste), la forme récente et la stabilité des rangs entre modèles. Conf. 99 = tous les signaux convergent. Ce n'est pas une promesse de gain.",
-                  },
-                  {
-                    q: "Pourquoi le KZ Score d'un cheval #1 peut être plus bas que celui du #2 ?",
-                    a: "Le classement d'arrivée utilise un score ordre strict (exactOrderScore) qui pénalise les favoris fragiles et valorise la stabilité. Un cheval classé #1 peut avoir un KZ brut plus faible mais une meilleure probabilité gagnant et moins de risques — il gagne plus souvent, pas forcément avec le meilleur score composite.",
-                  },
-                  {
-                    q: "Heatmap Top 3 : pourquoi le #2 est parfois en tête ?",
-                    a: "La heatmap trie par probabilité Top 3 décroissante. Un cheval peut avoir 68% de chances de finir dans le top 3 sans pour autant être le favori gagnant — il est régulier, souvent placé, mais rarement vainqueur. L'ordre des tickets prend en compte la probabilité gagnant stricte, ce qui peut inverser le classement.",
-                  },
-                  {
-                    q: "Stratégie Confiance vs Value vs Spéculatif ?",
-                    a: "Confiance : tickets sur les chevaux les mieux classés, risque faible. Value : chevaux sous-évalués par le marché (edge positif), potentiel de gain plus élevé. Spéculatif : outsiders avec un signal surprise Top 3 — risque élevé, gain potentiellement fort. Le mode Équilibré mixe les trois.",
-                  },
+                  { q: "Conf. X/99 sur un ticket ?", a: "Convergence algorithmique 0-99 : alignement entre probabilité gagnant, edge marché, forme et stabilité des rangs. 99 = tous les signaux convergent. Pas une promesse de gain." },
+                  { q: "Pourquoi le #1 peut avoir un KZ plus bas que le #2 ?", a: "Le classement d'arrivée pénalise les favoris fragiles et valorise la stabilité. Un cheval peut avoir un KZ brut plus faible mais une meilleure probabilité gagnant nette." },
+                  { q: "Heatmap vs ordre d'arrivée ?", a: "La heatmap trie par prob. Top 3 décroissante. L'ordre d'arrivée utilise la prob. gagnant stricte — un cheval régulièrement placé peut avoir une prob. Top 3 élevée mais être classé 2e ou 3e." },
+                  { q: "Confiance vs Value vs Spéculatif ?", a: "Confiance : chevaux les mieux classés, risque faible. Value : sous-évalués par le marché, potentiel élevé. Spéculatif : outsiders avec signal surprise Top 3, risque fort." },
                 ].map(({ q, a }) => (
-                  <article key={q} className="rounded-xl border border-border bg-surface p-4">
+                  <article key={q} className="rounded-xl border border-border bg-surface-sub p-4">
                     <p className="text-sm font-semibold text-fg">{q}</p>
                     <p className="mt-2 text-xs leading-5 text-muted">{a}</p>
                   </article>
                 ))}
               </div>
             </details>
-          </Panel>
+          </div>
 
-          {/* Simulation */}
-          <Panel title="Simulation & responsabilité" icon={Gauge}>
-            {selectedHorse && simulation ? (
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="col-span-2 flex flex-col gap-1.5 text-sm font-medium text-muted">
-                  Cheval sélectionné
-                  <select
-                    className="h-11 w-full rounded-xl border border-border bg-surface px-3 text-fg outline-none"
-                    onChange={(e) => setSelectedHorseId(e.target.value)}
-                    value={selectedHorse.id}
-                  >
-                    {arrival.map((horse) => (
-                      <option key={horse.id} value={horse.id}>
-                        #{horse.number} {horse.horse}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="col-span-2 flex flex-col gap-1.5 text-sm font-medium text-muted sm:col-span-1">
-                  Mise (€)
-                  <input
-                    className="h-11 w-full rounded-xl border border-border bg-surface px-3 text-fg outline-none"
-                    min={1}
-                    onChange={(e) => setStake(Number(e.target.value))}
-                    type="number"
-                    value={stake}
-                  />
-                </label>
-                <div className="grid grid-cols-2 gap-2 sm:col-span-2">
-                  <Result label="EV estimée"    value={`${simulation.expectedValue} €`} />
-                  <Result label="Kelly prudent" value={`${simulation.kellyStake} €`} />
-                  <Result label="Edge marché"   value={`${simulation.marketEdge}%`} />
-                  <Result label="Décision"      value={simulation.recommendation} accent={simulation.marketEdge > 0} />
+          {/* Colonne latérale */}
+          <div className="grid gap-3 content-start">
+
+            {/* Simulation */}
+            <Panel title="Simuler une mise" icon={Gauge}>
+              {selectedHorse && simulation ? (
+                <div className="grid gap-3">
+                  <label className="flex flex-col gap-1.5 text-xs font-bold text-muted">
+                    Cheval
+                    <select
+                      className="h-10 w-full rounded-xl border border-border bg-surface px-3 text-sm text-fg outline-none"
+                      onChange={(e) => setSelectedHorseId(e.target.value)}
+                      value={selectedHorse.id}
+                    >
+                      {arrival.map((horse) => (
+                        <option key={horse.id} value={horse.id}>#{horse.number} {horse.horse}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-1.5 text-xs font-bold text-muted">
+                    Mise (€)
+                    <input
+                      className="h-10 w-full rounded-xl border border-border bg-surface px-3 text-sm text-fg outline-none"
+                      min={1} type="number" value={stake}
+                      onChange={(e) => setStake(Number(e.target.value))}
+                    />
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Result label="EV estimée"    value={`${simulation.expectedValue} €`} />
+                    <Result label="Kelly"         value={`${simulation.kellyStake} €`} />
+                    <Result label="Edge marché"   value={`${simulation.marketEdge}%`} />
+                    <Result label="Décision"      value={simulation.recommendation} accent={simulation.marketEdge > 0} />
+                  </div>
+                </div>
+              ) : null}
+            </Panel>
+
+            {/* Analyse après course */}
+            <Panel title="Analyse après course" icon={Sparkles}>
+              <div className="space-y-3">
+                <div className="rounded-xl border border-border bg-surface-sub p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-semibold text-fg">{postRaceAnalysis.verdict}</p>
+                    <span className="font-mono text-sm text-accent-text">
+                      {postRaceAnalysis.status === "complete" ? `${postRaceAnalysis.metrics.confidenceScore}/99` : "En attente"}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm leading-5 text-muted">{postRaceAnalysis.summary}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Result label="Prédiction" value={postRaceAnalysis.predictedArrival.join("–") || "—"} />
+                  <Result label="Arrivée"    value={postRaceAnalysis.actualArrival.join("–") || "—"} />
+                  <Result label="Top 3"      value={`${postRaceAnalysis.metrics.top3Hits}/3`} />
+                  <Result label="Top 5"      value={`${postRaceAnalysis.metrics.top5Hits}/5`} />
                 </div>
               </div>
-            ) : null}
-          </Panel>
-        </div>
+            </Panel>
 
-        {/* ── POST-RACE / FACTEURS / MODÈLE ─────────────────────── */}
-        <div className="mt-4 grid gap-4 xl:grid-cols-3">
-          <Panel title="Analyse après course" icon={Sparkles}>
-            <div className="space-y-3">
-              <div className="rounded-xl border border-border bg-surface-sub p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="font-semibold text-fg">{postRaceAnalysis.verdict}</p>
-                  <span className="font-mono text-sm text-accent-text">
-                    {postRaceAnalysis.status === "complete" ? `${postRaceAnalysis.metrics.confidenceScore}/99` : "En attente"}
-                  </span>
+            {/* Facteurs IA */}
+            <Panel title="Facteurs IA" icon={Brain}>
+              <div className="space-y-2">
+                {(selectedHorse?.factors ?? []).map((factor) => (
+                  <div key={factor} className="flex gap-3 rounded-xl border border-border bg-surface-sub p-3">
+                    <Sparkles className="mt-0.5 shrink-0 text-accent-text" size={15} />
+                    <p className="text-sm text-muted">{factor}</p>
+                  </div>
+                ))}
+                {(selectedHorse?.factors ?? []).length === 0 && (
+                  <p className="text-sm text-muted">Aucun facteur disponible.</p>
+                )}
+              </div>
+            </Panel>
+
+            {/* Avertissement + Actions modèle */}
+            <div className="rounded-2xl border border-border bg-surface p-5">
+              <div className="space-y-2">
+                {postRaceAnalysis.nextModelActions.map((action) => (
+                  <p key={action} className="rounded-xl border border-accent/20 bg-accent-lo p-3 text-xs text-fg">{action}</p>
+                ))}
+                <div className="rounded-xl border border-warn/30 bg-warn-lo p-3">
+                  <AlertTriangle className="mb-2 text-warn" size={15} />
+                  <p className="text-xs text-warn">Aucun pronostic ne garantit un gain. Les tickets restent une aide à la décision.</p>
                 </div>
-                <p className="mt-2 text-sm leading-5 text-muted">{postRaceAnalysis.summary}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <Result label="Prédiction" value={postRaceAnalysis.predictedArrival.join("–") || "—"} />
-                <Result label="Arrivée"    value={postRaceAnalysis.actualArrival.join("–") || "—"} />
-                <Result label="Top 3"      value={`${postRaceAnalysis.metrics.top3Hits}/3`} />
-                <Result label="Top 5"      value={`${postRaceAnalysis.metrics.top5Hits}/5`} />
               </div>
             </div>
-          </Panel>
-
-          <Panel title="Facteurs IA" icon={Brain}>
-            <div className="space-y-2">
-              {(selectedHorse?.factors ?? []).map((factor) => (
-                <div key={factor} className="flex gap-3 rounded-xl border border-border bg-surface-sub p-3">
-                  <Sparkles className="mt-0.5 shrink-0 text-accent-text" size={15} />
-                  <p className="text-sm text-muted">{factor}</p>
-                </div>
-              ))}
-              {(selectedHorse?.factors ?? []).length === 0 && (
-                <p className="text-sm text-muted">Aucun facteur disponible.</p>
-              )}
-            </div>
-          </Panel>
-
-          <Panel title="Actions modèle" icon={ArrowUpRight}>
-            <div className="space-y-2">
-              {postRaceAnalysis.nextModelActions.map((action) => (
-                <p key={action} className="rounded-xl border border-accent/20 bg-accent-lo p-3 text-sm text-fg">
-                  {action}
-                </p>
-              ))}
-              <div className="rounded-xl border border-warn/30 bg-warn-lo p-3 text-sm">
-                <AlertTriangle className="mb-2 text-warn" size={16} />
-                <p className="text-warn">
-                  Aucun pronostic ne garantit un gain. Les tickets restent une aide à la décision.
-                </p>
-              </div>
-            </div>
-          </Panel>
+          </div>
         </div>
 
       </div>
