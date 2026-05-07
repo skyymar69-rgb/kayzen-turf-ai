@@ -200,7 +200,7 @@ export function CourseDetail({ race }: CourseDetailProps) {
           <div className="grid gap-3">
 
             {/* Accordion: Tous les tickets */}
-            <details className="overflow-hidden rounded-2xl border border-border bg-surface">
+            <details open className="overflow-hidden rounded-2xl border border-border bg-surface">
               <summary className="flex cursor-pointer list-none items-center justify-between p-5">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Tous les paris</p>
@@ -220,7 +220,7 @@ export function CourseDetail({ race }: CourseDetailProps) {
             </details>
 
             {/* Accordion: Analyse IA — Heatmap + Signaux */}
-            <details className="overflow-hidden rounded-2xl border border-border bg-surface">
+            <details open className="overflow-hidden rounded-2xl border border-border bg-surface">
               <summary className="flex cursor-pointer list-none items-center justify-between p-5">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Analyse IA</p>
@@ -270,7 +270,7 @@ export function CourseDetail({ race }: CourseDetailProps) {
             </details>
 
             {/* Accordion: Générateur de tickets */}
-            <details className="overflow-hidden rounded-2xl border border-border bg-surface">
+            <details open className="overflow-hidden rounded-2xl border border-border bg-surface">
               <summary className="flex cursor-pointer list-none items-center justify-between p-5">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Générateur</p>
@@ -328,7 +328,7 @@ export function CourseDetail({ race }: CourseDetailProps) {
             <PredictionMethodology race={race} arrival={arrival} />
 
             {/* FAQ */}
-            <details className="overflow-hidden rounded-2xl border border-border bg-surface">
+            <details open className="overflow-hidden rounded-2xl border border-border bg-surface">
               <summary className="flex cursor-pointer list-none items-center justify-between p-5">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Comprendre</p>
@@ -576,52 +576,216 @@ function TabPlaceholder({
   race: RaceAnalysis;
   recommendations: ReturnType<typeof buildBetRecommendations>;
 }) {
+
+  /* ── COTES ── */
   if (activeTab === "Cotes") {
+    const maxOdds = Math.max(...arrival.map((h) => h.odds).filter((o) => o > 0), 1);
     return (
-      <SimpleGrid title="Cotes IA / PMU">
-        {arrival.slice(0, 12).map((horse) => (
-          <Result key={horse.id} label={`#${horse.number} ${horse.horse}`} value={`PMU ${Number.isFinite(horse.odds) ? horse.odds : "—"} / juste ${Number.isFinite(horse.fairOdds) ? horse.fairOdds : "—"}`} />
-        ))}
-      </SimpleGrid>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[640px] border-collapse text-left text-sm">
+          <caption className="sr-only">Comparaison cotes PMU / cote juste modèle</caption>
+          <thead>
+            <tr className="border-b border-border bg-surface-sub text-xs font-bold uppercase tracking-widest text-muted">
+              <th className="px-4 py-3" scope="col">N°</th>
+              <th className="px-4 py-3" scope="col">Cheval</th>
+              <th className="px-4 py-3" scope="col">Cote PMU</th>
+              <th className="px-4 py-3" scope="col">Cote juste</th>
+              <th className="px-4 py-3" scope="col">Edge</th>
+              <th className="px-4 py-3" scope="col">Signal</th>
+              <th className="px-4 py-3" scope="col">Barre cote</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {arrival.map((horse) => {
+              const edge = Number.isFinite(horse.marketEdge) ? horse.marketEdge : 0;
+              const isValue = edge > 5;
+              const isAvoid = edge < -5;
+              return (
+                <tr key={horse.id} className="hover:bg-surface-sub transition">
+                  <td className="px-4 py-3 font-mono font-bold text-muted">#{horse.number}</td>
+                  <td className="px-4 py-3 font-semibold text-fg">{horse.horse}</td>
+                  <td className="px-4 py-3 font-mono text-fg">{Number.isFinite(horse.odds) && horse.odds > 0 ? horse.odds : "—"}</td>
+                  <td className="px-4 py-3 font-mono text-muted">{Number.isFinite(horse.fairOdds) && horse.fairOdds > 0 ? horse.fairOdds : "—"}</td>
+                  <td className={`px-4 py-3 font-mono font-bold ${isValue ? "text-cta" : isAvoid ? "text-danger" : "text-muted"}`}>
+                    {edge > 0 ? `+${edge}%` : `${edge}%`}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${isValue ? "bg-cta/10 text-cta" : isAvoid ? "bg-danger/10 text-danger" : "bg-surface-sub text-muted"}`}>
+                      {isValue ? "Value" : isAvoid ? "Surcoté" : "Neutre"}
+                    </span>
+                  </td>
+                  <td className="w-32 px-4 py-3">
+                    <div className="h-2 overflow-hidden rounded-full bg-border">
+                      <div className="h-full rounded-full bg-accent/40" style={{ width: `${safeWidth((horse.odds / maxOdds) * 100)}%` }} />
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        <p className="px-4 py-3 text-[11px] text-muted">Edge = (cote PMU × prob. modèle − 1) × 100. Positif = valeur, négatif = marché surévalue ce cheval.</p>
+      </div>
     );
   }
 
+  /* ── PRONOSTICS IA ── */
   if (activeTab === "Pronostics IA") {
     return (
       <div className="p-5">
-        <h2 className="mb-4 font-display text-lg font-bold text-fg">Tickets proposés</h2>
-        <div className="space-y-3">
-          {recommendations.map((item) => (
-            <div key={item.type} className="rounded-2xl border border-border bg-surface-sub p-4">
-              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                <p className="font-semibold text-fg">{item.label}</p>
-                <p className="font-mono text-sm font-bold text-accent-text">{item.ticket}</p>
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Analyse modèle</p>
+            <h2 className="mt-0.5 font-display text-lg font-bold text-fg">Tickets recommandés par stratégie</h2>
+          </div>
+          <p className="text-xs text-muted">Conf. = convergence des signaux 0-99</p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {recommendations.map((r) => (
+            <article key={r.type} className="rounded-2xl border border-border bg-surface-sub p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted">{formatStrategyLabel(r.strategy)}</p>
+                  <p className="mt-0.5 font-semibold text-fg">{r.label}</p>
+                </div>
+                <span className="shrink-0 rounded-full bg-accent-lo px-2 py-0.5 text-xs font-bold text-accent-text">{r.confidence}/99</span>
               </div>
-              <TicketVariantCloud recommendation={item} />
-            </div>
+              <p className="mt-3 font-mono text-2xl font-bold text-accent-text">{r.ticket}</p>
+              <p className="mt-2 text-xs leading-5 text-muted">{r.rationale}</p>
+              <TicketVariantCloud recommendation={r} />
+            </article>
           ))}
+          {recommendations.length === 0 && (
+            <p className="col-span-3 p-4 text-sm text-muted">Aucun ticket calculé pour cette course.</p>
+          )}
         </div>
       </div>
     );
   }
 
+  /* ── STATISTIQUES ── */
   if (activeTab === "Statistiques") {
+    const winMax = Math.max(...arrival.map((h) => h.winProbability ?? 0), 1);
+    const top3Sorted = arrival.slice().sort((a, b) => (b.top3Probability ?? 0) - (a.top3Probability ?? 0));
     return (
-      <SimpleGrid title="Statistiques course">
-        <Result label="Consensus IA"       value={`${race.modelConsensus}%`} />
-        <Result label="Volatilité marché"  value={`${race.marketVolatility}%`} />
-        <Result label="Qualité course"     value={`${race.raceQualityScore}`} />
-        <Result label="Risque"             value={formatRiskLabel(race.riskLevel)} />
-      </SimpleGrid>
+      <div className="p-5 grid gap-5">
+        {/* Métriques course */}
+        <div>
+          <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-muted">Métriques de la course</p>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <Result label="Consensus modèle" value={`${race.modelConsensus}%`} />
+            <Result label="Volatilité marché" value={`${race.marketVolatility}%`} />
+            <Result label="Qualité de course" value={`${race.raceQualityScore}/100`} />
+            <Result label="Niveau de risque" value={formatRiskLabel(race.riskLevel)} />
+          </div>
+        </div>
+        {/* Distribution probabilités gagnant */}
+        <div>
+          <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-muted">Distribution — Probabilité gagnant</p>
+          <div className="grid gap-2">
+            {arrival.map((horse) => (
+              <div key={horse.id} className="grid grid-cols-[56px_1fr_52px] items-center gap-3">
+                <span className="font-mono text-sm font-bold text-fg">#{horse.number}</span>
+                <div className="h-3 overflow-hidden rounded-full bg-border">
+                  <div
+                    className="h-full rounded-full bg-accent transition-all"
+                    style={{ width: `${safeWidth((horse.winProbability ?? 0) / winMax * 100)}%` }}
+                  />
+                </div>
+                <span className="text-right font-mono text-xs font-bold text-accent-text">{fmtProb(horse.winProbability)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Top 5 Top 3 */}
+        <div>
+          <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-muted">Top 5 — Probabilité Top 3</p>
+          <div className="grid gap-2 sm:grid-cols-5">
+            {top3Sorted.slice(0, 5).map((horse, i) => (
+              <div key={horse.id} className={`rounded-xl border p-3 text-center ${i === 0 ? "border-accent/30 bg-accent-lo" : "border-border bg-surface-sub"}`}>
+                <p className="text-[10px] font-bold uppercase text-muted">{["1er","2e","3e","4e","5e"][i]}</p>
+                <p className="mt-1 font-mono text-lg font-bold text-fg">#{horse.number}</p>
+                <p className="truncate text-xs text-muted">{horse.horse.split(" ")[0]}</p>
+                <p className="mt-1 font-mono text-sm font-bold text-accent-text">{fmtProb(horse.top3Probability)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     );
   }
 
+  /* ── LES PLUS JOUÉS ── */
+  if (activeTab === "Les Plus Joués") {
+    return (
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[580px] border-collapse text-left text-sm">
+          <caption className="sr-only">Probabilités modèle par cheval</caption>
+          <thead>
+            <tr className="border-b border-border bg-surface-sub text-xs font-bold uppercase tracking-widest text-muted">
+              <th className="px-4 py-3" scope="col">N°</th>
+              <th className="px-4 py-3" scope="col">Cheval</th>
+              <th className="px-4 py-3" scope="col">Cote PMU</th>
+              <th className="px-4 py-3" scope="col">P(Gagnant)</th>
+              <th className="px-4 py-3" scope="col">P(Top 3)</th>
+              <th className="px-4 py-3" scope="col">P(Top 5)</th>
+              <th className="px-4 py-3" scope="col">KZ Score</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {arrival.map((horse, idx) => (
+              <tr key={horse.id} className={`transition hover:bg-accent-lo ${idx === 0 ? "bg-accent-lo/50" : ""}`}>
+                <td className="px-4 py-3 font-mono font-bold text-muted">#{horse.number}</td>
+                <td className="px-4 py-3">
+                  <p className="font-semibold text-fg">{horse.horse}</p>
+                  <p className="text-xs text-muted">{horse.jockey}</p>
+                </td>
+                <td className="px-4 py-3 font-mono text-fg">{horse.odds > 0 ? horse.odds : "—"}</td>
+                <td className="px-4 py-3 font-mono font-bold text-accent-text">{fmtProb(horse.winProbability)}</td>
+                <td className="px-4 py-3 font-mono text-fg">{fmtProb(horse.top3Probability)}</td>
+                <td className="px-4 py-3 font-mono text-muted">{fmtProb(horse.top5Probability)}</td>
+                <td className="px-4 py-3 font-mono font-bold text-accent-text">{fmtScore(horse.kzScore)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="px-4 py-3 text-[11px] text-muted">Triés par ordre d'arrivée prédit · P(Top N) = probabilité de finir dans les N premiers selon le modèle Plackett-Luce.</p>
+      </div>
+    );
+  }
+
+  /* ── ARRIVÉES ET RAPPORTS ── */
   return (
-    <SimpleGrid title={activeTab}>
-      {arrival.slice(0, 8).map((horse) => (
-        <Result key={horse.id} label={`#${horse.number} ${horse.horse}`} value={`${fmtProb(horse.winProbability)} gagnant`} />
-      ))}
-    </SimpleGrid>
+    <div className="p-5">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Résultats officiels</p>
+      <h2 className="mt-0.5 mb-4 font-display text-lg font-bold text-fg">Arrivée & Analyse post-course</h2>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="rounded-2xl border border-border bg-surface-sub p-4">
+          <p className="text-xs font-bold uppercase tracking-widest text-muted">Arrivée officielle PMU</p>
+          <p className="mt-3 font-mono text-2xl font-bold text-fg">
+            {arrival.filter((h) => h.finishPosition).sort((a, b) => (a.finishPosition ?? 99) - (b.finishPosition ?? 99)).slice(0, 5).map((h) => h.number).join(" – ") || "En attente"}
+          </p>
+        </div>
+        <div className="rounded-2xl border border-border bg-surface-sub p-4">
+          <p className="text-xs font-bold uppercase tracking-widest text-muted">Prédiction modèle</p>
+          <p className="mt-3 font-mono text-2xl font-bold text-accent-text">
+            {arrival.slice(0, 5).map((h) => h.number).join(" – ")}
+          </p>
+        </div>
+        {arrival.filter((h) => h.won).map((h) => (
+          <div key={h.id} className="col-span-2 rounded-xl border border-cta/20 bg-cta/5 p-4">
+            <p className="text-xs font-bold uppercase tracking-widest text-cta">Gagnant officiel</p>
+            <p className="mt-1 text-lg font-bold text-fg">#{h.number} {h.horse}</p>
+            <p className="text-sm text-muted">Cote : {h.odds} · Probabilité modèle : {fmtProb(h.winProbability)}</p>
+          </div>
+        ))}
+        {!arrival.some((h) => h.won) && (
+          <p className="col-span-2 rounded-xl border border-border bg-surface-sub p-4 text-sm text-muted">
+            Résultats non encore disponibles — disponibles après l'arrivée officielle PMU.
+          </p>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -639,7 +803,7 @@ function SimpleGrid({ children, title }: { children: ReactNode; title: string })
 function TicketCombinationsPanel({ recommendations }: { recommendations: ReturnType<typeof buildBetRecommendations> }) {
   if (!recommendations.length) return null;
   return (
-    <details className="mt-4 rounded-2xl border border-border bg-surface">
+    <details open className="mt-4 rounded-2xl border border-border bg-surface">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5">
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-muted">Jeux disponibles</p>
@@ -710,7 +874,7 @@ function PredictionMethodology({ arrival, race }: { arrival: HorsePrediction[]; 
   }));
 
   return (
-    <details className="mt-4 rounded-2xl border border-border bg-surface-sub p-5">
+    <details open className="mt-4 rounded-2xl border border-border bg-surface-sub p-5">
       <summary className="cursor-pointer list-none">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
