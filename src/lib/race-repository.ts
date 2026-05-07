@@ -1,5 +1,5 @@
 import { getSql, hasDatabase } from "@/lib/db";
-import { probableArrival } from "@/lib/bet-recommendations";
+import { probableArrival, raceToContext } from "@/lib/bet-recommendations";
 import { raceAnalysis, raceCards, valueBets } from "@/lib/mock-data";
 import type { BetOffer, Confidence, HorsePrediction, RaceAnalysis } from "@/lib/types";
 
@@ -203,7 +203,7 @@ export async function getRaceById(id?: string | null, baseRow?: RaceRow, options
 export async function getPredictions() {
   const races = await getRaces();
   return races
-    .flatMap((race) => probableArrival(race.horses).map((horse, index) => ({ ...horse, raceId: race.id, raceName: race.name, arrivalRank: index + 1 })))
+    .flatMap((race) => probableArrival(race.horses, raceToContext(race)).map((horse, index) => ({ ...horse, raceId: race.id, raceName: race.name, arrivalRank: index + 1 })))
     .sort((a, b) => a.arrivalRank - b.arrivalRank || b.top3Probability - a.top3Probability);
 }
 

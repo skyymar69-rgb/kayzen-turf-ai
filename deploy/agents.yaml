@@ -1,0 +1,68 @@
+# Configuration champion-challenger par agent
+# L'orchestrateur lit ce fichier au démarrage.
+# traffic_pct : % du trafic prod routé vers le challenger (shadow — n'impacte pas la réponse user)
+
+form_agent:
+  port: 8001
+  cache_ttl_s: 86400          # 24h — features cheval ne changent pas en J
+  cache_key: "race_id+model_version"
+  champion:
+    version: "lgbm-pl-v1.0"
+    path: "models/form/lgbm-pl-v1.0.lgb"
+    deployed_at: "2026-05-07"
+  challenger: null
+
+connections_agent:
+  port: 8002
+  cache_ttl_s: 86400
+  cache_key: "race_id+model_version"
+  champion:
+    version: "lgbm-jt-v1.0"
+    path: "models/connections/lgbm-jt-v1.0.lgb"
+    deployed_at: "2026-05-07"
+  challenger: null
+
+conditions_agent:
+  port: 8003
+  cache_ttl_s: 21600          # 6h — re-calcule si météo change
+  cache_key: "race_id+going+weather_hash"
+  champion:
+    version: "rules-v1.0"
+    path: null                 # règles déterministes, pas de fichier modèle
+    deployed_at: "2026-05-07"
+  challenger: null
+
+market_agent:
+  port: 8004
+  cache_ttl_s: 300            # 5min — cotes très volatiles
+  cache_key: "race_id+model_version+snapshot_minute"
+  champion:
+    version: "drift-v1.0"
+    path: "models/market/drift-v1.0.pkl"
+    deployed_at: "2026-05-07"
+  challenger: null
+
+risk_agent:
+  port: 8005
+  cache_ttl_s: 86400
+  cache_key: "race_id+model_version"
+  champion:
+    version: "rules-v1.0"
+    path: null
+    deployed_at: "2026-05-07"
+  challenger: null
+
+meta_learner:
+  path: "models/meta/pl-meta-v1.0.pkl"
+  deployed_at: "2026-05-07"
+
+orchestrator:
+  timeout_s: 2.5
+  critical_agents:
+    - form_agent
+    - conditions_agent
+  promotion_criteria:
+    min_folds: 6
+    p_value_threshold: 0.05
+    clv_must_be_positive: true
+    no_segment_regression: true

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Clock3, Flag, TrendingUp } from "lucide-react";
-import { buildBetRecommendations, probableArrival } from "@/lib/bet-recommendations";
+import { buildBetRecommendations, probableArrival, raceToContext } from "@/lib/bet-recommendations";
 import { getRaces } from "@/lib/race-repository";
 
 export const dynamic = "force-dynamic";
@@ -71,8 +71,9 @@ export default async function PronosticsPage() {
             </div>
           ) : (
             races.map((race) => {
-              const arrival = probableArrival(race.horses);
-              const recommendations = buildBetRecommendations(race.horses, race.betTypes);
+              const ctx = raceToContext(race);
+              const arrival = probableArrival(race.horses, ctx);
+              const recommendations = buildBetRecommendations(race.horses, race.betTypes, ctx);
               const valueBet = arrival.find((h) => h.valueIndex > 10) ?? null;
               const hasQuinte = race.betTypes.some((b) => b.type === "QUINTE_PLUS");
               const hasQuarte = race.betTypes.some((b) => b.type === "QUARTE_PLUS" && b.audience === "REGIONAL");

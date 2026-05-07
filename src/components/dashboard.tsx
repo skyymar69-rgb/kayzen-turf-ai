@@ -18,7 +18,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useMemo, useState, useSyncExternalStore } from "react";
-import { probableArrival } from "@/lib/bet-recommendations";
+import { probableArrival, raceToContext } from "@/lib/bet-recommendations";
 import type { BetOffer, RaceAnalysis } from "@/lib/types";
 
 type DashboardProps = { races: RaceAnalysis[] };
@@ -76,7 +76,7 @@ export function Dashboard({ races }: DashboardProps) {
     return `${r.programCode} ${r.name} ${r.specialty} ${r.startTime}`.toLowerCase().includes(normalizedQuery);
   }) ?? [];
 
-  const topArrival      = selectedRace ? probableArrival(selectedRace.horses).slice(0, 5) : [];
+  const topArrival      = selectedRace ? probableArrival(selectedRace.horses, raceToContext(selectedRace)).slice(0, 5) : [];
   const dayInsights     = buildDayInsights(dayRaces);
   const todayDate       = dateForDay(races, "today");
   const dayRunnerCount  = dayRaces.reduce((t, r) => t + r.horses.length, 0);
@@ -256,8 +256,12 @@ export function Dashboard({ races }: DashboardProps) {
                             {/* Signal IA + status */}
                             <div className="flex shrink-0 flex-col items-end gap-1">
                               <span className={`text-xs font-bold ${
-                                signal === "Signal fort" ? "text-cta" :
-                                signal === "Opportunité" ? "text-yellow-400" : "text-white/35"
+                                signal.startsWith("Value") ? "text-cta" :
+                                signal.startsWith("Base fiable") ? "text-green-400" :
+                                signal.startsWith("Outsider") ? "text-yellow-400" :
+                                signal === "À éviter" || signal.startsWith("Favori fragile") ? "text-red-400" :
+                                signal === "Signal faible" ? "text-white/25" :
+                                "text-white/55"
                               }`}>{signal}</span>
                               <StatusChip status={status} dark />
                             </div>
@@ -286,10 +290,10 @@ export function Dashboard({ races }: DashboardProps) {
         <section aria-label="Indicateurs du jour" className="mb-4 grid gap-3 sm:grid-cols-3">
           <InsightCard
             icon={<TrendingUp size={18} />}
-            label="ROI estimé"
+            label="Qualité programme"
             tone="green"
-            value={`${dayInsights.estimatedRoi > 0 ? "+" : ""}${dayInsights.estimatedRoi}%`}
-            detail={`${dayInsights.valueRaces} course${dayInsights.valueRaces > 1 ? "s" : ""} à avantage positif`}
+            value={`${dayInsights.programScore}/100`}
+            detail={`${dayInsights.valueRaces} course${dayInsights.valueRaces > 1 ? "s" : ""} à signal positif`}
           />
           <InsightCard
             icon={<BellRing size={18} />}
@@ -323,7 +327,7 @@ export function Dashboard({ races }: DashboardProps) {
             </div>
             <div className="grid gap-px bg-border sm:grid-cols-3">
               {dayInsights.topRaces.map((race, i) => {
-                const best = probableArrival(race.horses)[0];
+                const best = probableArrival(race.horses, raceToContext(race))[0];
                 return (
                   <Link
                     key={race.id}
@@ -595,7 +599,7 @@ export function Dashboard({ races }: DashboardProps) {
                     <tr className="border-b border-border bg-surface-sub text-xs font-bold uppercase tracking-widest text-muted">
                       <th className="px-5 py-3">N°</th>
                       <th className="px-5 py-3">Cheval</th>
-                      <th className="px-5 py-3">Driver / Jockey</th>
+                      <th className="px-5 py-3">{selectedRace?.discipline === "Trot" ? "Driver" : selectedRace?.discipline === "Obstacle" ? "Jockey" : "Jockey"}</th>
                       <th className="px-5 py-3 text-right">Cote</th>
                       <th className="px-5 py-3 text-right">Score KZ</th>
                       <th className="px-5 py-3 text-right">Top 3</th>
@@ -611,9 +615,9 @@ export function Dashboard({ races }: DashboardProps) {
                         <td className="px-5 py-3 text-sm text-muted">{horse.jockey}</td>
                         <td className="px-5 py-3 text-right font-mono text-sm text-fg">{horse.odds}</td>
                         <td className={`px-5 py-3 text-right font-mono font-bold ${idx === 0 ? "text-accent-text" : "text-muted"}`}>
-                          {horse.kzScore}
+                          {fmtScore(horse.kzScore)}
                         </td>
-                        <td className="px-5 py-3 text-right font-mono text-sm text-muted">{horse.top3Probability}%</td>
+                        <td className="px-5 py-3 text-right font-mono text-sm text-muted">{fmtProb(horse.top3Probability)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -630,8 +634,8 @@ export function Dashboard({ races }: DashboardProps) {
                       <p className="truncate text-xs text-muted">{horse.jockey}</p>
                     </div>
                     <div className="text-right">
-                      <p className={`font-mono text-sm font-bold ${idx === 0 ? "text-accent-text" : "text-fg"}`}>{horse.kzScore}</p>
-                      <p className="text-xs text-muted">Top3 {horse.top3Probability}%</p>
+                      <p className={`font-mono text-sm font-bold ${idx === 0 ? "text-accent-text" : "text-fg"}`}>{fmtScore(horse.kzScore)}</p>
+                      <p className="text-xs text-muted">Top3 {fmtProb(horse.top3Probability)}</p>
                     </div>
                   </div>
                 ))}
@@ -840,9 +844,12 @@ function buildDayInsights(races: RaceAnalysis[]) {
   const avoidRaces = races.filter((r) => r.bettingTier === "Avoid" || r.riskLevel === "Speculatif").length;
   const topRaces   = races.slice().sort((a, b) => racePriorityScore(b) - racePriorityScore(a)).slice(0, 3);
   const bestRace   = topRaces[0];
-  const estimatedRoi = Math.round((valueRaces * 2.1 + focusRaces * 1.4 - avoidRaces * 0.9) * 10) / 10;
+  // Score qualité programme [0-100] — pondère les courses value et focus, pénalise les spéculatives
+  const programScore = Math.min(100, Math.max(0, Math.round(
+    (valueRaces * 8 + focusRaces * 5 - avoidRaces * 4 + races.length * 2) * 100 / Math.max(races.length * 15, 1)
+  )));
   return {
-    avoidRaces, focusRaces, valueRaces, topRaces, estimatedRoi,
+    avoidRaces, focusRaces, valueRaces, topRaces, programScore,
     bestAlert:    bestRace ? priorityLabel(bestRace) : "En attente",
     marketMood:   avoidRaces > focusRaces ? "Sélectif" : valueRaces >= 3 ? "Opportuniste" : "Stable",
     nextPriority: bestRace,
@@ -876,12 +883,37 @@ function meetingStrategy(score: number, races: RaceAnalysis[]) {
   return "Mix place/value, tickets flexi";
 }
 function raceOpportunity(race: RaceAnalysis) {
-  const best = probableArrival(race.horses)[0];
+  const arrival = probableArrival(race.horses, raceToContext(race));
+  const best = arrival[0];
   if (!best) return "Signal indisponible";
-  if (best.valueIndex > 14) return `Value #${best.number} (+${best.valueIndex})`;
-  if (race.modelConsensus >= 75) return `Base #${best.number}`;
-  if (race.riskLevel === "Speculatif") return "Course ouverte";
-  return "À surveiller";
+
+  // Favori très fragile
+  const fav = race.horses.slice().sort((a, b) => a.odds - b.odds)[0];
+  const favAnalysis = fav ? race.horses.indexOf(fav) : -1;
+  const favIsFragile = fav && fav.odds < 3 && fav.top3Probability < 40;
+
+  // Outsider avec value
+  const outsider = arrival.find((h) => h.valueIndex >= 10 && h.odds >= 7);
+
+  if (race.bettingTier === "Avoid" || (race.riskLevel === "Speculatif" && race.marketVolatility > 25))
+    return "À éviter";
+  if (favIsFragile)
+    return `Favori fragile #${fav.number}`;
+  if (best.valueIndex > 18)
+    return `Value forte #${best.number}`;
+  if (best.valueIndex > 12)
+    return `Value #${best.number} (+${best.valueIndex})`;
+  if (race.modelConsensus >= 75)
+    return `Base fiable #${best.number}`;
+  if (outsider)
+    return `Outsider #${outsider.number} (${outsider.odds})`;
+  if (race.raceQualityScore >= 72)
+    return `Course solide`;
+  if (race.riskLevel === "Speculatif")
+    return "Course ouverte";
+  if (best.top3Probability >= 35)
+    return `À surveiller #${best.number}`;
+  return "Signal faible";
 }
 function strategyForRace(race: RaceAnalysis) {
   if (race.riskLevel === "Prudent")   return "Sécurisé";
@@ -903,6 +935,16 @@ function raceStatus(race: RaceAnalysis, currentMinute: number) {
   if (start < currentMinute)         return race.horses.some((h) => h.finishPosition) ? "Arrivée disponible" : `Départ à ${race.startTime}`;
   if (start - currentMinute <= 30)   return `Départ imminent ${race.startTime}`;
   return `Départ à ${race.startTime}`;
+}
+/** Affiche un score numérique — retourne "—" si null / undefined / NaN */
+function fmtScore(v: number | null | undefined): string {
+  if (v === null || v === undefined || (typeof v === "number" && isNaN(v))) return "—";
+  return String(v);
+}
+/** Affiche une probabilité % — retourne "—" si invalide, sinon "XX.X%" */
+function fmtProb(v: number | null | undefined): string {
+  if (v === null || v === undefined || (typeof v === "number" && isNaN(v))) return "—";
+  return `${v}%`;
 }
 function minutesFromStartTime(t: string) {
   const [h = "0", m = "0"] = t.split(":");

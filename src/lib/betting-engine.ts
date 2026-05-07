@@ -1,5 +1,53 @@
 import type { BetSimulation, HorsePrediction, ModelCard, RaceAnalysis } from "@/lib/types";
 
+// ─────────────────────────────────────────────────────────────
+// PMU PARI-MUTUEL TAKEOUT RATES (approximate)
+// Source: PMU règlement — 16.5% simple, 21.5% couple, 24-27% bonus pools
+// ─────────────────────────────────────────────────────────────
+
+export const PMU_TAKEOUT: Record<string, number> = {
+  SIMPLE_GAGNANT: 0.165,
+  SIMPLE_PLACE: 0.165,
+  COUPLE_GAGNANT: 0.215,
+  COUPLE_PLACE: 0.215,
+  COUPLE_ORDRE: 0.215,
+  DEUX_SUR_QUATRE: 0.215,
+  TRIO: 0.245,
+  TRIO_ORDRE: 0.245,
+  TIERCE: 0.245,
+  MULTI: 0.270,
+  SUPER_QUATRE: 0.270,
+  QUARTE_PLUS: 0.260,
+  QUINTE_PLUS: 0.260,
+  PICK5: 0.260,
+  TIC_TROIS: 0.245,
+};
+
+/**
+ * Expected value with PMU pari-mutuel takeout correction.
+ * PMU pays dividends on the pool net of takeout, so the stated cote
+ * is an estimate of gross payout. EV = p × odds × (1 − takeout) − 1.
+ */
+export function expectedValuePMU(
+  winProbability: number,
+  decimalOdds: number,
+  betType: string = "SIMPLE_GAGNANT",
+): number {
+  const p = winProbability / 100;
+  const takeout = PMU_TAKEOUT[betType] ?? 0.22;
+  return round((p * decimalOdds * (1 - takeout) - 1) * 100, 1);
+}
+
+/**
+ * Closing Line Value — primary edge measurement for pari-mutuel.
+ * CLV > 0 means you took price before the market sharpened against you.
+ * Formula: (oddsTaken / oddsClosing − 1) × 100 in percent.
+ */
+export function closingLineValue(oddsTaken: number, oddsClosing: number): number {
+  if (oddsClosing <= 0 || oddsTaken <= 0) return 0;
+  return round((oddsTaken / oddsClosing - 1) * 100, 1);
+}
+
 export function probabilityToFairOdds(winProbability: number) {
   const probability = winProbability / 100;
   return probability > 0 ? round(1 / probability, 2) : 0;

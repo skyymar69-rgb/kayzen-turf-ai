@@ -9,16 +9,16 @@ import {
   Brain,
   Clock3,
   Gauge,
-  MessageSquareText,
   Sparkles,
   Target,
   Trophy,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { buildBetRecommendations, probableArrival } from "@/lib/bet-recommendations";
+import { buildBetRecommendations, probableArrival, raceToContext } from "@/lib/bet-recommendations";
 import { simulateBet } from "@/lib/betting-engine";
 import { buildPostRaceAnalysis } from "@/lib/post-race-analysis";
 import { explainPredictionScore, watchedLongshot } from "@/lib/prediction-math";
+import type { RaceContext } from "@/lib/prediction-math";
 import type { BetOffer, HorsePrediction, RaceAnalysis } from "@/lib/types";
 
 type CourseDetailProps = { race: RaceAnalysis };
@@ -50,9 +50,10 @@ export function CourseDetail({ race }: CourseDetailProps) {
   const [activeTab, setActiveTab]   = useState<(typeof TABS)[number]>("Partants");
 
   const selectedHorse       = race.horses.find((h) => h.id === selectedHorseId) ?? race.horses[0];
-  const arrival             = useMemo(() => probableArrival(race.horses), [race.horses]);
-  const horseRoles          = useMemo(() => buildHorseRoles(arrival), [arrival]);
-  const betRecommendations  = useMemo(() => buildBetRecommendations(race.horses, race.betTypes), [race.betTypes, race.horses]);
+  const ctx                 = useMemo(() => raceToContext(race), [race]);
+  const arrival             = useMemo(() => probableArrival(race.horses, ctx), [race.horses, ctx]);
+  const horseRoles          = useMemo(() => buildHorseRoles(arrival, ctx), [arrival, ctx]);
+  const betRecommendations  = useMemo(() => buildBetRecommendations(race.horses, race.betTypes, ctx), [race.betTypes, race.horses, ctx]);
   const ticketPlan          = useMemo(() => buildTicketPlan(betRecommendations, ticketMode, ticketBudget), [betRecommendations, ticketBudget, ticketMode]);
   const postRaceAnalysis    = useMemo(() => buildPostRaceAnalysis(race), [race]);
   const simulation          = selectedHorse ? simulateBet(stake, selectedHorse.odds, selectedHorse.winProbability, 500, 0) : null;
@@ -99,13 +100,9 @@ export function CourseDetail({ race }: CourseDetailProps) {
                   <Clock3 size={22} />
                   Départ {race.startTime}
                 </div>
-                <button
-                  className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-accent-hi"
-                  type="button"
-                >
-                  <MessageSquareText size={16} />
-                  Commenter cette course
-                </button>
+                <span className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2 text-sm text-muted">
+                  {race.going ? `Terrain : ${race.going}` : "État de piste non publié par le PMU"}
+                </span>
               </div>
             </div>
 
@@ -158,7 +155,7 @@ export function CourseDetail({ race }: CourseDetailProps) {
           role="tabpanel"
         >
           {activeTab === "Partants" ? (
-            <PartantsTable horses={arrival} onSelect={setSelectedHorseId} selectedHorseId={selectedHorse?.id} />
+            <PartantsTable horses={arrival} onSelect={setSelectedHorseId} selectedHorseId={selectedHorse?.id} discipline={race.discipline} />
           ) : (
             <TabPlaceholder activeTab={activeTab} arrival={arrival} race={race} recommendations={betRecommendations} />
           )}
@@ -390,11 +387,12 @@ export function CourseDetail({ race }: CourseDetailProps) {
 /* ─── PartantsTable ──────────────────────────────────────────────── */
 
 function PartantsTable({
-  horses, onSelect, selectedHorseId,
+  horses, onSelect, selectedHorseId, discipline,
 }: {
   horses: HorsePrediction[];
   onSelect: (id: string) => void;
   selectedHorseId?: string;
+  discipline?: string;
 }) {
   return (
     <>
@@ -425,13 +423,13 @@ function PartantsTable({
                 <p className="truncate text-xs text-muted">{horse.trainer}</p>
               </div>
               <div className="text-right">
-                <p className="font-mono text-sm font-bold text-accent-text">{horse.kzScore}</p>
+                <p className="font-mono text-sm font-bold text-accent-text">{fmtScore(horse.kzScore)}</p>
                 <p className="text-[10px] text-muted">KZ</p>
               </div>
             </div>
             <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
               <Result label="Cote"  value={horse.odds > 1 ? `${horse.odds}` : "—"} />
-              <Result label="Top 3" value={`${horse.top3Probability}%`} />
+              <Result label="Top 3" value={fmtProb(horse.top3Probability)} />
               <Result label="Gains" value={formatEuros(horse.earnings)} />
             </div>
             <p className="mt-2 line-clamp-2 text-xs text-muted">{horse.music ?? "Performances non disponibles"}</p>
@@ -445,7 +443,7 @@ function PartantsTable({
           <caption className="sr-only">Partants avec numéro, cheval, jockey, gains, cotes et score KZ</caption>
           <thead>
             <tr className="border-b border-border bg-surface-inv text-xs font-bold uppercase tracking-widest text-white">
-              {["N°", "Cheval", "Dist.", "Déf.", "S/A", "Driver / Jockey", "Entraîneur", "R/K", "Gains", "Dernières performances", "Cote", "KZ"].map((h) => (
+              {["N°", "Cheval", "Dist.", "Déf.", "S/A", discipline === "Trot" ? "Driver" : "Jockey", "Entraîneur", "R/K", "Gains", "Dernières performances", "Cote", "KZ"].map((h) => (
                 <th key={h} className="border-r border-white/10 px-3 py-4 font-semibold last:border-r-0" scope="col">{h}</th>
               ))}
             </tr>
@@ -488,7 +486,7 @@ function PartantsTable({
                 <td className="max-w-[340px] truncate px-3 py-3.5 text-muted" title={horse.music ?? ""}>{horse.music ?? "—"}</td>
                 <td className="px-3 py-3.5 font-mono text-fg">{horse.odds > 1 ? horse.odds : "—"}</td>
                 <td className={`px-3 py-3.5 font-mono font-bold ${selectedHorseId === horse.id ? "text-accent-text" : "text-accent-text/70"}`}>
-                  {horse.kzScore}
+                  {fmtScore(horse.kzScore)}
                 </td>
               </tr>
             ))}
@@ -635,8 +633,9 @@ function Panel({ children, icon: Icon, title }: { children: ReactNode; icon: typ
 }
 
 function PredictionMethodology({ arrival, race }: { arrival: HorsePrediction[]; race: RaceAnalysis }) {
+  const ctx = raceToContext(race);
   const reviewedHorses = arrival.map((horse, index) => ({
-    analysis: explainPredictionScore(horse, arrival, race),
+    analysis: explainPredictionScore(horse, arrival, ctx),
     horse, rank: index + 1,
   }));
 
@@ -657,10 +656,30 @@ function PredictionMethodology({ arrival, race }: { arrival: HorsePrediction[]; 
           <p className="text-xs font-bold uppercase tracking-widest text-muted">Contexte utilisé</p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
             <Result label="Hippodrome"           value={race.racecourse} />
-            <Result label="Terrain"              value={race.going || "Non renseigné"} />
+            <Result label="Terrain"              value={race.going || "Non publié par le PMU"} />
             <Result label="Météo"                value={race.weather || "Non renseignée"} />
             <Result label="Distance / discipline" value={`${formatMeters(race.distance)} m — ${race.specialty}`} />
           </div>
+        </section>
+
+        <section className="rounded-xl border border-border bg-surface p-4">
+          <p className="text-xs font-bold uppercase tracking-widest text-muted">Versions des modèles</p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3 text-xs text-muted font-mono">
+            {[
+              ["Modèle scoring", "form_scorer v2.0"],
+              ["Plackett-Luce", "pl_gumbel v1.0"],
+              ["Drift / Steam", "drift_lgbm — en attente DB"],
+              ["Connections", "connections_v1 — en attente DB"],
+              ["Risque DNF", "risk_v1 — Obstacle uniquement"],
+              ["Data cutoff", new Date().toISOString().slice(0, 10)],
+            ].map(([k, v]) => (
+              <div key={k} className="rounded-lg border border-border bg-surface-sub px-3 py-2">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted/60">{k}</p>
+                <p className="mt-0.5 text-fg/80">{v}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 text-[10px] text-muted/50">Chaque prédiction est reproductible : discipline, cote, musique et contexte sont tracés. Calibration Brier et ECE publiées sur la page Performance.</p>
         </section>
 
         <section className="rounded-xl border border-border bg-surface p-4">
@@ -687,8 +706,8 @@ function PredictionMethodology({ arrival, race }: { arrival: HorsePrediction[]; 
                     <p className="mt-0.5 text-xs text-muted">{horse.jockey} / {horse.trainer}</p>
                   </div>
                   <div className="grid grid-cols-2 gap-2 sm:min-w-56">
-                    <Result label="Score ordre" value={`${analysis.exactOrderScore}`} />
-                    <Result label="Top 3"        value={`${horse.top3Probability}%`} />
+                    <Result label="Score ordre" value={fmtScore(analysis.exactOrderScore)} />
+                    <Result label="Top 3"        value={fmtProb(horse.top3Probability)} />
                   </div>
                 </div>
                 <p className="mt-3 text-sm leading-6 text-muted">{horseOpinion(horse, analysis, rank, race)}</p>
@@ -739,23 +758,56 @@ function horseOpinion(
   rank: number,
   race: RaceAnalysis,
 ) {
-  const strengths = [
-    horse.winProbability >= 12    ? "bonne probabilité gagnant" : null,
-    horse.top3Probability >= 48   ? "profil solide pour le Top 3" : null,
-    horse.top5Probability >= 65   ? "forte capacité à rester dans le champ élargi" : null,
-    analysis.top3UpsetScore >= 24 ? "signal outsider/tocard à surveiller" : null,
-    analysis.favoriteFailureRisk <= 14 ? "risque de défaillance contenu" : null,
-  ].filter(Boolean);
+  const isTrot = race.discipline === "Trot";
+  const conducteur = isTrot ? `driver ${horse.jockey}` : `jockey ${horse.jockey}`;
+
+  // Pool de raisons positives — chacune distincte et conditionnelle
+  const positives = [
+    horse.winProbability >= 20      ? `probabilité gagnant élevée (${horse.winProbability}%)` : null,
+    horse.winProbability >= 12 && horse.winProbability < 20
+                                    ? `bonne probabilité gagnant (${horse.winProbability}%)` : null,
+    horse.top3Probability >= 45     ? `profil Top 3 solide (${horse.top3Probability}%)` : null,
+    horse.top3Probability >= 35 && horse.top3Probability < 45
+                                    ? `bonne capacité à se placer (${horse.top3Probability}%)` : null,
+    analysis.exactOrderScore >= 70  ? `score ordre strict élevé (${analysis.exactOrderScore}/99)` : null,
+    analysis.top3UpsetScore >= 30   ? `signal outsider significatif (${analysis.top3UpsetScore}/60)` : null,
+    horse.valueIndex >= 15          ? `edge marché positif (+${horse.valueIndex}% vs cote juste)` : null,
+    horse.odds >= 8 && horse.winProbability >= 10
+                                    ? `bonne value sur outsider (cote ${horse.odds})` : null,
+    horse.confidence === "Forte"    ? `historique récent robuste` : null,
+    horse.earnings && horse.earnings > 50000
+                                    ? `gains significatifs (${new Intl.NumberFormat("fr-FR").format(horse.earnings)} €)` : null,
+    race.going && horse.top3Probability >= 40
+                                    ? `profil adapté au terrain ${race.going}` : null,
+    analysis.favoriteFailureRisk <= 10
+                                    ? `risque défaillance très faible` : null,
+  ].filter((x): x is string => x !== null);
+
+  // Pool de mises en garde
   const cautions = [
-    analysis.favoriteFailureRisk >= 25 ? "risque de défaillance élevé" : null,
-    horse.winProbability < 9      ? "probabilité gagnant limitée" : null,
-    horse.odds >= 12              ? "cote plus spéculative" : null,
-    horse.confidence === "Faible" ? "historique moins robuste" : null,
-  ].filter(Boolean);
-  const ctx     = `${race.racecourse}, ${formatMeters(race.distance)} m, ${race.going || "terrain non renseigné"}, ${race.weather || "météo non renseignée"}`;
-  const positive = strengths.length ? strengths.join(", ") : "profil correct mais sans signal dominant";
-  const warning  = cautions.length  ? ` Point de vigilance : ${cautions.join(", ")}.` : "";
-  return `Notre avis : #${horse.number} est classé ${rank}e dans l'ordre strict car il combine ${positive}. Sa musique (${horse.music || "non renseignée"}) est croisée avec la cote ${horse.odds || "—"}, le jockey ${horse.jockey}, l'entraîneur ${horse.trainer} et le contexte ${ctx}.${warning}`;
+    analysis.favoriteFailureRisk >= 30 ? `risque de défaillance élevé (${analysis.favoriteFailureRisk}/60)` : null,
+    horse.odds < 2.5 && horse.winProbability < 35
+                                    ? `favori court mais probabilité modérée` : null,
+    horse.winProbability < 7        ? `probabilité gagnant faible (${horse.winProbability}%)` : null,
+    horse.odds >= 20                ? `cote spéculative (${horse.odds})` : null,
+    horse.confidence === "Faible"   ? `historique récent insuffisant` : null,
+    isTrot && horse.reductionKm     ? `réduction kilométrique à surveiller (${horse.reductionKm})` : null,
+  ].filter((x): x is string => x !== null);
+
+  const terrain = race.going ? `terrain ${race.going}` : "état de piste non publié";
+  const meteo   = race.weather ? `, météo ${race.weather}` : "";
+  const ctx     = `${race.racecourse} · ${formatMeters(race.distance)} m · ${terrain}${meteo}`;
+
+  // Sélectionner max 3 raisons positives les plus pertinentes
+  const top3Reasons = positives.slice(0, 3);
+  const positive = top3Reasons.length ? top3Reasons.join(", ") : "profil dans la moyenne du champ sans signal dominant";
+  const warning  = cautions.length ? ` Point de vigilance : ${cautions.slice(0, 2).join(", ")}.` : "";
+
+  const musicNote = horse.music
+    ? `Musique récente : ${horse.music.slice(0, 30)}${horse.music.length > 30 ? "…" : ""}.`
+    : "";
+
+  return `#${horse.number} classé ${rank}e — ${positive}. ${musicNote} ${conducteur}, entraîneur ${horse.trainer}, contexte ${ctx}.${warning}`.replace(/\s+/g, " ").trim();
 }
 
 function buildTicketPlan(recommendations: ReturnType<typeof buildBetRecommendations>, mode: TicketMode, budget: number) {
@@ -796,14 +848,14 @@ function shortBetLabel(offer: BetOffer) {
   return labels[offer.type] ?? offer.label;
 }
 
-function buildHorseRoles(arrival: HorsePrediction[]) {
+function buildHorseRoles(arrival: HorsePrediction[], context: RaceContext = {}) {
   const base     = arrival[0];
   const outsider = arrival.find((h) => h.valueIndex >= 10 && h.odds >= 6) ?? arrival[3] ?? arrival[1];
-  const longshot = watchedLongshot(arrival) ?? arrival.slice().reverse().find((h) => h.valueIndex >= 5 && h.top3Probability >= 18) ?? arrival[6] ?? arrival.at(-1);
+  const longshot = watchedLongshot(arrival, context) ?? arrival.slice().reverse().find((h) => h.valueIndex >= 5 && h.top3Probability >= 18) ?? arrival[6] ?? arrival.at(-1);
   const roles    = [
-    base     ? { horse: base,     label: "Base",            reason: `Score enrichi ${explainPredictionScore(base, arrival).score}/99 : probabilité gagnant, top 3, cote juste et stabilité des rangs.` } : null,
+    base     ? { horse: base,     label: "Base",            reason: `Score enrichi ${explainPredictionScore(base, arrival, context).score}/99 : probabilité gagnant, top 3, cote juste et stabilité des rangs.` } : null,
     outsider ? { horse: outsider, label: "Outsider",        reason: `Signal value ${outsider.valueIndex}% avec cote ${outsider.odds} : intéressant si la probabilité estimée reste supérieure au marché.` } : null,
-    longshot ? { horse: longshot, label: "Tocard surveillé",reason: `Signal Top 3 surprise ${explainPredictionScore(longshot, arrival).top3UpsetScore}/60 : à intégrer dans les tickets larges ou flexi.` } : null,
+    longshot ? { horse: longshot, label: "Tocard surveillé",reason: `Signal Top 3 surprise ${explainPredictionScore(longshot, arrival, context).top3UpsetScore}/60 : à intégrer dans les tickets larges ou flexi.` } : null,
   ].filter((r): r is { horse: HorsePrediction; label: string; reason: string } => Boolean(r));
   const seen = new Set<string>();
   return roles.filter((r) => { if (seen.has(r.horse.id)) return false; seen.add(r.horse.id); return true; });
@@ -819,3 +871,12 @@ function formatSexAge(horse: HorsePrediction) { const s = horse.sex?.slice(0, 1)
 function formatEquipment(value?: string | null) { if (!value || value === "SANS_OEILLERES") return "—"; return value.replaceAll("_", " ").toLowerCase(); }
 function formatRiskLabel(r: RaceAnalysis["riskLevel"]) { if (r === "Equilibre") return "Équilibré"; if (r === "Speculatif") return "Spéculatif"; return r; }
 function formatStrategyLabel(s: string) { if (s === "Speculatif") return "Spéculatif"; return s; }
+/** Affiche un score KZ — retourne "—" si null / undefined / NaN */
+function fmtScore(v: number | null | undefined): string {
+  if (v === null || v === undefined || (typeof v === "number" && isNaN(v))) return "—";
+  return String(v);
+}
+function fmtProb(v: number | null | undefined): string {
+  if (v === null || v === undefined || (typeof v === "number" && isNaN(v))) return "—";
+  return `${v}%`;
+}

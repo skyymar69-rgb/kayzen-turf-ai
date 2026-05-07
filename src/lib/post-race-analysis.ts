@@ -1,9 +1,11 @@
 import { probableArrival } from "@/lib/bet-recommendations";
+import { raceToContext } from "@/lib/bet-recommendations";
 import { explainPredictionScore, watchedLongshot } from "@/lib/prediction-math";
 import type { HorsePrediction, PostRaceAnalysis, RaceAnalysis } from "@/lib/types";
 
 export function buildPostRaceAnalysis(race: RaceAnalysis): PostRaceAnalysis {
-  const predicted = probableArrival(race.horses);
+  const context = raceToContext(race);
+  const predicted = probableArrival(race.horses, context);
   const actual = race.horses
     .filter((horse) => typeof horse.finishPosition === "number")
     .sort((a, b) => Number(a.finishPosition) - Number(b.finishPosition));
@@ -51,7 +53,7 @@ export function buildPostRaceAnalysis(race: RaceAnalysis): PostRaceAnalysis {
     },
     verdict,
     summary: summaryFor(race, actual, predicted, verdict, top3Hits, top5Hits),
-    lessons: lessonsFor(actual, predicted),
+    lessons: lessonsFor(race, actual, predicted),
     nextModelActions: nextActionsFor(actual, predicted, verdict),
   };
 }
@@ -91,52 +93,63 @@ function summaryFor(
 ) {
   const winner = actual[0];
   const predictedWinner = predicted[0];
+  const discipline = race.discipline;
 
   if (verdict === "Bon signal") {
-    return `${race.programCode}: lecture solide. Le modèle place ${top3Hits}/3 dans le Top 3 et ${top5Hits}/5 dans le Top 5.`;
+    return `${race.programCode} [${discipline}]: lecture solide. Le modèle place ${top3Hits}/3 dans le Top 3 et ${top5Hits}/5 dans le Top 5.`;
   }
 
   if (winner && predictedWinner && winner.number !== predictedWinner.number) {
-    return `${race.programCode}: le gagnant reel #${winner.number} ${winner.horse} devance notre base #${predictedWinner.number} ${predictedWinner.horse}. On doit analyser le signal sous-estimé.`;
+    return `${race.programCode} [${discipline}]: le gagnant reel #${winner.number} ${winner.horse} devance notre base #${predictedWinner.number} ${predictedWinner.horse}. Signal sous-estimé a analyser.`;
   }
 
-  return `${race.programCode}: resultat partiellement conforme, mais l'ordre exact reste insuffisant pour les paris ordre.`;
+  return `${race.programCode} [${discipline}]: resultat partiellement conforme, ordre exact insuffisant pour les paris ordre.`;
 }
 
-function lessonsFor(actual: HorsePrediction[], predicted: HorsePrediction[]) {
+function lessonsFor(race: RaceAnalysis, actual: HorsePrediction[], predicted: HorsePrediction[]) {
+  const context = raceToContext(race);
   const lessons: string[] = [];
   const winner = actual[0];
   const predictedWinner = predicted[0];
   const favorite = predicted.slice().sort((a, b) => a.odds - b.odds)[0];
-  const longshot = watchedLongshot(predicted);
+  const longshot = watchedLongshot(predicted, context);
+  const discipline = race.discipline;
 
   if (!winner || !predictedWinner) return lessons;
 
   const winnerRank = predicted.findIndex((horse) => horse.number === winner.number) + 1;
   if (winnerRank > 3) {
-    lessons.push(`Le gagnant #${winner.number} était classé ${winnerRank}e par le modèle: pénalité à remonter dans le feedback.`);
+    lessons.push(`[${discipline}] Le gagnant #${winner.number} était classé ${winnerRank}e par le modèle: pénalité à remonter dans le feedback.`);
   }
 
   if (winner.valueIndex > 10) {
-    lessons.push(`Le gagnant avait un signal value positif (+${winner.valueIndex}%): renforcer la pondération value quand elle converge avec Top 3/Top 5.`);
+    lessons.push(`[${discipline}] Le gagnant avait un signal value positif (+${winner.valueIndex}%): renforcer la pondération value quand elle converge avec Top 3/Top 5.`);
   }
 
   if (predictedWinner.finishPosition && predictedWinner.finishPosition > 3) {
-    lessons.push(`Notre base #${predictedWinner.number} finit ${predictedWinner.finishPosition}e: reduire la confiance des profils similaires.`);
+    lessons.push(`[${discipline}] Notre base #${predictedWinner.number} finit ${predictedWinner.finishPosition}e: reduire la confiance des profils similaires.`);
   }
 
   if (favorite && favorite.finishPosition && favorite.finishPosition > 3) {
-    const favoriteRisk = explainPredictionScore(favorite, predicted).favoriteFailureRisk;
-    lessons.push(`Favori #${favorite.number} hors Top 3: risque favori fragile mesure a ${favoriteRisk}/60, renforcer cette penalite si le profil se repete.`);
+    const favoriteRisk = explainPredictionScore(favorite, predicted, context).favoriteFailureRisk;
+    lessons.push(`[${discipline}] Favori #${favorite.number} hors Top 3: risque favori fragile mesuré a ${favoriteRisk}/60 — renforcer cette pénalité si le profil se répète.`);
   }
 
   if (longshot && longshot.finishPosition && longshot.finishPosition <= 3) {
-    const longshotSignal = explainPredictionScore(longshot, predicted).top3UpsetScore;
-    lessons.push(`Tocard surveille #${longshot.number} dans les trois premiers: signal outsider Top 3 mesure a ${longshotSignal}/60, a remonter dans les tickets larges.`);
+    const longshotSignal = explainPredictionScore(longshot, predicted, context).top3UpsetScore;
+    lessons.push(`[${discipline}] Tocard surveillé #${longshot.number} dans les trois premiers: signal outsider Top 3 mesuré a ${longshotSignal}/70 — à remonter dans les tickets larges.`);
+  }
+
+  if (discipline === "Obstacle" && !winner.music?.match(/[1-9]/)) {
+    lessons.push("[Obstacle] Le gagnant avait une musique atypique — vérifier si codes F/P/R ont été correctement parsés.");
+  }
+
+  if (discipline === "Trot" && winner.music?.includes("0")) {
+    lessons.push("[Trot] Le gagnant avait des DQ dans sa musique — le signal rebond post-DQ mérite d'être renforcé.");
   }
 
   if (lessons.length === 0) {
-    lessons.push("Les principaux signaux étaient coherents; conserver la calibration actuelle sur ce profil de course.");
+    lessons.push("Les principaux signaux étaient cohérents; conserver la calibration actuelle sur ce profil de course.");
   }
 
   return lessons;
@@ -147,7 +160,7 @@ function nextActionsFor(actual: HorsePrediction[], predicted: HorsePrediction[],
   const predictedWinner = predicted[0];
   const actions = [
     "Enregistrer l'écart prediction/resultat dans le jeu d'apprentissage quotidien.",
-    "Recalculer les poids KZ Score sur les courses terminées avant le prochain batch modèle.",
+    "Recalculer les poids par discipline sur les courses terminées avant le prochain batch modèle.",
   ];
 
   if (verdict === "Erreur modèle") {
@@ -155,7 +168,7 @@ function nextActionsFor(actual: HorsePrediction[], predicted: HorsePrediction[],
   }
 
   if (winner && predictedWinner && winner.number !== predictedWinner.number) {
-    actions.push(`Comparer les facteurs de #${winner.number} et #${predictedWinner.number}: forme recente, cote observee, aptitude piste/distance.`);
+    actions.push(`Comparer les facteurs de #${winner.number} et #${predictedWinner.number}: forme recente, cote observée, aptitude piste/distance/discipline.`);
   }
 
   return actions;
