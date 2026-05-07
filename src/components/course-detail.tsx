@@ -200,7 +200,7 @@ export function CourseDetail({ race }: CourseDetailProps) {
                           <p className="text-[10px] font-bold uppercase tracking-widest text-accent-text">{role.label}</p>
                           <h3 className="mt-0.5 font-bold text-fg">#{role.horse.number} {role.horse.horse}</h3>
                         </div>
-                        <span className="font-mono text-sm font-bold text-fg">{role.horse.kzScore}</span>
+                        <span className="font-mono text-sm font-bold text-fg">{fmtScore(role.horse.kzScore)}</span>
                       </div>
                       <p className="mt-2 text-xs leading-5 text-muted">{role.reason}</p>
                     </article>
@@ -217,10 +217,10 @@ export function CourseDetail({ race }: CourseDetailProps) {
                       <div className="h-2.5 overflow-hidden rounded-full bg-border">
                         <div
                           className="h-full rounded-full bg-accent transition-all"
-                          style={{ width: `${Math.max(4, Math.min(100, horse.top3Probability))}%` }}
+                          style={{ width: `${safeWidth(horse.top3Probability)}%` }}
                         />
                       </div>
-                      <span className="text-right font-mono text-xs font-bold text-accent-text">{horse.top3Probability}%</span>
+                      <span className="text-right font-mono text-xs font-bold text-accent-text">{fmtProb(horse.top3Probability)}</span>
                     </div>
                   ))}
                 </div>
@@ -443,7 +443,15 @@ function PartantsTable({
           <caption className="sr-only">Partants avec numéro, cheval, jockey, gains, cotes et score KZ</caption>
           <thead>
             <tr className="border-b border-border bg-surface-inv text-xs font-bold uppercase tracking-widest text-white">
-              {["N°", "Cheval", "Dist.", "Déf.", "S/A", discipline === "Trot" ? "Driver" : "Jockey", "Entraîneur", "R/K", "Gains", "Dernières performances", "Cote", "KZ"].map((h) => (
+              {[
+                "N°", "Cheval",
+                ...(discipline === "Trot" ? ["Dist."] : []),
+                "Déf.", "S/A",
+                discipline === "Trot" ? "Driver" : "Jockey",
+                "Entraîneur",
+                ...(discipline === "Trot" ? ["R/K"] : []),
+                "Gains", "Dernières performances", "Cote", "KZ",
+              ].map((h) => (
                 <th key={h} className="border-r border-white/10 px-3 py-4 font-semibold last:border-r-0" scope="col">{h}</th>
               ))}
             </tr>
@@ -476,12 +484,12 @@ function PartantsTable({
                     <span className="font-bold text-fg">{horse.horse}</span>
                   </div>
                 </td>
-                <td className="px-3 py-3.5 font-mono text-muted">{horse.handicapDistance ?? "—"}</td>
+                {discipline === "Trot" && <td className="px-3 py-3.5 font-mono text-muted">{horse.handicapDistance ?? "—"}</td>}
                 <td className="px-3 py-3.5 text-muted">{formatEquipment(horse.equipment)}</td>
                 <td className="px-3 py-3.5 font-mono text-muted">{formatSexAge(horse)}</td>
                 <td className="px-3 py-3.5 text-muted">{horse.jockey}</td>
                 <td className="px-3 py-3.5 text-muted">{horse.trainer}</td>
-                <td className="px-3 py-3.5 font-mono text-muted">{horse.reductionKm ?? "—"}</td>
+                {discipline === "Trot" && <td className="px-3 py-3.5 font-mono text-muted">{horse.reductionKm ?? "—"}</td>}
                 <td className="px-3 py-3.5 font-mono text-muted">{formatEuros(horse.earnings)}</td>
                 <td className="max-w-[340px] truncate px-3 py-3.5 text-muted" title={horse.music ?? ""}>{horse.music ?? "—"}</td>
                 <td className="px-3 py-3.5 font-mono text-fg">{horse.odds > 1 ? horse.odds : "—"}</td>
@@ -511,7 +519,7 @@ function TabPlaceholder({
     return (
       <SimpleGrid title="Cotes IA / PMU">
         {arrival.slice(0, 12).map((horse) => (
-          <Result key={horse.id} label={`#${horse.number} ${horse.horse}`} value={`PMU ${horse.odds} / juste ${horse.fairOdds}`} />
+          <Result key={horse.id} label={`#${horse.number} ${horse.horse}`} value={`PMU ${Number.isFinite(horse.odds) ? horse.odds : "—"} / juste ${Number.isFinite(horse.fairOdds) ? horse.fairOdds : "—"}`} />
         ))}
       </SimpleGrid>
     );
@@ -550,7 +558,7 @@ function TabPlaceholder({
   return (
     <SimpleGrid title={activeTab}>
       {arrival.slice(0, 8).map((horse) => (
-        <Result key={horse.id} label={`#${horse.number} ${horse.horse}`} value={`${horse.winProbability}% gagnant`} />
+        <Result key={horse.id} label={`#${horse.number} ${horse.horse}`} value={`${fmtProb(horse.winProbability)} gagnant`} />
       ))}
     </SimpleGrid>
   );
@@ -875,12 +883,14 @@ function formatSexAge(horse: HorsePrediction) { const s = horse.sex?.slice(0, 1)
 function formatEquipment(value?: string | null) { if (!value || value === "SANS_OEILLERES") return "—"; return value.replaceAll("_", " ").toLowerCase(); }
 function formatRiskLabel(r: RaceAnalysis["riskLevel"]) { if (r === "Equilibre") return "Équilibré"; if (r === "Speculatif") return "Spéculatif"; return r; }
 function formatStrategyLabel(s: string) { if (s === "Speculatif") return "Spéculatif"; return s; }
-/** Affiche un score KZ — retourne "—" si null / undefined / NaN */
 function fmtScore(v: number | null | undefined): string {
-  if (v === null || v === undefined || (typeof v === "number" && isNaN(v))) return "—";
-  return String(v);
+  if (v == null || !Number.isFinite(v)) return "—";
+  return Math.round(v).toString();
 }
 function fmtProb(v: number | null | undefined): string {
-  if (v === null || v === undefined || (typeof v === "number" && isNaN(v))) return "—";
-  return `${v}%`;
+  if (v == null || !Number.isFinite(v)) return "—";
+  return `${Math.round(v)}%`;
+}
+function safeWidth(v: number | null | undefined, min = 4, max = 100): number {
+  return Math.max(min, Math.min(max, Number.isFinite(v as number) ? (v as number) : 0));
 }
