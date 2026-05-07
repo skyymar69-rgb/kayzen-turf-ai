@@ -6,20 +6,19 @@ import {
   BarChart3,
   BellRing,
   Brain,
-  CalendarDays,
-  ChevronLeft,
-  ChevronRight,
   Download,
   Flag,
   Gauge,
   Loader2,
   Search,
   Sparkles,
+  Star,
   TrendingUp,
   Trophy,
   Zap,
 } from "lucide-react";
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useFavorites } from "@/hooks/use-favorites";
 import { probableArrival, raceToContext } from "@/lib/bet-recommendations";
 import type { BetOffer, RaceAnalysis } from "@/lib/types";
 
@@ -48,11 +47,17 @@ const BET_BADGE: Record<string, string> = {
   TRIO:        "bg-orange-400 text-white",
 };
 
+const DISCIPLINES = ["Tous", "Plat", "Trot", "Obstacle"] as const;
+type DisciplineFilter = (typeof DISCIPLINES)[number];
+
 export function Dashboard({ races }: DashboardProps) {
   const currentMinute = useCurrentMinute();
+  const { favs, toggle: toggleFav } = useFavorites();
   const [dayFilter, setDayFilter]           = useState<RaceAnalysis["relativeDay"]>("today");
+  const [disciplineFilter, setDisciplineFilter] = useState<DisciplineFilter>("Tous");
   const [selectedMeetingKey, setSelectedMeetingKey] = useState("");
   const [query, setQuery]                   = useState("");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const dayRaces = useMemo(
     () => races.filter((r) => r.relativeDay === dayFilter)
@@ -60,12 +65,18 @@ export function Dashboard({ races }: DashboardProps) {
     [dayFilter, races],
   );
   const meetings   = useMemo(() => groupRacesByMeeting(dayRaces), [dayRaces]);
+  const filteredMeetings = useMemo(
+    () => disciplineFilter === "Tous"
+      ? meetings
+      : meetings.filter((m) => m.races.some((r) => r.discipline === disciplineFilter)),
+    [meetings, disciplineFilter],
+  );
   const timelineRace = useMemo(() => selectTimelineRace(dayRaces, currentMinute), [currentMinute, dayRaces]);
 
   const selectedMeeting =
-    meetings.find((m) => m.key === selectedMeetingKey) ??
-    meetings.find((m) => m.races.some((r) => r.id === timelineRace?.id)) ??
-    meetings[0];
+    filteredMeetings.find((m) => m.key === selectedMeetingKey) ??
+    filteredMeetings.find((m) => m.races.some((r) => r.id === timelineRace?.id)) ??
+    filteredMeetings[0];
 
   const selectedRace =
     timelineRace && selectedMeeting?.races.some((r) => r.id === timelineRace.id)
@@ -89,6 +100,13 @@ export function Dashboard({ races }: DashboardProps) {
     setDayFilter(day);
     setSelectedMeetingKey("");
     setQuery("");
+    setDisciplineFilter("Tous");
+  }
+
+  function handleQueryChange(value: string) {
+    clearTimeout(debounceRef.current);
+    const v = value;
+    debounceRef.current = setTimeout(() => setQuery(v), 200);
   }
 
   /* ── Empty state ─────────────────────────────────────────────── */
@@ -184,7 +202,7 @@ export function Dashboard({ races }: DashboardProps) {
                 {/* Colonne réunions */}
                 <div className="border-b border-white/10 lg:border-b-0 lg:border-r lg:border-white/10">
                   <div className="flex overflow-x-auto lg:flex-col kz-scroll">
-                    {meetings.map((meeting) => {
+                    {filteredMeetings.map((meeting) => {
                       const active = meeting.key === selectedMeeting.key;
                       return (
                         <button
@@ -388,7 +406,7 @@ export function Dashboard({ races }: DashboardProps) {
           {/* Réunions — scroll horizontal */}
           <div className="border-b border-border">
             <div className="flex overflow-x-auto kz-scroll">
-              {meetings.map((meeting) => {
+              {filteredMeetings.map((meeting) => {
                 const active = meeting.key === selectedMeeting.key;
                 return (
                   <button
@@ -428,11 +446,24 @@ export function Dashboard({ races }: DashboardProps) {
             </div>
           </div>
 
-          {/* Filtre + compteurs */}
+          {/* Filtre discipline + search */}
           <div className="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-4 text-sm text-muted">
-              <span>Réunion <strong className="text-fg">{selectedMeeting.reunionNumber}</strong> · {titleCase(selectedMeeting.racecourse)}</span>
-              <span className="hidden sm:inline">{selectedMeeting.strategy}</span>
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Discipline tabs */}
+              <div className="flex overflow-hidden rounded-lg border border-border bg-surface-sub text-xs font-bold" role="group" aria-label="Filtrer par discipline">
+                {DISCIPLINES.map((d) => (
+                  <button
+                    key={d}
+                    aria-pressed={disciplineFilter === d}
+                    className={`px-3 py-1.5 transition ${disciplineFilter === d ? "bg-accent text-white" : "text-muted hover:bg-surface"}`}
+                    onClick={() => { setDisciplineFilter(d); setSelectedMeetingKey(""); }}
+                    type="button"
+                  >
+                    {d}
+                  </button>
+                ))}
+              </div>
+              <span className="hidden text-sm text-muted sm:inline">{selectedMeeting.strategy}</span>
             </div>
             <label className="flex items-center gap-2 rounded-xl border border-border bg-surface-sub px-3 py-2 text-sm sm:min-w-[220px]">
               <Search size={14} className="shrink-0 text-muted" />
@@ -440,8 +471,8 @@ export function Dashboard({ races }: DashboardProps) {
               <input
                 className="min-w-0 flex-1 bg-transparent text-fg outline-none placeholder:text-muted"
                 placeholder="Filtrer par course, prix…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                defaultValue=""
+                onChange={(e) => handleQueryChange(e.target.value)}
               />
             </label>
           </div>
@@ -512,12 +543,22 @@ export function Dashboard({ races }: DashboardProps) {
                         </div>
                       </td>
                       <td className="px-5 py-3.5 text-right">
-                        <Link
-                          href={`/races/${encodeURIComponent(race.id)}`}
-                          className="inline-flex items-center gap-1.5 rounded-xl border border-accent bg-surface px-3.5 py-2 text-xs font-bold text-accent-text transition hover:bg-accent hover:text-white"
-                        >
-                          Analyser <ArrowRight size={12} />
-                        </Link>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            aria-label={favs.has(race.id) ? "Retirer des favoris" : "Ajouter aux favoris"}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-surface transition hover:border-amber-300"
+                            onClick={(e) => { e.preventDefault(); toggleFav(race.id); }}
+                            type="button"
+                          >
+                            <Star size={13} className={favs.has(race.id) ? "fill-amber-400 text-amber-400" : "text-muted"} />
+                          </button>
+                          <Link
+                            href={`/races/${encodeURIComponent(race.id)}`}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-accent bg-surface px-3.5 py-2 text-xs font-bold text-accent-text transition hover:bg-accent hover:text-white"
+                          >
+                            Analyser <ArrowRight size={12} />
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -558,12 +599,22 @@ export function Dashboard({ races }: DashboardProps) {
                   </div>
                   <div className="mt-3 flex items-center justify-between gap-3">
                     <StatusChip status={raceStatus(race, currentMinute)} />
-                    <Link
-                      href={`/races/${encodeURIComponent(race.id)}`}
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-cta px-3.5 py-2 text-xs font-bold text-cta-text"
-                    >
-                      Analyser <ArrowRight size={12} />
-                    </Link>
+                    <div className="flex items-center gap-2">
+                      <button
+                        aria-label={favs.has(race.id) ? "Retirer des favoris" : "Ajouter aux favoris"}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-border"
+                        onClick={(e) => { e.preventDefault(); toggleFav(race.id); }}
+                        type="button"
+                      >
+                        <Star size={13} className={favs.has(race.id) ? "fill-amber-400 text-amber-400" : "text-muted"} />
+                      </button>
+                      <Link
+                        href={`/races/${encodeURIComponent(race.id)}`}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-cta px-3.5 py-2 text-xs font-bold text-cta-text"
+                      >
+                        Analyser <ArrowRight size={12} />
+                      </Link>
+                    </div>
                   </div>
                 </article>
               );

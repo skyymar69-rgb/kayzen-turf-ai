@@ -222,3 +222,139 @@ function includeHorse(arrival: HorsePrediction[], horse: HorsePrediction, maxInd
   const index = Math.min(maxIndex, withoutDuplicate.length);
   return [...withoutDuplicate.slice(0, index), horse, ...withoutDuplicate.slice(index)];
 }
+
+// ── X-FORMAT TICKET SYSTEM ─────────────────────────────────────────
+
+export type XTicket = {
+  betType: string;
+  label: string;
+  ticket: string;       // "2-3 X" or "2 X X X" or "2-3-5-7" (multi)
+  bases: number[];      // fixed horse numbers
+  xPositions: number;  // number of X (field) positions
+  combinations: number; // number of combinations this represents
+  confidence: number;   // 1-99
+  costEuros: number;    // estimated total cost in euros
+};
+
+export function buildXTickets(
+  horses: HorsePrediction[],
+  offers: BetOffer[],
+  context: RaceContext = {},
+): XTicket[] {
+  const arrival = probableArrival(horses, context);
+  const cov     = coverageArrival(horses, context).map((i) => i.horse);
+  const offerMap = new Map(offers.map((o) => [o.type, o]));
+  const N = horses.length;
+  const out: XTicket[] = [];
+
+  function add(betType: string, offer: BetOffer, bases: HorsePrediction[], xCount: number) {
+    const bn     = bases.map((h) => h.number);
+    const combos = xCount === 0 ? 1 : ncr(Math.max(0, N - bn.length), xCount);
+    if (combos < 1) return;
+    const avgKz  = bases.reduce((s, h) => s + (h.kzScore ?? 50), 0) / (bases.length || 1);
+    const conf   = Math.max(1, Math.min(99, Math.round(avgKz - xCount * 10)));
+    const xs     = Array(xCount).fill("X").join(" ");
+    const ticket = xCount === 0 ? bn.join("-") : xs ? `${bn.join("-")} ${xs}` : bn.join("-");
+    const label  = xCount === 0
+      ? `${offer.label} — ${bn.length} cheval${bn.length > 1 ? "x" : ""} fixé${bn.length > 1 ? "s" : ""}`
+      : `${offer.label} — ${bn.length} base${bn.length > 1 ? "s" : ""} + ${xCount} X`;
+    out.push({
+      betType, label, ticket, bases: bn, xPositions: xCount,
+      combinations: combos, confidence: conf,
+      costEuros: +(combos * (offer.baseStake || 1.5)).toFixed(2),
+    });
+  }
+
+  // Trio / Tiercé (3 positions)
+  for (const t of ["TIERCE", "TRIO", "TRIO_ORDRE"] as const) {
+    const offer = offerMap.get(t);
+    if (!offer || arrival.length < 1) continue;
+    const [b1, b2, b3] = arrival;
+    if (b1 && b2 && b3) add(t, offer, [b1, b2, b3], 0);
+    if (b1 && b2)        add(t, offer, [b1, b2],     1);
+    if (b1)              add(t, offer, [b1],          2);
+  }
+
+  // Quarté+ (4 positions)
+  const q4 = offerMap.get("QUARTE_PLUS");
+  if (q4 && arrival.length >= 1) {
+    const [b1, b2, b3, b4] = arrival;
+    if (b1 && b2 && b3 && b4) add("QUARTE_PLUS", q4, [b1, b2, b3, b4], 0);
+    if (b1 && b2 && b3)        add("QUARTE_PLUS", q4, [b1, b2, b3],    1);
+    if (b1 && b2)              add("QUARTE_PLUS", q4, [b1, b2],         2);
+    if (b1)                    add("QUARTE_PLUS", q4, [b1],             3);
+  }
+
+  // Quinté+ / Pick5 (5 positions)
+  for (const t of ["QUINTE_PLUS", "PICK5"] as const) {
+    const offer = offerMap.get(t);
+    if (!offer || arrival.length < 1) continue;
+    const [b1, b2, b3, b4, b5] = arrival;
+    if (b1 && b2 && b3 && b4 && b5) add(t, offer, [b1, b2, b3, b4, b5], 0);
+    if (b1 && b2 && b3 && b4)        add(t, offer, [b1, b2, b3, b4],    1);
+    if (b1 && b2 && b3)              add(t, offer, [b1, b2, b3],         2);
+    if (b1 && b2)                    add(t, offer, [b1, b2],             3);
+    if (b1)                          add(t, offer, [b1],                 4);
+  }
+
+  // Multi — 4 à 7 chevaux pour occuper les 4 premières places
+  const mOffer = offerMap.get("MULTI");
+  if (mOffer && cov.length >= 4) {
+    for (let n = 4; n <= Math.min(7, cov.length); n++) {
+      const sel  = cov.slice(0, n);
+      const nums = sel.map((h) => h.number);
+      const avgKz = sel.reduce((s, h) => s + (h.kzScore ?? 50), 0) / n;
+      // For Multi: we select n horses and any 4 can be in top 4
+      // Cost = C(n,4) × 24 combinations × baseStake (but PMU charges differently)
+      // Simplified: 1 base stake for 4 horses, n-3 for 5, etc.
+      const combosCount = n <= 4 ? 1 : ncr(n, 4);
+      out.push({
+        betType: "MULTI",
+        label: `Multi — ${n} cheval${n > 1 ? "x" : ""}`,
+        ticket: nums.join("-"),
+        bases: nums,
+        xPositions: 0,
+        combinations: combosCount,
+        confidence: Math.max(1, Math.min(99, Math.round(avgKz - (n - 4) * 8))),
+        costEuros: +(combosCount * (mOffer.baseStake || 1.5)).toFixed(2),
+      });
+    }
+  }
+
+  // Mini-Multi — 4 chevaux (variante économique du Multi)
+  // Identique à Multi 4 chevaux mais affiché séparément pour clarté
+  if (mOffer && cov.length >= 4) {
+    const sel  = cov.slice(0, 4);
+    const nums = sel.map((h) => h.number);
+    const avgKz = sel.reduce((s, h) => s + (h.kzScore ?? 50), 0) / 4;
+    out.push({
+      betType: "MINI_MULTI",
+      label: "Mini-Multi — 4 chevaux (base)",
+      ticket: nums.join("-"),
+      bases: nums,
+      xPositions: 0,
+      combinations: 1,
+      confidence: Math.max(1, Math.min(99, Math.round(avgKz))),
+      costEuros: +(mOffer.baseStake || 1.5),
+    });
+  }
+
+  // Déduplication : garder le ticket le plus confiant pour chaque (betType + ticket) pair
+  const seen = new Set<string>();
+  return out
+    .sort((a, b) => b.confidence - a.confidence)
+    .filter((t) => {
+      const key = `${t.betType}|${t.ticket}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
+function ncr(n: number, k: number): number {
+  if (k < 0 || k > n || n < 0) return 0;
+  if (k === 0 || k === n) return 1;
+  let r = 1;
+  for (let i = 0; i < k; i++) r = r * (n - i) / (i + 1);
+  return Math.round(r);
+}

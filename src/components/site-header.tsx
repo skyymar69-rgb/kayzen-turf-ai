@@ -47,7 +47,7 @@ export function SiteHeader() {
           </span>
           <span className="hidden flex-col sm:flex">
             <span className="font-display text-base font-bold leading-tight tracking-tight text-white">Kayzen</span>
-            <span className="text-[11px] font-medium uppercase tracking-widest text-slate-300">Pronostic Turf PMU</span>
+            <span className="text-[11px] font-medium uppercase tracking-widest text-white/70">Pronostic Turf PMU</span>
           </span>
         </Link>
 
@@ -62,7 +62,7 @@ export function SiteHeader() {
                 className={`relative px-4 py-5 text-sm font-bold italic tracking-wide transition ${
                   active
                     ? "text-white"
-                    : "text-slate-200 hover:text-white"
+                    : "text-white/80 hover:text-white"
                 }`}
               >
                 {label}
@@ -84,7 +84,7 @@ export function SiteHeader() {
             <button
               aria-expanded={contactOpen}
               aria-haspopup="true"
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/30 bg-white/12 px-3 text-sm font-medium text-slate-100 transition hover:bg-white/20 hover:text-white"
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/30 bg-white/12 px-3 text-sm font-medium text-white transition hover:bg-white/20 hover:text-white"
               onClick={() => setContactOpen((v) => !v)}
               type="button"
             >
@@ -129,7 +129,7 @@ export function SiteHeader() {
           <button
             aria-expanded={mobileOpen}
             aria-label="Menu de navigation"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/30 bg-white/12 text-slate-100 transition hover:bg-white/20 hover:text-white lg:hidden"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/30 bg-white/12 text-white transition hover:bg-white/20 hover:text-white lg:hidden"
             onClick={() => setMobileOpen((v) => !v)}
             type="button"
           >
@@ -151,7 +151,7 @@ export function SiteHeader() {
                   className={`rounded-lg px-4 py-2.5 text-sm font-medium transition ${
                     active
                       ? "bg-white/15 text-white"
-                      : "text-slate-200 hover:bg-white/10 hover:text-white"
+                      : "text-white/80 hover:bg-white/10 hover:text-white"
                   }`}
                 >
                   {label}
@@ -196,7 +196,7 @@ function MobileContactItem({ href, icon, label }: { href: string; icon: React.Re
       href={href}
       rel="noopener noreferrer"
       target="_blank"
-      className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10 hover:text-white"
+      className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10 hover:text-white"
     >
       {icon}
       <span>{label}</span>

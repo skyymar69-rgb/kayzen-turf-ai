@@ -5,16 +5,19 @@ import type { ReactNode } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
-  ArrowUpRight,
+  ArrowUpDown,
   Brain,
+  Check,
   Clock3,
+  Copy,
   Gauge,
+  Share2,
   Sparkles,
   Target,
-  Trophy,
+  Timer,
 } from "lucide-react";
-import { useMemo, useState } from "react";
-import { buildBetRecommendations, probableArrival, raceToContext } from "@/lib/bet-recommendations";
+import { useEffect, useMemo, useState } from "react";
+import { buildBetRecommendations, buildXTickets, probableArrival, raceToContext, type XTicket } from "@/lib/bet-recommendations";
 import { simulateBet } from "@/lib/betting-engine";
 import { buildPostRaceAnalysis } from "@/lib/post-race-analysis";
 import { explainPredictionScore, watchedLongshot } from "@/lib/prediction-math";
@@ -23,6 +26,7 @@ import type { BetOffer, HorsePrediction, RaceAnalysis } from "@/lib/types";
 
 type CourseDetailProps = { race: RaceAnalysis };
 type TicketMode = "agressif" | "equilibre" | "securise";
+type SortKey = "arrival" | "kz" | "odds" | "top3";
 
 const TABS = ["Partants", "Cotes", "Pronostics IA", "Statistiques", "Les Plus Joués", "Arrivées et Rapports"] as const;
 
@@ -48,16 +52,39 @@ export function CourseDetail({ race }: CourseDetailProps) {
   const [ticketBudget, setTicketBudget] = useState(30);
   const [ticketMode, setTicketMode] = useState<TicketMode>("equilibre");
   const [activeTab, setActiveTab]   = useState<(typeof TABS)[number]>("Partants");
+  const [sortBy, setSortBy]         = useState<SortKey>("arrival");
+  const [countdown, setCountdown]   = useState<string | null>(null);
 
   const selectedHorse       = race.horses.find((h) => h.id === selectedHorseId) ?? race.horses[0];
   const ctx                 = useMemo(() => raceToContext(race), [race]);
   const arrival             = useMemo(() => probableArrival(race.horses, ctx), [race.horses, ctx]);
+  const displayedHorses     = useMemo(() => sortHorses(arrival, sortBy), [arrival, sortBy]);
   const horseRoles          = useMemo(() => buildHorseRoles(arrival, ctx), [arrival, ctx]);
   const betRecommendations  = useMemo(() => buildBetRecommendations(race.horses, race.betTypes, ctx), [race.betTypes, race.horses, ctx]);
+  const xTickets            = useMemo(() => buildXTickets(race.horses, race.betTypes, ctx), [race.horses, race.betTypes, ctx]);
   const ticketPlan          = useMemo(() => buildTicketPlan(betRecommendations, ticketMode, ticketBudget), [betRecommendations, ticketBudget, ticketMode]);
   const postRaceAnalysis    = useMemo(() => buildPostRaceAnalysis(race), [race]);
   const simulation          = selectedHorse ? simulateBet(stake, selectedHorse.odds, selectedHorse.winProbability, 500, 0) : null;
   const partantsCount       = race.horses.length;
+
+  useEffect(() => {
+    if (race.relativeDay !== "today") return;
+    function tick() {
+      const [h = "0", m = "0"] = race.startTime.split(":");
+      const now  = new Date();
+      const race_t = new Date();
+      race_t.setHours(Number(h), Number(m), 0, 0);
+      const diff = Math.floor((race_t.getTime() - now.getTime()) / 1000);
+      if (diff <= 0) { setCountdown(null); return; }
+      const hh = Math.floor(diff / 3600);
+      const mm = Math.floor((diff % 3600) / 60);
+      const ss = diff % 60;
+      setCountdown(hh > 0 ? `${hh}h${String(mm).padStart(2, "0")}` : `${mm}m${String(ss).padStart(2, "0")}s`);
+    }
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [race.startTime, race.relativeDay]);
 
   const topBet = betRecommendations[0];
 
@@ -90,9 +117,17 @@ export function CourseDetail({ race }: CourseDetailProps) {
                   {race.racecourse} — {formatLongDate(race.raceDate)}
                 </h1>
               </div>
-              <div className="flex items-center gap-2 font-bold text-accent-text">
-                <Clock3 size={18} />
-                Départ {race.startTime}
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="flex items-center gap-2 font-bold text-accent-text">
+                  <Clock3 size={18} />
+                  Départ {race.startTime}
+                  {countdown && (
+                    <span className="flex items-center gap-1 rounded-lg bg-cta/10 px-2 py-0.5 text-sm font-bold text-cta">
+                      <Timer size={12} /> {countdown}
+                    </span>
+                  )}
+                </span>
+                <ShareButton programCode={race.programCode} name={race.name} />
               </div>
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
@@ -187,7 +222,25 @@ export function CourseDetail({ race }: CourseDetailProps) {
           role="tabpanel"
         >
           {activeTab === "Partants" ? (
-            <PartantsTable horses={arrival} onSelect={setSelectedHorseId} selectedHorseId={selectedHorse?.id} discipline={race.discipline} />
+            <>
+              {/* Sort controls */}
+              <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
+                <ArrowUpDown size={13} className="shrink-0 text-muted" />
+                <span className="text-xs text-muted">Trier :</span>
+                {([["arrival", "Arrivée IA"], ["kz", "KZ Score"], ["odds", "Cote"], ["top3", "Top 3"]] as [SortKey, string][]).map(([key, label]) => (
+                  <button
+                    key={key}
+                    aria-pressed={sortBy === key}
+                    className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${sortBy === key ? "bg-accent text-white" : "text-muted hover:bg-surface-sub"}`}
+                    onClick={() => setSortBy(key)}
+                    type="button"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <PartantsTable horses={displayedHorses} onSelect={setSelectedHorseId} selectedHorseId={selectedHorse?.id} discipline={race.discipline} />
+            </>
           ) : (
             <TabPlaceholder activeTab={activeTab} arrival={arrival} race={race} recommendations={betRecommendations} />
           )}
@@ -210,14 +263,13 @@ export function CourseDetail({ race }: CourseDetailProps) {
               </summary>
               <div className="grid gap-2 px-5 pb-5 sm:grid-cols-2 xl:grid-cols-3">
                 {betRecommendations.map((r) => (
-                  <div key={r.type} className="rounded-xl border border-border bg-surface-sub p-3">
-                    <p className="text-xs font-semibold text-fg">{r.label}</p>
-                    <p className="mt-1 font-mono text-base font-bold text-accent-text">{r.ticket}</p>
-                    <p className="mt-1 text-[10px] text-muted">Conf. {r.confidence}/99 · {formatStrategyLabel(r.strategy)}</p>
-                  </div>
+                  <TicketCard key={r.type} label={r.label} ticket={r.ticket} confidence={r.confidence} strategy={formatStrategyLabel(r.strategy)} />
                 ))}
               </div>
             </details>
+
+            {/* Accordion: Tickets en X (bases + champ variable) */}
+            {xTickets.length > 0 && <XTicketsSection xTickets={xTickets} />}
 
             {/* Accordion: Analyse IA — Heatmap + Signaux */}
             <details open className="overflow-hidden rounded-2xl border border-border bg-surface">
@@ -984,6 +1036,154 @@ function Result({ label, value, accent }: { label: string; value: string; accent
   );
 }
 
+/* ─── X-Tickets section ─────────────────────────────────────────── */
+
+function XTicketsSection({ xTickets }: { xTickets: XTicket[] }) {
+  const byType = useMemo(() => {
+    const map = new Map<string, XTicket[]>();
+    for (const t of xTickets) {
+      const arr = map.get(t.betType) ?? [];
+      arr.push(t);
+      map.set(t.betType, arr);
+    }
+    return Array.from(map.entries());
+  }, [xTickets]);
+
+  return (
+    <details open className="overflow-hidden rounded-2xl border border-border bg-surface">
+      <summary className="flex cursor-pointer list-none items-center justify-between p-5">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Notation X</p>
+          <p className="mt-0.5 text-base font-bold text-fg">Tickets en X — bases fixes + champ variable</p>
+        </div>
+        <span className="shrink-0 rounded-full border border-border bg-surface-sub px-3 py-1 text-xs font-bold text-muted">Voir →</span>
+      </summary>
+      <div className="px-5 pb-5">
+        <p className="mb-4 rounded-xl border border-border bg-surface-sub px-4 py-3 text-xs leading-5 text-muted">
+          <strong className="text-fg">Base</strong> = cheval sélectionné fixe ·{" "}
+          <strong className="text-fg">X</strong> = n'importe quel cheval du champ ·{" "}
+          Le coût estimé correspond au nombre de combinaisons × mise de base PMU.
+        </p>
+        <div className="grid gap-5">
+          {byType.map(([betType, tickets]) => (
+            <div key={betType}>
+              <p className="mb-2 text-xs font-bold uppercase tracking-widest text-accent-text">
+                {betTypeLabel(betType)}
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                {tickets.map((t) => (
+                  <XTicketCard key={`${t.betType}-${t.ticket}`} ticket={t} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </details>
+  );
+}
+
+function XTicketCard({ ticket: t }: { ticket: XTicket }) {
+  const [copied, setCopied] = useState(false);
+
+  function handleCopy() {
+    navigator.clipboard.writeText(t.ticket).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {});
+  }
+
+  const confColor = t.confidence >= 65 ? "text-emerald-600" : t.confidence >= 45 ? "text-amber-600" : "text-muted";
+
+  return (
+    <div className="rounded-xl border border-border bg-surface-sub p-3">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-xs font-semibold text-fg">{t.label}</p>
+        <button
+          aria-label="Copier le ticket"
+          className="shrink-0 rounded-lg border border-border bg-surface px-2 py-0.5 text-[10px] font-bold text-muted transition hover:text-accent-text"
+          onClick={handleCopy}
+          type="button"
+        >
+          {copied ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
+        </button>
+      </div>
+      <p className="mt-2 font-mono text-xl font-bold text-accent-text">{t.ticket}</p>
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted">
+        <span>{t.combinations} combinaison{t.combinations > 1 ? "s" : ""}</span>
+        <span>·</span>
+        <span>~{t.costEuros} €</span>
+        <span>·</span>
+        <span className={`font-bold ${confColor}`}>Conf. {t.confidence}/99</span>
+      </div>
+    </div>
+  );
+}
+
+function TicketCard({ label, ticket, confidence, strategy }: {
+  label: string; ticket: string; confidence: number; strategy: string;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  function handleCopy() {
+    navigator.clipboard.writeText(ticket).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {});
+  }
+
+  const confColor = confidence >= 65 ? "text-emerald-600" : confidence >= 45 ? "text-amber-600" : "text-muted";
+
+  return (
+    <div className="rounded-xl border border-border bg-surface-sub p-3">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-xs font-semibold text-fg">{label}</p>
+        <button
+          aria-label="Copier le ticket"
+          className="shrink-0 rounded-lg border border-border bg-surface px-2 py-0.5 transition hover:text-accent-text"
+          onClick={handleCopy}
+          type="button"
+        >
+          {copied ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
+        </button>
+      </div>
+      <p className="mt-1 font-mono text-base font-bold text-accent-text">{ticket}</p>
+      <p className="mt-1 text-[10px] text-muted">
+        <span className={`font-bold ${confColor}`}>Conf. {confidence}/99</span>
+        {" · "}{strategy}
+      </p>
+    </div>
+  );
+}
+
+function ShareButton({ programCode, name }: { programCode: string; name: string }) {
+  const [shared, setShared] = useState(false);
+
+  async function handleShare() {
+    const text = `${programCode} — ${name} | Pronostics Kayzen Turf AI`;
+    const url  = window.location.href;
+    if (typeof navigator.share === "function") {
+      try { await navigator.share({ title: text, url }); return; } catch {}
+    }
+    navigator.clipboard.writeText(`${text}\n${url}`).then(() => {
+      setShared(true);
+      setTimeout(() => setShared(false), 2000);
+    }).catch(() => {});
+  }
+
+  return (
+    <button
+      aria-label="Partager cette course"
+      className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-muted transition hover:text-accent-text"
+      onClick={handleShare}
+      type="button"
+    >
+      {shared ? <Check size={13} className="text-emerald-600" /> : <Share2 size={13} />}
+      {shared ? "Copié !" : "Partager"}
+    </button>
+  );
+}
+
 /* ─── Pure helpers (business logic unchanged) ────────────────────── */
 
 function probabilityTechniques() {
@@ -1126,4 +1326,19 @@ function fmtProb(v: number | null | undefined): string {
 }
 function safeWidth(v: number | null | undefined, min = 4, max = 100): number {
   return Math.max(min, Math.min(max, Number.isFinite(v as number) ? (v as number) : 0));
+}
+function sortHorses(horses: HorsePrediction[], key: SortKey): HorsePrediction[] {
+  const arr = [...horses];
+  if (key === "kz")   return arr.sort((a, b) => (b.kzScore ?? 0) - (a.kzScore ?? 0));
+  if (key === "odds") return arr.sort((a, b) => (a.odds > 0 ? a.odds : 99) - (b.odds > 0 ? b.odds : 99));
+  if (key === "top3") return arr.sort((a, b) => (b.top3Probability ?? 0) - (a.top3Probability ?? 0));
+  return arr;
+}
+function betTypeLabel(type: string): string {
+  const map: Record<string, string> = {
+    TIERCE: "Tiercé", TRIO: "Trio", TRIO_ORDRE: "Trio ordre",
+    QUARTE_PLUS: "Quarté+", QUINTE_PLUS: "Quinté+", PICK5: "Pick 5",
+    MULTI: "Multi", MINI_MULTI: "Mini-Multi",
+  };
+  return map[type] ?? type;
 }
