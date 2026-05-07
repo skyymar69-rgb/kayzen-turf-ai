@@ -154,7 +154,7 @@ function RaceRow({ race, idx }: { race: RaceAnalysis; idx: number }) {
     <View style={[s.row, isAlt ? s.rowAlt : {}]}>
       <Text style={[s.cCode, s.tdGreen]}>{race.programCode}</Text>
       <Text style={[s.cHour, s.tdMuted]}>{race.startTime}</Text>
-      <Text style={[s.cName]} numberOfLines={1}>
+      <Text style={s.cName}>
         {race.name.length > 26 ? race.name.slice(0, 25) + "…" : race.name}
       </Text>
       <Text style={[s.cDist, s.tdMuted]}>{distStr}</Text>
