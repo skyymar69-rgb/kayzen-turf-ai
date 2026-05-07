@@ -9,8 +9,10 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  Download,
   Flag,
   Gauge,
+  Loader2,
   Search,
   Sparkles,
   TrendingUp,
@@ -366,17 +368,20 @@ export function Dashboard({ races }: DashboardProps) {
         <section className="rounded-2xl border border-border bg-surface shadow-sm" aria-label="Programme des réunions">
 
           {/* Header programme */}
-          <div className="flex items-center justify-between border-b border-border px-5 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-muted">
                 {formatRelativeDay(dayFilter)} · {formatShortDate(dateForDay(races, dayFilter))}
               </p>
               <h2 className="font-display text-xl font-bold text-fg">Programme PMU</h2>
             </div>
-            <div className="flex items-center gap-4 text-sm text-muted">
-              <span><strong className="text-fg">{meetings.length}</strong> réunion{meetings.length > 1 ? "s" : ""}</span>
-              <span><strong className="text-fg">{dayRaces.length}</strong> courses</span>
-              <span><strong className="text-fg">{dayFeatureCount}</strong> temps fort{dayFeatureCount > 1 ? "s" : ""}</span>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-4 text-sm text-muted">
+                <span><strong className="text-fg">{meetings.length}</strong> réunion{meetings.length > 1 ? "s" : ""}</span>
+                <span><strong className="text-fg">{dayRaces.length}</strong> courses</span>
+                <span><strong className="text-fg">{dayFeatureCount}</strong> temps fort{dayFeatureCount > 1 ? "s" : ""}</span>
+              </div>
+              <PdfDownloadButton date={dateForDay(races, dayFilter)} />
             </div>
           </div>
 
@@ -708,6 +713,46 @@ export function Dashboard({ races }: DashboardProps) {
 
       </div>
     </main>
+  );
+}
+
+/* ─── PDF Download Button ────────────────────────────────────────── */
+
+function PdfDownloadButton({ date }: { date: string }) {
+  const [loading, setLoading] = useState(false);
+
+  async function handleDownload() {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/pdf/pronostics?date=${date}`);
+      if (!res.ok) throw new Error("Génération échouée");
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      a.href     = url;
+      a.download = `kayzen-pronostics-${date}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("Impossible de générer le PDF. Réessayez.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <button
+      disabled={loading}
+      onClick={handleDownload}
+      type="button"
+      className="inline-flex items-center gap-2 rounded-xl border border-accent/40 bg-accent-lo px-4 py-2.5 text-sm font-semibold text-accent-text transition hover:bg-accent hover:text-white disabled:opacity-60"
+    >
+      {loading
+        ? <><Loader2 size={15} className="animate-spin" /> Génération…</>
+        : <><Download size={15} /> PDF pronostics</>
+      }
+    </button>
   );
 }
 
