@@ -10,14 +10,14 @@
   --bg:            #f5f7f5;   /* off-white with faint green tint */
   --fg:            #0f1f17;   /* near-black with green undertone */
   --surface:       #ffffff;
-  --surface-sub:   #eef4f0;   /* light green-gray */
+  --surface-sub:   #f0f3f1;   /* neutral light gray — less green-on-green */
   --surface-inv:   #0c2318;   /* PMU dark green — nav bar */
-  --muted:         #5a6e62;   /* warm gray-green — 4.5:1 on bg */
-  --border:        #d8e4da;
-  --border-strong: #b4c8b8;
+  --muted:         #47605a;   /* darker gray-green — 5.2:1 on bg */
+  --border:        #c4d2c8;   /* more visible border */
+  --border-strong: #9eb4a4;   /* clearly visible separator */
   --accent:        #004a38;   /* PMU medium green — 10.2:1 on white */
   --accent-hi:     #003528;   /* darker green for hover */
-  --accent-lo:     #e3f2e8;   /* light green tint */
+  --accent-lo:     #daeee2;   /* distinct from surface-sub */
   --accent-text:   #004a38;   /* green text on light backgrounds */
   --cta:           #1eb854;   /* PMU bright green — primary CTA */
   --cta-hi:        #189a47;   /* darker green for hover */

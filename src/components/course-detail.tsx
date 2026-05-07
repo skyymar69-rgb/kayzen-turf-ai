@@ -596,10 +596,14 @@ function TicketCombinationsPanel({ recommendations }: { recommendations: ReturnT
   );
 }
 
+const MAX_VARIANTS_SHOWN = 5;
+
 function TicketVariantCloud({ recommendation }: { recommendation: ReturnType<typeof buildBetRecommendations>[number] }) {
+  const shown = recommendation.variants.slice(0, MAX_VARIANTS_SHOWN);
+  const hidden = recommendation.variantCount - shown.length;
   return (
     <div className="mt-3 flex flex-wrap gap-1.5">
-      {recommendation.variants.map((v) => (
+      {shown.map((v) => (
         <span
           key={`${recommendation.type}-${v.ticket}`}
           className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2 py-1 font-mono text-xs font-bold text-fg"
@@ -609,9 +613,9 @@ function TicketVariantCloud({ recommendation }: { recommendation: ReturnType<typ
           <span className="font-sans text-[10px] font-semibold text-accent-text">{v.confidence}</span>
         </span>
       ))}
-      {recommendation.variantCount > recommendation.variants.length && (
+      {hidden > 0 && (
         <span className="inline-flex items-center rounded-lg border border-border bg-surface-sub px-2 py-1 text-xs text-muted">
-          +{recommendation.variantCount - recommendation.variants.length}
+          +{hidden} autres
         </span>
       )}
     </div>
