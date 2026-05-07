@@ -182,7 +182,11 @@ export function CourseDetail({ race }: CourseDetailProps) {
                   <div key={r.type} className="rounded-xl border border-border bg-surface-sub p-3">
                     <p className="text-xs font-semibold text-fg">{r.label}</p>
                     <p className="mt-1 font-mono text-base font-bold text-accent-text">{r.ticket}</p>
-                    <p className="mt-1 text-[10px] text-muted">Conf. {r.confidence}/99 · {formatStrategyLabel(r.strategy)}</p>
+                    <p className="mt-1 flex items-center text-[10px] text-muted">
+                      <span>Conf. {r.confidence}/99</span>
+                      <InfoTip text="Indice de convergence des signaux 0-99 : mesure l'alignement entre probabilité gagnant, edge marché, forme et stabilité des rangs. 99 = tous les signaux pointent dans le même sens. Ne garantit pas le gain." />
+                      <span className="ml-1">· {formatStrategyLabel(r.strategy)}</span>
+                    </p>
                   </div>
                 ))}
               </div>
@@ -191,7 +195,10 @@ export function CourseDetail({ race }: CourseDetailProps) {
             {/* Typologie + Heatmap */}
             <div className="mt-4 grid gap-3 lg:grid-cols-[0.95fr_1.05fr]">
               <section className="rounded-2xl border border-border bg-surface-sub p-4" aria-label="Typologie IA">
-                <p className="text-xs font-bold uppercase tracking-widest text-muted">Typologie IA</p>
+                <div className="flex items-center">
+                  <p className="text-xs font-bold uppercase tracking-widest text-muted">Typologie IA</p>
+                  <InfoTip text="Base : meilleur score global KZ. Outsider : edge marché positif avec cote ≥ 6 (valeur sous-estimée). Tocard surveillé : signal surprise Top 3 élevé malgré une cote haute. Le KZ Score (0-99) combine probabilités, cote, musique, gains et contexte terrain." />
+                </div>
                 <div className="mt-3 grid gap-2">
                   {horseRoles.map((role) => (
                     <article key={role.label} className="rounded-xl border border-border bg-surface p-3">
@@ -209,9 +216,13 @@ export function CourseDetail({ race }: CourseDetailProps) {
               </section>
 
               <section className="rounded-2xl border border-border bg-surface-sub p-4" aria-label="Heatmap Top 3">
-                <p className="text-xs font-bold uppercase tracking-widest text-muted">Heatmap Top 3</p>
+                <div className="flex items-center">
+                  <p className="text-xs font-bold uppercase tracking-widest text-muted">Heatmap Top 3</p>
+                  <InfoTip text="Probabilité que le cheval finisse dans les 3 premiers (modèle Plackett-Luce). Triés du plus élevé au plus bas. L'ordre d'arrivée prédit peut différer car il intègre aussi la probabilité gagnant stricte, la cote et la forme — un cheval peut être 1er même avec une prob. Top 3 plus faible si sa prob. gagnant est dominante." />
+                </div>
+                <p className="mt-0.5 text-[10px] text-muted">Triés par prob. Top 3 ↓</p>
                 <div className="mt-3 grid gap-3">
-                  {arrival.slice(0, 8).map((horse) => (
+                  {arrival.slice(0, 8).slice().sort((a, b) => (b.top3Probability ?? 0) - (a.top3Probability ?? 0)).map((horse) => (
                     <div key={horse.id} className="grid grid-cols-[36px_1fr_48px] items-center gap-3">
                       <span className="font-mono text-sm font-bold text-fg">#{horse.number}</span>
                       <div className="h-2.5 overflow-hidden rounded-full bg-border">
@@ -285,6 +296,42 @@ export function CourseDetail({ race }: CourseDetailProps) {
             </section>
 
             <TicketCombinationsPanel recommendations={betRecommendations} />
+
+            {/* FAQ Comprendre les indices */}
+            <details className="mt-4 rounded-2xl border border-border bg-surface-sub p-5">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-widest text-muted">Comprendre ces chiffres</p>
+                  <p className="mt-0.5 text-sm font-medium text-fg">Pourquoi ces chevaux ? Que signifient les indices ?</p>
+                </div>
+                <span className="shrink-0 rounded-full border border-border bg-surface px-3 py-1 text-xs font-bold text-muted">Ouvrir →</span>
+              </summary>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {[
+                  {
+                    q: "Que signifie Conf. X/99 sur un ticket ?",
+                    a: "Indice de convergence algorithmique 0-99. Il mesure l'alignement entre la probabilité gagnant, l'edge marché (cote PMU vs cote juste), la forme récente et la stabilité des rangs entre modèles. Conf. 99 = tous les signaux convergent. Ce n'est pas une promesse de gain.",
+                  },
+                  {
+                    q: "Pourquoi le KZ Score d'un cheval #1 peut être plus bas que celui du #2 ?",
+                    a: "Le classement d'arrivée utilise un score ordre strict (exactOrderScore) qui pénalise les favoris fragiles et valorise la stabilité. Un cheval classé #1 peut avoir un KZ brut plus faible mais une meilleure probabilité gagnant et moins de risques — il gagne plus souvent, pas forcément avec le meilleur score composite.",
+                  },
+                  {
+                    q: "Heatmap Top 3 : pourquoi le #2 est parfois en tête ?",
+                    a: "La heatmap trie par probabilité Top 3 décroissante. Un cheval peut avoir 68% de chances de finir dans le top 3 sans pour autant être le favori gagnant — il est régulier, souvent placé, mais rarement vainqueur. L'ordre des tickets prend en compte la probabilité gagnant stricte, ce qui peut inverser le classement.",
+                  },
+                  {
+                    q: "Stratégie Confiance vs Value vs Spéculatif ?",
+                    a: "Confiance : tickets sur les chevaux les mieux classés, risque faible. Value : chevaux sous-évalués par le marché (edge positif), potentiel de gain plus élevé. Spéculatif : outsiders avec un signal surprise Top 3 — risque élevé, gain potentiellement fort. Le mode Équilibré mixe les trois.",
+                  },
+                ].map(({ q, a }) => (
+                  <article key={q} className="rounded-xl border border-border bg-surface p-4">
+                    <p className="text-sm font-semibold text-fg">{q}</p>
+                    <p className="mt-2 text-xs leading-5 text-muted">{a}</p>
+                  </article>
+                ))}
+              </div>
+            </details>
           </Panel>
 
           {/* Simulation */}
@@ -739,6 +786,17 @@ function PredictionMethodology({ arrival, race }: { arrival: HorsePrediction[]; 
         </section>
       </div>
     </details>
+  );
+}
+
+function InfoTip({ text }: { text: string }) {
+  return (
+    <span className="group/tip relative ml-1.5 inline-flex shrink-0">
+      <span className="inline-flex h-4 w-4 cursor-help select-none items-center justify-center rounded-full border border-muted/40 bg-surface text-[9px] font-bold text-muted">?</span>
+      <span className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 w-64 -translate-x-1/2 rounded-xl border border-border bg-surface p-3 text-left text-[11px] leading-5 text-muted shadow-xl opacity-0 transition-opacity duration-150 group-hover/tip:opacity-100">
+        {text}
+      </span>
+    </span>
   );
 }
 
