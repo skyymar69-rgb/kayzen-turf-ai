@@ -115,7 +115,7 @@ export function CourseDetail({ race }: CourseDetailProps) {
                 aria-controls="course-tab-panel"
                 aria-selected={activeTab === tab}
                 className={`relative h-12 min-w-[140px] shrink-0 border-r border-border px-4 text-sm font-medium transition xl:min-w-0 xl:flex-1 ${
-                  activeTab === tab ? "bg-surface-inv text-white" : "text-muted hover:bg-surface hover:text-fg"
+                  activeTab === tab ? "bg-surface-inv text-white" : "text-fg/70 hover:bg-surface hover:text-fg"
                 }`}
                 onClick={() => setActiveTab(tab)}
                 role="tab"

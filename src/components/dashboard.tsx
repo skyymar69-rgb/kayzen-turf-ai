@@ -132,7 +132,7 @@ export function Dashboard({ races }: DashboardProps) {
                   <h1 className="font-display text-xl font-bold leading-tight text-white">
                     Programme PMU
                   </h1>
-                  <p className="text-xs text-white/45">
+                  <p className="text-xs text-white/65">
                     {meetings.length} réunion{meetings.length > 1 ? "s" : ""} · {dayRaces.length} courses · {dayRunnerCount} partants
                   </p>
                 </div>
@@ -153,13 +153,13 @@ export function Dashboard({ races }: DashboardProps) {
                         onClick={() => selectDay(day)}
                         type="button"
                       >
-                        <span className={`text-[10px] font-bold uppercase tracking-widest ${active ? "text-cta" : "text-white/40"}`}>
+                        <span className={`text-[10px] font-bold uppercase tracking-widest ${active ? "text-cta" : "text-slate-400"}`}>
                           {formatRelativeDay(day)}
                         </span>
-                        <span className={`font-display text-base font-bold sm:text-lg ${active ? "text-white" : "text-white/55"}`}>
+                        <span className={`font-display text-base font-bold sm:text-lg ${active ? "text-white" : "text-slate-200"}`}>
                           {formatShortDate(date)}
                         </span>
-                        <span className={`text-[10px] ${active ? "text-white/55" : "text-white/30"}`}>
+                        <span className={`text-[10px] ${active ? "text-white/65" : "text-slate-400"}`}>
                           {count > 0 ? `${count} course${count > 1 ? "s" : ""}` : "—"}
                         </span>
                         {active && <span className="absolute bottom-0 left-2 right-2 h-0.5 rounded-t-full bg-cta" />}
@@ -170,7 +170,7 @@ export function Dashboard({ races }: DashboardProps) {
 
                 {/* Lien pronostics */}
                 <div className="hidden items-center border-l border-white/10 px-4 sm:flex">
-                  <Link href="/pronostics" className="flex items-center gap-1.5 text-xs font-semibold text-white/50 transition hover:text-white">
+                  <Link href="/pronostics" className="flex items-center gap-1.5 text-xs font-semibold text-slate-300 transition hover:text-white">
                     Pronostics <ArrowRight size={12} />
                   </Link>
                 </div>
@@ -195,15 +195,15 @@ export function Dashboard({ races }: DashboardProps) {
                           type="button"
                         >
                           <div className="flex items-center gap-2">
-                            <span className={`font-display text-lg font-bold ${active ? "text-cta" : "text-white/70"}`}>
+                            <span className={`font-display text-lg font-bold ${active ? "text-cta" : "text-slate-200"}`}>
                               R{meeting.reunionNumber}
                             </span>
                             <DifficultyPip difficulty={meeting.difficulty} active={active} />
                           </div>
-                          <span className={`text-xs font-semibold leading-tight ${active ? "text-white" : "text-white/55"}`}>
+                          <span className={`text-xs font-semibold leading-tight ${active ? "text-white" : "text-slate-300"}`}>
                             {titleCase(meeting.racecourse)}
                           </span>
-                          <span className={`text-[10px] ${active ? "text-white/50" : "text-white/30"}`}>
+                          <span className={`text-[10px] ${active ? "text-white/65" : "text-slate-400"}`}>
                             {meeting.races.length} courses
                           </span>
                         </button>
@@ -244,7 +244,7 @@ export function Dashboard({ races }: DashboardProps) {
                                   <span key={h.label} className={`hidden shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold sm:inline ${h.className}`}>{h.label}</span>
                                 ))}
                               </div>
-                              <div className="mt-0.5 flex items-center gap-2 text-[11px] text-white/45">
+                              <div className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-400">
                                 <span>{race.startTime}</span>
                                 <span>·</span>
                                 <span>{titleCase(race.specialty)}</span>
@@ -260,8 +260,8 @@ export function Dashboard({ races }: DashboardProps) {
                                 signal.startsWith("Base fiable") ? "text-green-400" :
                                 signal.startsWith("Outsider") ? "text-yellow-400" :
                                 signal === "À éviter" || signal.startsWith("Favori fragile") ? "text-red-400" :
-                                signal === "Signal faible" ? "text-white/25" :
-                                "text-white/55"
+                                signal === "Signal faible" ? "text-slate-500" :
+                                "text-slate-300"
                               }`}>{signal}</span>
                               <StatusChip status={status} dark />
                             </div>
@@ -276,7 +276,7 @@ export function Dashboard({ races }: DashboardProps) {
 
               {/* ── Footer hero ──────────────────────────────────────── */}
               <div className="flex items-center justify-between border-t border-white/10 px-5 py-2.5">
-                <p className="text-[10px] text-white/30">Outil d'aide à la décision — aucun résultat ni gain garanti</p>
+                <p className="text-[10px] text-slate-400">Outil d'aide à la décision — aucun résultat ni gain garanti</p>
                 <Link href="/tarifs" className="text-[10px] font-semibold text-cta transition hover:text-cta-hi">
                   Accès premium →
                 </Link>
@@ -772,7 +772,7 @@ function DisciplinePill({ discipline }: { discipline: string }) {
   const cls =
     discipline === "Trot"     ? "bg-sky-100 text-sky-800" :
     discipline === "Obstacle" ? "bg-orange-100 text-orange-800" :
-                                "bg-emerald-100 text-emerald-800";
+                                "bg-violet-100 text-violet-800";
   return <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${cls}`}>{discipline}</span>;
 }
 
@@ -789,7 +789,7 @@ function StatusChip({ status, dark }: { status: string; dark?: boolean }) {
   const isAvailable = status.includes("disponible");
   if (dark) {
     return (
-      <span className={`text-[10px] font-semibold ${isImminent ? "text-cta font-bold" : "text-white/30"}`}>
+      <span className={`text-[10px] font-semibold ${isImminent ? "text-cta font-bold" : "text-slate-400"}`}>
         {isImminent && <span className="mr-1 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-cta align-middle" />}
         {status}
       </span>

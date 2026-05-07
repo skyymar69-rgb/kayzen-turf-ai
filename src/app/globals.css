@@ -7,14 +7,14 @@
 /* ─── Design tokens ─────────────────────────────────────────────── */
 :root {
   color-scheme: light;
-  --bg:            #f5f7f5;   /* off-white with faint green tint */
-  --fg:            #0f1f17;   /* near-black with green undertone */
+  --bg:            #f5f6f5;   /* near-neutral off-white */
+  --fg:            #111827;   /* near-black neutral — 16:1 on bg */
   --surface:       #ffffff;
-  --surface-sub:   #f0f3f1;   /* neutral light gray — less green-on-green */
+  --surface-sub:   #f0f0ef;   /* neutral light gray, no green tint */
   --surface-inv:   #0c2318;   /* PMU dark green — nav bar */
-  --muted:         #47605a;   /* darker gray-green — 5.2:1 on bg */
-  --border:        #c4d2c8;   /* more visible border */
-  --border-strong: #9eb4a4;   /* clearly visible separator */
+  --muted:         #4b5563;   /* neutral gray — 5.5:1 on bg */
+  --border:        #d1d5db;   /* neutral visible border */
+  --border-strong: #9ca3af;   /* neutral separator */
   --accent:        #004a38;   /* PMU medium green — 10.2:1 on white */
   --accent-hi:     #003528;   /* darker green for hover */
   --accent-lo:     #daeee2;   /* distinct from surface-sub */
