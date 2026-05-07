@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-import { Globe2, MapPin, Menu, Star, WalletCards, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Download, Loader2, Menu, X } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { COMPANY, CONTACT_LINKS, SITE_URL } from "@/lib/site-config";
 
 const NAV_LINKS = [
   { href: "/",                  label: "Programme" },
@@ -14,23 +13,24 @@ const NAV_LINKS = [
   { href: "/techniques-prediction", label: "Notre IA" },
 ] as const;
 
+function parisToday(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Paris",
+    year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(new Date());
+}
+
 export function SiteHeader() {
   const pathname = usePathname();
-  const [contactOpen, setContactOpen] = useState(false);
-  const [mobileOpen, setMobileOpen]   = useState(false);
-  const contactRef = useRef<HTMLDivElement>(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
-    function onKey(e: KeyboardEvent) { if (e.key === "Escape") { setContactOpen(false); setMobileOpen(false); } }
-    function onClick(e: MouseEvent) {
-      if (contactRef.current && !contactRef.current.contains(e.target as Node)) setContactOpen(false);
-    }
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") setMobileOpen(false); }
     document.addEventListener("keydown", onKey);
-    document.addEventListener("mousedown", onClick);
-    return () => { document.removeEventListener("keydown", onKey); document.removeEventListener("mousedown", onClick); };
+    return () => document.removeEventListener("keydown", onKey);
   }, []);
 
-  useEffect(() => { setMobileOpen(false); setContactOpen(false); }, [pathname]);
+  useEffect(() => { setMobileOpen(false); }, [pathname]);
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-surface-inv">
@@ -60,9 +60,7 @@ export function SiteHeader() {
                 key={href}
                 href={href}
                 className={`relative px-4 py-5 text-sm font-bold italic tracking-wide transition ${
-                  active
-                    ? "text-white"
-                    : "text-white/80 hover:text-white"
+                  active ? "text-white" : "text-white/80 hover:text-white"
                 }`}
               >
                 {label}
@@ -79,41 +77,9 @@ export function SiteHeader() {
 
         {/* Actions */}
         <div className="flex items-center gap-2">
-          {/* Contact dropdown */}
-          <div className="relative hidden sm:block" ref={contactRef}>
-            <button
-              aria-expanded={contactOpen}
-              aria-haspopup="true"
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/30 bg-white/12 px-3 text-sm font-medium text-white transition hover:bg-white/20 hover:text-white"
-              onClick={() => setContactOpen((v) => !v)}
-              type="button"
-            >
-              <WalletCards size={15} />
-              <span className="hidden md:inline">Contact</span>
-            </button>
-            {contactOpen && (
-              <div
-                role="menu"
-                className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-xl border border-border bg-surface shadow-xl"
-              >
-                <div className="border-b border-border px-4 py-3">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-muted">{COMPANY.editor}</p>
-                  <p className="mt-0.5 text-sm font-medium text-fg">{COMPANY.brand}</p>
-                </div>
-                <div className="p-2">
-                  <ContactItem href={SITE_URL}              icon={<Globe2 size={14} />} label="Site officiel" />
-                  <ContactItem href={CONTACT_LINKS.maps}    icon={<MapPin size={14} />} label="Itinéraire" />
-                  <ContactItem href={CONTACT_LINKS.reviews} icon={<Star size={14} />}   label="Avis Google" />
-                  <a
-                    href={CONTACT_LINKS.vcard}
-                    className="mt-1 block w-full rounded-lg border border-accent/30 bg-accent-lo px-3 py-2 text-center text-sm font-semibold text-accent-text transition hover:bg-accent hover:text-white"
-                  >
-                    Télécharger la vCard
-                  </a>
-                </div>
-              </div>
-            )}
-          </div>
+
+          {/* PDF pronostics du jour */}
+          <HeaderPdfButton />
 
           {/* CTA principal */}
           <Link
@@ -149,9 +115,7 @@ export function SiteHeader() {
                   key={href}
                   href={href}
                   className={`rounded-lg px-4 py-2.5 text-sm font-medium transition ${
-                    active
-                      ? "bg-white/15 text-white"
-                      : "text-white/80 hover:bg-white/10 hover:text-white"
+                    active ? "bg-white/15 text-white" : "text-white/80 hover:bg-white/10 hover:text-white"
                   }`}
                 >
                   {label}
@@ -165,9 +129,7 @@ export function SiteHeader() {
               >
                 Commencer gratuitement
               </Link>
-              <MobileContactItem href={SITE_URL}              icon={<Globe2 size={14} />} label="Site officiel" />
-              <MobileContactItem href={CONTACT_LINKS.maps}    icon={<MapPin size={14} />} label="Itinéraire" />
-              <MobileContactItem href={CONTACT_LINKS.reviews} icon={<Star size={14} />}   label="Avis Google" />
+              <MobileHeaderPdfButton />
             </div>
           </nav>
         </div>
@@ -176,30 +138,81 @@ export function SiteHeader() {
   );
 }
 
-function ContactItem({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
+function HeaderPdfButton() {
+  const [loading, setLoading] = useState(false);
+
+  async function handleDownload() {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const date = parisToday();
+      const res  = await fetch(`/api/pdf/pronostics?date=${date}`);
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      a.href     = url;
+      a.download = `kayzen-pronostics-${date}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("Impossible de générer le PDF. Réessayez.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <a
-      href={href}
-      rel="noopener noreferrer"
-      target="_blank"
-      className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-muted transition hover:bg-surface-sub hover:text-fg"
+    <button
+      disabled={loading}
+      onClick={handleDownload}
+      type="button"
+      className="hidden h-9 items-center gap-2 rounded-lg border border-white/30 bg-white/12 px-3 text-sm font-medium text-white transition hover:bg-white/20 disabled:opacity-60 sm:inline-flex"
+      title="Télécharger les pronostics du jour en PDF"
     >
-      {icon}
-      <span>{label}</span>
-    </a>
+      {loading
+        ? <><Loader2 size={14} className="animate-spin" /><span className="hidden md:inline">Génération…</span></>
+        : <><Download size={14} /><span className="hidden md:inline">PDF du jour</span></>
+      }
+    </button>
   );
 }
 
-function MobileContactItem({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
+function MobileHeaderPdfButton() {
+  const [loading, setLoading] = useState(false);
+
+  async function handleDownload() {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const date = parisToday();
+      const res  = await fetch(`/api/pdf/pronostics?date=${date}`);
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      a.href     = url;
+      a.download = `kayzen-pronostics-${date}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("Impossible de générer le PDF. Réessayez.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <a
-      href={href}
-      rel="noopener noreferrer"
-      target="_blank"
-      className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10 hover:text-white"
+    <button
+      disabled={loading}
+      onClick={handleDownload}
+      type="button"
+      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10 hover:text-white disabled:opacity-60"
     >
-      {icon}
-      <span>{label}</span>
-    </a>
+      {loading
+        ? <><Loader2 size={14} className="animate-spin" /> Génération en cours…</>
+        : <><Download size={14} /> Pronostics PDF du jour</>
+      }
+    </button>
   );
 }
