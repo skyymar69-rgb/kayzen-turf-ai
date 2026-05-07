@@ -1,290 +1,195 @@
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import { buildBetRecommendations, probableArrival, raceToContext } from "@/lib/bet-recommendations";
-import type { HorsePrediction, RaceAnalysis } from "@/lib/types";
+import type { RaceAnalysis } from "@/lib/types";
 
-/* ─── Palette PMU ────────────────────────────────────────────────── */
+/* ─── Palette ─────────────────────────────────────────────────────── */
 const C = {
-  dark:        "#0c2318",
-  green:       "#004a38",
-  cta:         "#1eb854",
-  greenLight:  "#e8f5ec",
-  greenPale:   "#f2faf5",
-  fg:          "#111827",
-  muted:       "#4b5563",
-  mutedLight:  "#9ca3af",
-  border:      "#e5e7eb",
-  white:       "#ffffff",
-  danger:      "#dc2626",
-  warn:        "#b45309",
-  warnBg:      "#fffbeb",
-  valueBg:     "#ecfdf5",
+  dark:      "#0c2318",
+  green:     "#004a38",
+  cta:       "#1eb854",
+  pale:      "#f2faf5",
+  fg:        "#111827",
+  muted:     "#6b7280",
+  border:    "#e5e7eb",
+  borderDk:  "#d1d5db",
+  white:     "#ffffff",
+  warn:      "#d97706",
+  warnBg:    "#fffbeb",
+  blue:      "#0284c7",
 };
 
-/* ─── StyleSheet ─────────────────────────────────────────────────── */
+/* ─── Styles ──────────────────────────────────────────────────────── */
 const s = StyleSheet.create({
-  page:    { paddingTop: 52, paddingBottom: 44, paddingHorizontal: 30, backgroundColor: C.white, fontFamily: "Helvetica", fontSize: 9, color: C.fg },
+  page: {
+    paddingTop: 38, paddingBottom: 28, paddingHorizontal: 24,
+    backgroundColor: C.white, fontFamily: "Helvetica", fontSize: 8, color: C.fg,
+  },
 
-  /* fixed page header */
-  pageHeader: { position: "absolute", top: 0, left: 0, right: 0, height: 36, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 30, backgroundColor: C.dark },
-  pageHeaderLeft:  { flexDirection: "row", alignItems: "center", gap: 8 },
-  pageHeaderBadge: { width: 22, height: 22, borderRadius: 5, backgroundColor: C.cta, alignItems: "center", justifyContent: "center" },
-  pageHeaderBadgeText: { fontFamily: "Helvetica-Bold", fontSize: 8, color: C.dark },
-  pageHeaderTitle: { fontFamily: "Helvetica-Bold", fontSize: 10, color: C.white },
-  pageHeaderSub:   { fontSize: 7, color: "#9ca3af", marginLeft: 2 },
-  pageHeaderRight: { fontSize: 7, color: "#9ca3af" },
+  /* fixed header */
+  hdr: {
+    position: "absolute", top: 0, left: 0, right: 0, height: 30,
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 24, backgroundColor: C.dark,
+  },
+  hdrLeft:  { flexDirection: "row", alignItems: "center", gap: 7 },
+  hdrBadge: { width: 18, height: 18, borderRadius: 4, backgroundColor: C.cta, alignItems: "center", justifyContent: "center" },
+  hdrBadgeTxt: { fontFamily: "Helvetica-Bold", fontSize: 7, color: C.dark },
+  hdrTitle: { fontFamily: "Helvetica-Bold", fontSize: 9, color: C.white },
+  hdrSub:   { fontSize: 6.5, color: "#9ca3af" },
+  hdrRight: { fontSize: 6.5, color: "#9ca3af" },
 
   /* fixed footer */
-  pageFooter: { position: "absolute", bottom: 0, left: 30, right: 30, height: 30, borderTopWidth: 0.5, borderTopColor: "#374151", flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  pageFooterText: { fontSize: 6.5, color: C.mutedLight },
+  ftr: {
+    position: "absolute", bottom: 0, left: 24, right: 24, height: 22,
+    borderTopWidth: 0.5, borderTopColor: "#374151",
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+  },
+  ftrTxt: { fontSize: 6, color: "#9ca3af" },
 
-  /* cover block */
-  cover: { marginBottom: 14, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: C.border },
-  coverTitle: { fontFamily: "Helvetica-Bold", fontSize: 22, color: C.dark, marginBottom: 4 },
-  coverDate:  { fontSize: 10, color: C.muted, marginBottom: 8 },
-  coverStats: { flexDirection: "row", gap: 10 },
-  coverStat:  { backgroundColor: C.greenPale, borderRadius: 6, paddingVertical: 6, paddingHorizontal: 10, alignItems: "center", minWidth: 80 },
-  coverStatValue: { fontFamily: "Helvetica-Bold", fontSize: 16, color: C.green },
-  coverStatLabel: { fontSize: 7, color: C.muted, marginTop: 2 },
+  /* summary strip */
+  strip: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    marginBottom: 10, paddingBottom: 8,
+    borderBottomWidth: 0.5, borderBottomColor: C.borderDk,
+  },
+  stripTitle: { fontFamily: "Helvetica-Bold", fontSize: 14, color: C.dark, flex: 1 },
+  stripDate:  { fontSize: 8, color: C.muted },
+  statBox:    { backgroundColor: C.pale, borderRadius: 4, paddingVertical: 4, paddingHorizontal: 8, alignItems: "center" },
+  statVal:    { fontFamily: "Helvetica-Bold", fontSize: 11, color: C.green },
+  statLbl:    { fontSize: 6, color: C.muted, marginTop: 1 },
+  warnBox:    { backgroundColor: C.warnBg, borderRadius: 4, paddingVertical: 4, paddingHorizontal: 8, alignItems: "center" },
+  warnVal:    { fontSize: 6.5, color: C.warn, fontFamily: "Helvetica-Bold" },
+  warnLbl:    { fontSize: 6, color: C.warn },
 
-  /* race block */
-  race:       { marginBottom: 14, borderRadius: 6, overflow: "hidden", borderWidth: 0.5, borderColor: C.border },
-  raceHeader: { backgroundColor: C.dark, paddingVertical: 7, paddingHorizontal: 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  raceCode:   { fontFamily: "Helvetica-Bold", fontSize: 9, color: C.cta, marginRight: 6 },
-  raceName:   { fontFamily: "Helvetica-Bold", fontSize: 10, color: C.white, flex: 1 },
-  raceMeta:   { fontSize: 7.5, color: "#d1d5db", marginTop: 2 },
-  raceTier:   { borderRadius: 4, paddingVertical: 2, paddingHorizontal: 6, fontSize: 7, fontFamily: "Helvetica-Bold" },
+  /* table */
+  tblHead: {
+    flexDirection: "row", backgroundColor: C.dark,
+    paddingVertical: 5, paddingHorizontal: 6, borderRadius: 3,
+    marginBottom: 1,
+  },
+  meetingRow: {
+    flexDirection: "row", alignItems: "center",
+    backgroundColor: C.green,
+    paddingVertical: 4, paddingHorizontal: 6,
+    marginTop: 4, marginBottom: 1,
+  },
+  meetingLabel: { fontFamily: "Helvetica-Bold", fontSize: 7.5, color: C.cta },
+  meetingName:  { fontSize: 7, color: "#9ca3af", marginLeft: 6, flex: 1 },
+  meetingDate:  { fontSize: 6.5, color: "#9ca3af" },
 
-  /* decision zone */
-  decision:      { flexDirection: "row", backgroundColor: C.greenPale, borderBottomWidth: 0.5, borderBottomColor: C.border },
-  decisionCell:  { flex: 1, paddingVertical: 8, paddingHorizontal: 10, alignItems: "center" },
-  decisionDivider: { width: 0.5, backgroundColor: C.border },
-  decisionLabel: { fontSize: 6.5, fontFamily: "Helvetica-Bold", color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 },
-  decisionValue: { fontFamily: "Helvetica-Bold", fontSize: 16, color: C.green },
-  decisionSub:   { fontSize: 7.5, color: C.muted, marginTop: 3 },
+  row:    { flexDirection: "row", paddingVertical: 4, paddingHorizontal: 6, borderBottomWidth: 0.3, borderBottomColor: C.border },
+  rowAlt: { backgroundColor: C.pale },
 
-  /* horse table */
-  tableHeader: { flexDirection: "row", backgroundColor: C.dark, paddingVertical: 5, paddingHorizontal: 6 },
-  tableRow:    { flexDirection: "row", paddingVertical: 4, paddingHorizontal: 6, borderBottomWidth: 0.3, borderBottomColor: C.border },
-  tableRowAlt: { backgroundColor: C.greenPale },
-  tableRowTop: { backgroundColor: "#e0f2e9" },
-  thNum:    { width: 24, fontFamily: "Helvetica-Bold", fontSize: 7, color: C.white },
-  thHorse:  { flex: 1,  fontFamily: "Helvetica-Bold", fontSize: 7, color: C.white },
-  thDriver: { width: 80, fontFamily: "Helvetica-Bold", fontSize: 7, color: C.white },
-  thOdds:   { width: 32, fontFamily: "Helvetica-Bold", fontSize: 7, color: C.white, textAlign: "right" },
-  thKz:     { width: 28, fontFamily: "Helvetica-Bold", fontSize: 7, color: C.white, textAlign: "right" },
-  thTop3:   { width: 36, fontFamily: "Helvetica-Bold", fontSize: 7, color: C.white, textAlign: "right" },
-  thWin:    { width: 36, fontFamily: "Helvetica-Bold", fontSize: 7, color: C.white, textAlign: "right" },
-  tdNum:    { width: 24, fontFamily: "Helvetica-Bold", fontSize: 8, color: C.green },
-  tdHorse:  { flex: 1,  fontSize: 8, fontFamily: "Helvetica-Bold", color: C.fg },
-  tdDriver: { width: 80, fontSize: 7.5, color: C.muted },
-  tdOdds:   { width: 32, fontSize: 8, color: C.fg, textAlign: "right" },
-  tdKz:     { width: 28, fontFamily: "Helvetica-Bold", fontSize: 8, color: C.green, textAlign: "right" },
-  tdTop3:   { width: 36, fontSize: 7.5, color: C.muted, textAlign: "right" },
-  tdWin:    { width: 36, fontSize: 7.5, color: C.muted, textAlign: "right" },
+  /* column widths */
+  cCode:   { width: 34, fontFamily: "Helvetica-Bold" },
+  cHour:   { width: 30 },
+  cName:   { flex: 1 },
+  cDist:   { width: 34 },
+  cOrdre:  { width: 88 },
+  cTicket: { width: 58 },
+  cConf:   { width: 26 },
+  cBase:   { width: 22 },
+  cSignal: { width: 38 },
 
-  /* signals */
-  signals:     { flexDirection: "row", padding: 8, gap: 6 },
-  signal:      { flex: 1, borderRadius: 4, padding: 6 },
-  signalBase:  { backgroundColor: "#e0f2e9", borderWidth: 0.5, borderColor: C.cta },
-  signalOut:   { backgroundColor: "#fef3c7", borderWidth: 0.5, borderColor: "#d97706" },
-  signalLong:  { backgroundColor: "#f0f9ff", borderWidth: 0.5, borderColor: "#0ea5e9" },
-  signalLabel: { fontSize: 6.5, fontFamily: "Helvetica-Bold", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 3 },
-  signalNum:   { fontFamily: "Helvetica-Bold", fontSize: 12, marginBottom: 1 },
-  signalName:  { fontSize: 7.5, color: C.muted },
-  signalDetail:{ fontSize: 6.5, color: C.mutedLight, marginTop: 2 },
-
-  /* music */
-  musicRow:  { paddingHorizontal: 10, paddingBottom: 6, flexDirection: "row", flexWrap: "wrap", gap: 4 },
-  musicChip: { backgroundColor: C.greenPale, borderRadius: 3, paddingVertical: 2, paddingHorizontal: 5, fontSize: 6.5, color: C.muted },
+  /* th / td */
+  th: { fontFamily: "Helvetica-Bold", fontSize: 6.5, color: C.white },
+  tdMuted: { color: C.muted },
+  tdBold:  { fontFamily: "Helvetica-Bold", color: C.fg },
+  tdGreen: { fontFamily: "Helvetica-Bold", color: C.green },
+  tdWarn:  { fontFamily: "Helvetica-Bold", color: C.warn },
+  tdFocus: { fontFamily: "Helvetica-Bold", color: C.cta },
+  tdBlue:  { fontFamily: "Helvetica-Bold", color: C.blue },
 });
 
-/* ─── Helpers ────────────────────────────────────────────────────── */
+/* ─── Helpers ─────────────────────────────────────────────────────── */
 function fmt(v: number | null | undefined) {
   if (v == null || !Number.isFinite(v as number)) return "—";
   return Math.round(v as number).toString();
 }
-function fmtProb(v: number | null | undefined) {
-  if (v == null || !Number.isFinite(v as number)) return "—";
-  return `${Math.round(v as number)}%`;
-}
-function fmtOdds(v: number) {
-  return v > 0 ? String(v) : "—";
-}
-function titleCase(s: string) {
-  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
-}
 function formatDate(d: string) {
-  return new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" }).format(new Date(`${d}T12:00:00`));
+  return new Intl.DateTimeFormat("fr-FR", {
+    weekday: "long", day: "2-digit", month: "long", year: "numeric",
+  }).format(new Date(`${d}T12:00:00`));
 }
 function formatMeters(distance: string) {
-  return String(distance).replace(/\D/g, "") || distance;
+  const m = String(distance).replace(/\D/g, "");
+  return m ? `${m}m` : distance;
 }
-function tierColor(tier: RaceAnalysis["bettingTier"]): string {
-  if (tier === "Focus") return C.cta;
-  if (tier === "Value") return "#d97706";
-  return C.mutedLight;
+function signalStyle(tier: RaceAnalysis["bettingTier"]) {
+  if (tier === "Focus") return s.tdFocus;
+  if (tier === "Value") return s.tdWarn;
+  return s.tdMuted;
 }
-function tierLabel(tier: RaceAnalysis["bettingTier"]): string {
+function signalLabel(tier: RaceAnalysis["bettingTier"]) {
   if (tier === "Focus") return "Focus";
   if (tier === "Value") return "Value";
   return "Prudence";
 }
 
-/* ─── Sub-components ─────────────────────────────────────────────── */
+/* ─── Race row ────────────────────────────────────────────────────── */
+function RaceRow({ race, idx }: { race: RaceAnalysis; idx: number }) {
+  const ctx      = raceToContext(race);
+  const arrival  = probableArrival(race.horses, ctx);
+  const recs     = buildBetRecommendations(race.horses, race.betTypes, ctx);
+  const topRec   = recs[0];
+  const base     = arrival[0];
+  const outsider = arrival.find((h) => h.id !== base?.id && h.valueIndex >= 10 && h.odds >= 6);
 
-function RaceBlock({ race }: { race: RaceAnalysis }) {
-  const ctx     = raceToContext(race);
-  const arrival = probableArrival(race.horses, ctx);
-  const recs    = buildBetRecommendations(race.horses, race.betTypes, ctx);
-  const topRec  = recs[0];
-  const base    = arrival[0];
-  const outsider = arrival.find((h) => h.valueIndex >= 10 && h.odds >= 6);
-  const tocard   = arrival.find((h) => h.odds >= 15 && h.top3Probability >= 18);
-
-  const isTrot = race.discipline === "Trot";
-  const driverLabel = isTrot ? "Driver" : "Jockey";
-
-  const ordreStr  = arrival.slice(0, 5).map((h) => h.number).join(" – ");
+  const ordreStr  = arrival.slice(0, 5).map((h) => h.number).join("-");
   const ticketStr = topRec ? topRec.ticket : "—";
-  const confStr   = topRec ? `${topRec.confidence}/99` : "—";
+  const confStr   = topRec ? `${topRec.confidence}` : "—";
+  const baseStr   = base ? `#${base.number}` : "—";
+  const outStr    = outsider ? `#${outsider.number}` : "—";
+  const distStr   = formatMeters(race.distance);
+  const isAlt     = idx % 2 === 1;
+
+  const codeParts = race.programCode.match(/^(R\d+)(C\d+)$/);
+  const codeDisp  = codeParts ? (
+    <Text style={[s.cCode, s.th, { color: C.cta }]}>{codeParts[1]}<Text style={{ color: C.white }}>{codeParts[2]}</Text></Text>
+  ) : (
+    <Text style={[s.cCode, s.tdGreen]}>{race.programCode}</Text>
+  );
 
   return (
-    <View style={s.race} wrap={false}>
-      {/* Header band */}
-      <View style={s.raceHeader}>
-        <View style={{ flex: 1 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 2 }}>
-            <Text style={s.raceCode}>{race.programCode}</Text>
-            <Text style={s.raceName}>{titleCase(race.name)}</Text>
-            <View style={[s.raceTier, { backgroundColor: tierColor(race.bettingTier) + "30", borderWidth: 0.5, borderColor: tierColor(race.bettingTier) }]}>
-              <Text style={{ color: tierColor(race.bettingTier), fontFamily: "Helvetica-Bold", fontSize: 7 }}>{tierLabel(race.bettingTier)}</Text>
-            </View>
-          </View>
-          <Text style={s.raceMeta}>
-            {race.startTime}  ·  {race.discipline}  ·  {formatMeters(race.distance)} m  ·  {race.racecourse}
-            {race.going ? `  ·  ${race.going}` : ""}
-            {race.weather ? `  ·  ${race.weather}` : ""}
-          </Text>
-        </View>
-      </View>
-
-      {/* Decision zone */}
-      <View style={s.decision}>
-        <View style={s.decisionCell}>
-          <Text style={s.decisionLabel}>Ordre probable</Text>
-          <Text style={s.decisionValue}>{ordreStr}</Text>
-          <Text style={s.decisionSub}>{arrival.length} partants</Text>
-        </View>
-        <View style={s.decisionDivider} />
-        <View style={s.decisionCell}>
-          <Text style={s.decisionLabel}>Ticket recommandé</Text>
-          <Text style={s.decisionValue}>{ticketStr}</Text>
-          <Text style={s.decisionSub}>{topRec ? topRec.label : "—"}</Text>
-        </View>
-        <View style={s.decisionDivider} />
-        <View style={s.decisionCell}>
-          <Text style={s.decisionLabel}>Confiance IA</Text>
-          <Text style={[s.decisionValue, { fontSize: 18 }]}>{confStr}</Text>
-          <Text style={s.decisionSub}>{topRec ? topRec.strategy : "—"}</Text>
-        </View>
-      </View>
-
-      {/* Horse table */}
-      <View style={s.tableHeader}>
-        <Text style={s.thNum}>N°</Text>
-        <Text style={s.thHorse}>Cheval</Text>
-        <Text style={s.thDriver}>{driverLabel}</Text>
-        <Text style={s.thOdds}>Cote</Text>
-        <Text style={s.thKz}>KZ</Text>
-        <Text style={s.thTop3}>Top 3</Text>
-        <Text style={s.thWin}>Gagnant</Text>
-      </View>
-      {arrival.map((horse, idx) => (
-        <HorseRow key={horse.id} horse={horse} idx={idx} />
-      ))}
-
-      {/* Signals */}
-      {(base || outsider || tocard) && (
-        <View style={s.signals}>
-          {base && (
-            <View style={[s.signal, s.signalBase]}>
-              <Text style={[s.signalLabel, { color: C.green }]}>Base</Text>
-              <Text style={[s.signalNum, { color: C.green }]}>#{base.number}</Text>
-              <Text style={s.signalName}>{titleCase(base.horse)}</Text>
-              <Text style={s.signalDetail}>KZ {fmt(base.kzScore)}  ·  Cote {fmtOdds(base.odds)}  ·  Top3 {fmtProb(base.top3Probability)}</Text>
-            </View>
-          )}
-          {outsider && outsider.id !== base?.id ? (
-            <View style={[s.signal, s.signalOut]}>
-              <Text style={[s.signalLabel, { color: "#b45309" }]}>Outsider</Text>
-              <Text style={[s.signalNum, { color: "#b45309" }]}>#{outsider.number}</Text>
-              <Text style={s.signalName}>{titleCase(outsider.horse)}</Text>
-              <Text style={s.signalDetail}>Edge +{Math.round(outsider.valueIndex)}%  ·  Cote {fmtOdds(outsider.odds)}</Text>
-            </View>
-          ) : (
-            <View style={[s.signal, s.signalOut]}>
-              <Text style={[s.signalLabel, { color: "#b45309" }]}>Outsider</Text>
-              <Text style={[s.signalNum, { color: "#b45309" }]}>—</Text>
-              <Text style={s.signalDetail}>Aucun signal value détecté</Text>
-            </View>
-          )}
-          {tocard && tocard.id !== base?.id && tocard.id !== outsider?.id ? (
-            <View style={[s.signal, s.signalLong]}>
-              <Text style={[s.signalLabel, { color: "#0284c7" }]}>Tocard surveillé</Text>
-              <Text style={[s.signalNum, { color: "#0284c7" }]}>#{tocard.number}</Text>
-              <Text style={s.signalName}>{titleCase(tocard.horse)}</Text>
-              <Text style={s.signalDetail}>Cote {fmtOdds(tocard.odds)}  ·  Top3 {fmtProb(tocard.top3Probability)}</Text>
-            </View>
-          ) : (
-            <View style={[s.signal, s.signalLong]}>
-              <Text style={[s.signalLabel, { color: "#0284c7" }]}>Tocard surveillé</Text>
-              <Text style={[s.signalNum, { color: "#0284c7" }]}>—</Text>
-              <Text style={s.signalDetail}>Aucun outsider surprise</Text>
-            </View>
-          )}
-        </View>
-      )}
-
-      {/* Musics / dernières performances */}
-      {arrival.some((h) => h.music) && (
-        <View style={s.musicRow}>
-          {arrival.slice(0, 6).filter((h) => h.music).map((h) => (
-            <View key={h.id} style={s.musicChip}>
-              <Text>#{h.number} {h.music?.slice(0, 20) ?? ""}</Text>
-            </View>
-          ))}
-        </View>
-      )}
+    <View style={[s.row, isAlt ? s.rowAlt : {}]}>
+      <Text style={[s.cCode, s.tdGreen]}>{race.programCode}</Text>
+      <Text style={[s.cHour, s.tdMuted]}>{race.startTime}</Text>
+      <Text style={[s.cName]} numberOfLines={1}>
+        {race.name.length > 26 ? race.name.slice(0, 25) + "…" : race.name}
+      </Text>
+      <Text style={[s.cDist, s.tdMuted]}>{distStr}</Text>
+      <Text style={[s.cOrdre, s.tdBold]}>{ordreStr}</Text>
+      <Text style={[s.cTicket, { fontFamily: "Helvetica-Bold", color: C.dark }]}>{ticketStr}</Text>
+      <Text style={[s.cConf, s.tdGreen]}>{confStr}</Text>
+      <Text style={[s.cBase, s.tdGreen]}>{baseStr}</Text>
+      <Text style={[s.cSignal, signalStyle(race.bettingTier)]}>{signalLabel(race.bettingTier)}</Text>
     </View>
   );
 }
 
-function HorseRow({ horse, idx }: { horse: HorsePrediction; idx: number }) {
-  const isTop = idx === 0;
-  const rowStyle = isTop ? s.tableRowTop : idx % 2 === 1 ? s.tableRowAlt : s.tableRow;
-  return (
-    <View style={[s.tableRow, rowStyle]}>
-      <Text style={[s.tdNum, isTop ? { color: C.dark } : {}]}>#{horse.number}</Text>
-      <Text style={[s.tdHorse, isTop ? { color: C.dark } : {}]}>{horse.horse.length > 20 ? horse.horse.slice(0, 20) + "." : horse.horse}</Text>
-      <Text style={s.tdDriver}>{horse.jockey.length > 14 ? horse.jockey.slice(0, 14) + "." : horse.jockey}</Text>
-      <Text style={s.tdOdds}>{fmtOdds(horse.odds)}</Text>
-      <Text style={[s.tdKz, isTop ? { color: C.dark } : {}]}>{fmt(horse.kzScore)}</Text>
-      <Text style={s.tdTop3}>{fmtProb(horse.top3Probability)}</Text>
-      <Text style={s.tdWin}>{fmtProb(horse.winProbability)}</Text>
-    </View>
-  );
-}
-
-/* ─── Main document ──────────────────────────────────────────────── */
-
+/* ─── Main document ───────────────────────────────────────────────── */
 export function PronosticsPDF({ races, date }: { races: RaceAnalysis[]; date: string }) {
   const sorted = [...races].sort((a, b) =>
-    a.startTime.localeCompare(b.startTime) || a.reunionNumber - b.reunionNumber || a.courseNumber - b.courseNumber,
+    a.startTime.localeCompare(b.startTime) ||
+    a.reunionNumber - b.reunionNumber ||
+    a.courseNumber - b.courseNumber,
   );
 
-  const totalHorses   = races.reduce((t, r) => t + r.horses.length, 0);
-  const reunionCount  = new Set(races.map((r) => r.reunionNumber)).size;
-  const todayLabel    = formatDate(date);
+  /* group by reunion */
+  const meetingMap = new Map<number, { name: string; racecourse: string; races: RaceAnalysis[] }>();
+  for (const race of sorted) {
+    if (!meetingMap.has(race.reunionNumber)) {
+      meetingMap.set(race.reunionNumber, { name: `R${race.reunionNumber}`, racecourse: race.racecourse, races: [] });
+    }
+    meetingMap.get(race.reunionNumber)!.races.push(race);
+  }
+  const meetings = [...meetingMap.entries()].sort((a, b) => a[0] - b[0]);
+
+  const reunionCount = meetings.length;
+  const totalHorses  = races.reduce((t, r) => t + r.horses.length, 0);
+  const todayLabel   = formatDate(date);
+
+  let globalIdx = 0;
 
   return (
     <Document
@@ -295,53 +200,72 @@ export function PronosticsPDF({ races, date }: { races: RaceAnalysis[]; date: st
     >
       <Page size="A4" style={s.page}>
 
-        {/* Fixed page header — every page */}
-        <View style={s.pageHeader} fixed>
-          <View style={s.pageHeaderLeft}>
-            <View style={s.pageHeaderBadge}>
-              <Text style={s.pageHeaderBadgeText}>KZ</Text>
-            </View>
-            <Text style={s.pageHeaderTitle}>Kayzen</Text>
-            <Text style={s.pageHeaderSub}>PRONOSTICS PMU — {date}</Text>
+        {/* Fixed header */}
+        <View style={s.hdr} fixed>
+          <View style={s.hdrLeft}>
+            <View style={s.hdrBadge}><Text style={s.hdrBadgeTxt}>KZ</Text></View>
+            <Text style={s.hdrTitle}>Kayzen</Text>
+            <Text style={s.hdrSub}>  PRONOSTICS PMU — {date}</Text>
           </View>
-          <Text style={s.pageHeaderRight} render={({ pageNumber, totalPages }) => `Page ${pageNumber} / ${totalPages}`} />
+          <Text style={s.hdrRight} render={({ pageNumber, totalPages }) => `p. ${pageNumber}/${totalPages}`} />
         </View>
 
-        {/* Cover block */}
-        <View style={s.cover}>
-          <Text style={s.coverTitle}>Pronostics du jour</Text>
-          <Text style={s.coverDate}>{todayLabel}</Text>
-          <View style={s.coverStats}>
-            <View style={s.coverStat}>
-              <Text style={s.coverStatValue}>{reunionCount}</Text>
-              <Text style={s.coverStatLabel}>Réunion{reunionCount > 1 ? "s" : ""}</Text>
-            </View>
-            <View style={s.coverStat}>
-              <Text style={s.coverStatValue}>{races.length}</Text>
-              <Text style={s.coverStatLabel}>Course{races.length > 1 ? "s" : ""}</Text>
-            </View>
-            <View style={s.coverStat}>
-              <Text style={s.coverStatValue}>{totalHorses}</Text>
-              <Text style={s.coverStatLabel}>Partants</Text>
-            </View>
-            <View style={[s.coverStat, { backgroundColor: C.warnBg }]}>
-              <Text style={[s.coverStatValue, { fontSize: 9, color: C.warn, marginTop: 3 }]}>Aide à la décision uniquement</Text>
-              <Text style={[s.coverStatLabel, { color: C.warn }]}>Aucun gain garanti</Text>
-            </View>
+        {/* Summary strip */}
+        <View style={s.strip}>
+          <Text style={s.stripTitle}>Pronostics du jour</Text>
+          <Text style={s.stripDate}>{todayLabel}</Text>
+          <View style={s.statBox}>
+            <Text style={s.statVal}>{reunionCount}</Text>
+            <Text style={s.statLbl}>Réunion{reunionCount > 1 ? "s" : ""}</Text>
+          </View>
+          <View style={s.statBox}>
+            <Text style={s.statVal}>{races.length}</Text>
+            <Text style={s.statLbl}>Courses</Text>
+          </View>
+          <View style={s.statBox}>
+            <Text style={s.statVal}>{totalHorses}</Text>
+            <Text style={s.statLbl}>Partants</Text>
+          </View>
+          <View style={s.warnBox}>
+            <Text style={s.warnVal}>Aide à la décision</Text>
+            <Text style={s.warnLbl}>Aucun gain garanti</Text>
           </View>
         </View>
 
-        {/* Race blocks */}
-        {sorted.map((race) => (
-          <RaceBlock key={race.id} race={race} />
+        {/* Table header */}
+        <View style={s.tblHead}>
+          <Text style={[s.cCode, s.th]}>Code</Text>
+          <Text style={[s.cHour, s.th]}>Heure</Text>
+          <Text style={[s.cName, s.th]}>Course</Text>
+          <Text style={[s.cDist, s.th]}>Dist.</Text>
+          <Text style={[s.cOrdre, s.th]}>Ordre probable IA</Text>
+          <Text style={[s.cTicket, s.th]}>Ticket</Text>
+          <Text style={[s.cConf, s.th]}>Conf.</Text>
+          <Text style={[s.cBase, s.th]}>Base</Text>
+          <Text style={[s.cSignal, s.th]}>Signal</Text>
+        </View>
+
+        {/* Meetings + races */}
+        {meetings.map(([reunionNum, meeting]) => (
+          <View key={reunionNum}>
+            <View style={s.meetingRow}>
+              <Text style={s.meetingLabel}>R{reunionNum}</Text>
+              <Text style={s.meetingName}>{meeting.racecourse}</Text>
+              <Text style={s.meetingDate}>{meeting.races.length} course{meeting.races.length > 1 ? "s" : ""}</Text>
+            </View>
+            {meeting.races.map((race) => {
+              const idx = globalIdx++;
+              return <RaceRow key={race.id} race={race} idx={idx} />;
+            })}
+          </View>
         ))}
 
-        {/* Fixed footer — every page */}
-        <View style={s.pageFooter} fixed>
-          <Text style={s.pageFooterText}>
-            Kayzen Turf AI — Outil d'aide à la décision. Aucun pronostic ne garantit un gain. Les jeux d'argent comportent des risques.
+        {/* Fixed footer */}
+        <View style={s.ftr} fixed>
+          <Text style={s.ftrTxt}>
+            Kayzen Turf AI — Outil d'aide à la décision uniquement. Les jeux d'argent comportent des risques.
           </Text>
-          <Text style={s.pageFooterText}>{date}</Text>
+          <Text style={s.ftrTxt}>{date}</Text>
         </View>
 
       </Page>
