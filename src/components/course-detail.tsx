@@ -625,29 +625,26 @@ function SimpleGrid({ children, title }: { children: ReactNode; title: string })
 function TicketCombinationsPanel({ recommendations }: { recommendations: ReturnType<typeof buildBetRecommendations> }) {
   if (!recommendations.length) return null;
   return (
-    <section className="mt-4 rounded-2xl border border-border bg-surface p-5">
-      <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+    <details className="mt-4 rounded-2xl border border-border bg-surface">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-muted">Tous les jeux possibles</p>
-          <h3 className="mt-1 font-display text-lg font-bold text-fg">Combinaisons par pari ouvert</h3>
+          <p className="text-xs font-bold uppercase tracking-widest text-muted">Jeux disponibles</p>
+          <p className="mt-0.5 text-sm font-medium text-fg">Top 5 tickets par pari — priorisés par confiance IA</p>
         </div>
-        <p className="text-xs text-muted">Champ priorisé par arrivée probable, favori fragile et tocard surveillé.</p>
-      </div>
-      <div className="grid gap-3 xl:grid-cols-2">
+        <span className="shrink-0 rounded-full border border-border bg-surface-sub px-3 py-1 text-xs font-bold text-muted">Voir →</span>
+      </summary>
+      <div className="grid gap-3 p-5 pt-0 xl:grid-cols-2">
         {recommendations.map((r) => (
           <article key={`variants-${r.type}`} className="rounded-xl border border-border bg-surface-sub p-3">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="font-semibold text-fg">{r.label}</p>
-                <p className="mt-0.5 text-xs text-muted">{r.variantCount} combinaisons calculées</p>
-              </div>
+            <div className="flex items-center justify-between gap-3">
+              <p className="font-semibold text-fg">{r.label}</p>
               <span className="rounded-full bg-accent-lo px-2 py-0.5 text-xs font-bold text-accent-text">{r.confidence}/99</span>
             </div>
             <TicketVariantCloud recommendation={r} />
           </article>
         ))}
       </div>
-    </section>
+    </details>
   );
 }
 
