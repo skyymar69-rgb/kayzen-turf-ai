@@ -6,6 +6,8 @@ const PRODUCT_LINKS = [
   { href: "/pronostics",            label: "Pronostics PMU" },
   { href: "/tarifs",                label: "Tarifs & offres" },
   { href: "/techniques-prediction", label: "Notre IA" },
+  { href: "/lexique",               label: "Lexique turf" },
+  { href: "/kz-score",             label: "Le KZ Score" },
 ];
 
 const LEGAL_LINKS = [
@@ -15,6 +17,7 @@ const LEGAL_LINKS = [
   { href: "/confidentialite",   label: "RGPD" },
   { href: "/cookies",           label: "Cookies" },
   { href: "/accessibilite",     label: "Accessibilité" },
+  { href: "/jeu-responsable",   label: "Jeu responsable" },
 ];
 
 export function SiteFooter() {

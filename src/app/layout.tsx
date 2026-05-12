@@ -79,6 +79,13 @@ export default function RootLayout({
         {/* amélioration #13 — preconnect pour les fonts */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* PWA manifest (#78) */}
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Kayzen Turf" />
+        <meta name="theme-color" content="#16a34a" />
         {/* JSON-LD */}
         <script
           type="application/ld+json"

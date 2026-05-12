@@ -11,6 +11,7 @@ const NAV_LINKS = [
   { href: "/pronostics",        label: "Pronostics" },
   { href: "/tarifs",            label: "Tarifs" },
   { href: "/techniques-prediction", label: "Notre IA" },
+  { href: "/lexique",           label: "Lexique" },
 ] as const;
 
 function parisToday(): string {

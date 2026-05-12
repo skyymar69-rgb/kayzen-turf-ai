@@ -88,18 +88,34 @@ export function CourseDetail({ race }: CourseDetailProps) {
 
   const topBet = betRecommendations[0];
 
+  /* #87 — raccourcis clavier 1-6 pour naviguer entre tabs */
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.target as HTMLElement).tagName === "INPUT" || (e.target as HTMLElement).tagName === "SELECT") return;
+      const idx = Number(e.key) - 1;
+      if (idx >= 0 && idx < TABS.length) setActiveTab(TABS[idx]);
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
+
   return (
     <main className="min-h-screen bg-bg pb-20" id="contenu-principal">
       <div className="mx-auto max-w-[1520px] px-4 pt-6 sm:px-6 lg:px-8">
 
-        {/* Breadcrumb */}
-        <Link
-          href="/"
-          className="mb-4 inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-3.5 py-2 text-sm font-medium text-muted shadow-sm transition hover:border-accent hover:text-accent-text"
-        >
-          <ArrowLeft size={14} />
-          Programme
-        </Link>
+        {/* Breadcrumb / retour réunion (#96 #97) */}
+        <nav aria-label="Fil d'Ariane" className="mb-4 flex flex-wrap items-center gap-2">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3.5 py-2 text-sm font-medium text-muted shadow-sm transition hover:border-accent hover:text-accent-text"
+          >
+            <ArrowLeft size={14} /> Accueil
+          </Link>
+          <span className="text-muted/40" aria-hidden="true">/</span>
+          <span className="text-sm text-muted">R{race.reunionNumber} — {race.racecourse.charAt(0).toUpperCase() + race.racecourse.slice(1).toLowerCase()}</span>
+          <span className="text-muted/40" aria-hidden="true">/</span>
+          <span className="text-sm font-semibold text-fg">{race.programCode} — {race.name.charAt(0).toUpperCase() + race.name.slice(1).toLowerCase()}</span>
+        </nav>
 
         {/* ── RACE HEADER (compact) ── */}
         <header className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
@@ -464,6 +480,8 @@ export function CourseDetail({ race }: CourseDetailProps) {
 
             {/* Facteurs IA */}
             <Panel title="Facteurs IA" icon={Brain}>
+              {selectedHorse && <SignalDominant horse={selectedHorse} />}
+              {selectedHorse && <KzBreakdown horse={selectedHorse} />}
               <div className="space-y-2">
                 {(selectedHorse?.factors ?? []).map((factor) => (
                   <div key={factor} className="flex gap-3 rounded-xl border border-border bg-surface-sub p-3">
@@ -476,6 +494,12 @@ export function CourseDetail({ race }: CourseDetailProps) {
                 )}
               </div>
             </Panel>
+
+            {/* Analyse des risques (#70) */}
+            <RaceRiskPanel race={race} />
+
+            {/* Comparateur deux chevaux (#94) */}
+            <HorseComparator arrival={arrival} selectedHorseId={selectedHorse?.id ?? ""} />
 
             {/* Avertissement + Actions modèle */}
             <div className="rounded-2xl border border-border bg-surface p-5">
@@ -545,7 +569,9 @@ function PartantsTable({
               <Result label="Top 3" value={fmtProb(horse.top3Probability)} />
               <Result label="Gains" value={formatEuros(horse.earnings)} />
             </div>
-            <p className="mt-2 line-clamp-2 text-xs text-muted">{horse.music ?? "Performances non disponibles"}</p>
+            <div className="mt-2 max-w-full overflow-hidden">
+              {horse.music ? <MusicSparkline music={horse.music} /> : <span className="text-xs text-muted">Performances non disponibles</span>}
+            </div>
           </button>
         ))}
       </div>
@@ -563,7 +589,7 @@ function PartantsTable({
                 discipline === "Trot" ? "Driver" : "Jockey",
                 "Entraîneur",
                 ...(discipline === "Trot" ? ["R/K"] : []),
-                "Gains", "Dernières performances", "Cote", "KZ",
+                "Gains", "Dernières performances", "Cote", "C.Juste", "KZ",
               ].map((h) => (
                 <th key={h} className="border-r border-white/10 px-3 py-4 font-semibold last:border-r-0" scope="col">{h}</th>
               ))}
@@ -604,8 +630,16 @@ function PartantsTable({
                 <td className="px-3 py-3.5 text-muted">{horse.trainer}</td>
                 {discipline === "Trot" && <td className="px-3 py-3.5 font-mono text-muted">{horse.reductionKm ?? "—"}</td>}
                 <td className="px-3 py-3.5 font-mono text-muted">{formatEuros(horse.earnings)}</td>
-                <td className="max-w-[340px] truncate px-3 py-3.5 text-muted" title={horse.music ?? ""}>{horse.music ?? "—"}</td>
+                <td className="max-w-[260px] px-3 py-3.5" title={horse.music ?? ""}>
+                  <MusicSparkline music={horse.music} />
+                </td>
                 <td className="px-3 py-3.5 font-mono text-fg">{horse.odds > 1 ? horse.odds : "—"}</td>
+                <td className={`px-3 py-3.5 font-mono text-xs ${horse.marketEdge > 5 ? "text-cta font-bold" : horse.marketEdge < -5 ? "text-danger" : "text-muted"}`}>
+                  {Number.isFinite(horse.fairOdds) && horse.fairOdds > 0 ? horse.fairOdds : "—"}
+                  {Number.isFinite(horse.marketEdge) && Math.abs(horse.marketEdge) > 5 && (
+                    <span className="ml-1 text-[9px]">{horse.marketEdge > 0 ? "↑" : "↓"}</span>
+                  )}
+                </td>
                 <td className={`px-3 py-3.5 font-mono font-bold ${selectedHorseId === horse.id ? "text-accent-text" : "text-accent-text/70"}`}>
                   {fmtScore(horse.kzScore)}
                 </td>
@@ -702,7 +736,20 @@ function TabPlaceholder({
                 </div>
                 <span className="shrink-0 rounded-full bg-accent-lo px-2 py-0.5 text-xs font-bold text-accent-text">{r.confidence}/99</span>
               </div>
-              <p className="mt-3 font-mono text-2xl font-bold text-accent-text">{r.ticket}</p>
+              <div className="mt-3 flex items-center gap-2">
+                {(r.type === "QUINTE_PLUS" || r.type === "QUARTE_PLUS") ? (
+                  <div className="flex flex-1 flex-wrap gap-1.5">
+                    {r.horses.map((h) => (
+                      <span key={h.number} className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent font-mono text-sm font-bold text-white shadow">
+                        {h.number}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="flex-1 font-mono text-2xl font-bold text-accent-text">{r.ticket}</p>
+                )}
+                <CopyTicketButton ticket={r.ticket} />
+              </div>
               <p className="mt-2 text-xs leading-5 text-muted">{r.rationale}</p>
               <TicketVariantCloud recommendation={r} />
             </article>
@@ -731,6 +778,21 @@ function TabPlaceholder({
             <Result label="Niveau de risque" value={formatRiskLabel(race.riskLevel)} />
           </div>
         </div>
+
+        {/* Radar + Bubble côte à côte */}
+        <div className="grid gap-5 sm:grid-cols-2">
+          {/* Radar chart cheval sélectionné (#64) */}
+          <div>
+            <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-muted">Profil radar — {arrival[0]?.horse?.split(" ")[0] ?? "Favori"}</p>
+            <HorseRadarChart horse={arrival[0]} />
+          </div>
+          {/* Bubble chart cote × KZ (#93) */}
+          <div>
+            <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-muted">Nuage — Cote vs KZ Score</p>
+            <OddsKzBubble horses={arrival} />
+          </div>
+        </div>
+
         {/* Distribution probabilités gagnant */}
         <div>
           <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-muted">Distribution — Probabilité gagnant</p>
@@ -1341,4 +1403,296 @@ function betTypeLabel(type: string): string {
     MULTI: "Multi", MINI_MULTI: "Mini-Multi",
   };
   return map[type] ?? type;
+}
+
+/* ─── parseMusicToPositions ──────────────────────────────────────── */
+function parseMusicToPositions(music?: string | null): number[] {
+  if (!music) return [];
+  const tokens = music.trim().split(/[\s\-–,]+/).filter(Boolean);
+  const positions: number[] = [];
+  for (const t of tokens) {
+    const n = parseInt(t, 10);
+    if (!isNaN(n) && n >= 0 && n <= 25) {
+      positions.push(Math.min(n === 0 ? 10 : n, 10));
+    } else if (/^[DATdatQq]/i.test(t)) {
+      positions.push(10);
+    }
+  }
+  return positions.slice(-8);
+}
+
+/* ─── MusicSparkline ─────────────────────────────────────────────── */
+function MusicSparkline({ music }: { music?: string | null }) {
+  const pts = parseMusicToPositions(music);
+  if (pts.length < 2) return <span className="text-xs text-muted">{music ?? "—"}</span>;
+  const W = 72, H = 20, PAD = 2, max = 10;
+  const coords = pts.map((p, i) => {
+    const x = PAD + (i / (pts.length - 1)) * (W - PAD * 2);
+    const y = H - PAD - ((max - p) / (max - 1)) * (H - PAD * 2);
+    return [x, y] as [number, number];
+  });
+  const recent3 = pts.slice(-3).reduce((a, b) => a + b, 0) / Math.min(3, pts.length);
+  const stroke = recent3 <= 3 ? "#22c55e" : recent3 <= 6 ? "#f59e0b" : "#ef4444";
+  const d = coords.map((c, i) => `${i === 0 ? "M" : "L"}${c[0].toFixed(1)},${c[1].toFixed(1)}`).join(" ");
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <svg aria-hidden="true" className="shrink-0" height={H} viewBox={`0 0 ${W} ${H}`} width={W}>
+        <path d={d} fill="none" stroke={stroke} strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" opacity="0.85" />
+        {coords.map(([x, y], i) => (
+          <circle key={i} cx={x.toFixed(1)} cy={y.toFixed(1)} r="1.5"
+            fill={i === coords.length - 1 ? stroke : "transparent"} />
+        ))}
+      </svg>
+      <span className="truncate text-xs text-muted">{music}</span>
+    </span>
+  );
+}
+
+/* ─── CopyTicketButton (#80) ─────────────────────────────────────── */
+function CopyTicketButton({ ticket }: { ticket: string }) {
+  const [copied, setCopied] = useState(false);
+  function handleCopy() {
+    navigator.clipboard.writeText(ticket).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+  return (
+    <button
+      aria-label="Copier le ticket"
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-surface transition hover:border-accent hover:text-accent-text"
+      onClick={handleCopy}
+      type="button"
+    >
+      {copied ? <Check size={14} className="text-accent-text" /> : <Copy size={14} className="text-muted" />}
+    </button>
+  );
+}
+
+/* ─── SignalDominant (#68) ───────────────────────────────────────── */
+function SignalDominant({ horse }: { horse: HorsePrediction }) {
+  const keywords: Record<string, { label: string; cls: string }> = {
+    forme:      { label: "Forme récente",   cls: "bg-green-100 text-green-800" },
+    value:      { label: "Value bet",       cls: "bg-amber-100 text-amber-800" },
+    gagnant:    { label: "Signal gagnant",  cls: "bg-accent-lo text-accent-text" },
+    favori:     { label: "Favori confirmé", cls: "bg-accent-lo text-accent-text" },
+    outsider:   { label: "Outsider",        cls: "bg-sky-100 text-sky-800" },
+    distance:   { label: "Distance idéale", cls: "bg-purple-100 text-purple-800" },
+    terrain:    { label: "Terrain favori",  cls: "bg-lime-100 text-lime-800" },
+    jockey:     { label: "Jockey en forme", cls: "bg-orange-100 text-orange-800" },
+    progression:{ label: "En progression",  cls: "bg-cyan-100 text-cyan-800" },
+  };
+  const factorText = (horse.factors ?? []).join(" ").toLowerCase();
+  const match = Object.entries(keywords).find(([key]) => factorText.includes(key));
+  const dominant = match
+    ? match[1]
+    : horse.valueIndex > 12
+      ? { label: "Value bet", cls: "bg-amber-100 text-amber-800" }
+      : horse.confidence === "Forte"
+        ? { label: "Forte confiance", cls: "bg-green-100 text-green-800" }
+        : null;
+  if (!dominant) return null;
+  return (
+    <div className="mb-3 flex items-center gap-2">
+      <Target size={13} className="shrink-0 text-muted" />
+      <span className="text-[10px] text-muted">Signal dominant</span>
+      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${dominant.cls}`}>{dominant.label}</span>
+    </div>
+  );
+}
+
+/* ─── KzBreakdown ────────────────────────────────────────────────── */
+function KzBreakdown({ horse }: { horse: HorsePrediction }) {
+  const rows = [
+    { label: "KZ Score",    value: horse.kzScore,                                                                     max: 99  },
+    { label: "P(Gagnant)",  value: horse.winProbability,                                                              max: 100 },
+    { label: "P(Top 3)",    value: horse.top3Probability,                                                             max: 100 },
+    { label: "Value Index", value: Math.max(0, horse.valueIndex),                                                     max: 30  },
+    { label: "Confiance",   value: horse.confidence === "Forte" ? 90 : horse.confidence === "Moyenne" ? 55 : 25,      max: 100 },
+  ];
+  return (
+    <div className="mb-4 rounded-xl border border-border bg-surface-sub p-3">
+      <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-muted">Décomposition KZ</p>
+      <div className="grid gap-2">
+        {rows.map((r) => (
+          <div key={r.label} className="grid grid-cols-[72px_1fr_36px] items-center gap-2">
+            <span className="truncate text-[10px] font-bold text-muted">{r.label}</span>
+            <div className="h-1.5 overflow-hidden rounded-full bg-border">
+              <div className="h-full rounded-full bg-accent/70 transition-all"
+                style={{ width: `${safeWidth((r.value / r.max) * 100, 2)}%` }} />
+            </div>
+            <span className="text-right font-mono text-[10px] font-bold text-fg">
+              {r.label === "Confiance" ? horse.confidence.slice(0, 3) : Math.round(r.value)}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─── HorseComparator (#94) ─────────────────────────────────────── */
+function HorseComparator({ arrival, selectedHorseId }: { arrival: HorsePrediction[]; selectedHorseId: string }) {
+  const [compareId, setCompareId] = useState<string>("");
+  const horseA = arrival.find((h) => h.id === selectedHorseId);
+  const horseB = arrival.find((h) => h.id === compareId);
+  const rows: Array<{ label: string; getVal: (h: HorsePrediction) => string }> = [
+    { label: "KZ Score",   getVal: (h) => String(Math.round(h.kzScore)) },
+    { label: "P(Gagnant)", getVal: (h) => `${Math.round(h.winProbability)}%` },
+    { label: "P(Top 3)",   getVal: (h) => `${Math.round(h.top3Probability)}%` },
+    { label: "Cote",       getVal: (h) => h.odds > 0 ? String(h.odds) : "—" },
+    { label: "Value",      getVal: (h) => `${Math.round(h.valueIndex)}%` },
+    { label: "Confiance",  getVal: (h) => h.confidence },
+  ];
+  return (
+    <div className="rounded-2xl border border-border bg-surface p-4">
+      <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-muted">Comparer deux chevaux</p>
+      <select
+        className="h-9 w-full rounded-xl border border-border bg-surface-sub px-3 text-sm text-fg outline-none"
+        value={compareId}
+        onChange={(e) => setCompareId(e.target.value)}
+      >
+        <option value="">Choisir un cheval à comparer…</option>
+        {arrival.filter((h) => h.id !== selectedHorseId).map((h) => (
+          <option key={h.id} value={h.id}>#{h.number} {h.horse}</option>
+        ))}
+      </select>
+      {horseA && horseB && (
+        <div className="mt-3 overflow-hidden rounded-xl border border-border">
+          <div className="grid grid-cols-3 border-b border-border bg-surface-sub px-3 py-2 text-[10px] font-bold uppercase text-muted">
+            <span className="truncate">{horseA.horse.split(" ")[0]}</span>
+            <span className="text-center">vs</span>
+            <span className="truncate text-right">{horseB.horse.split(" ")[0]}</span>
+          </div>
+          {rows.map(({ label, getVal }) => {
+            const vA = getVal(horseA), vB = getVal(horseB);
+            const numA = parseFloat(vA), numB = parseFloat(vB);
+            const aWins = Number.isFinite(numA) && Number.isFinite(numB) && numA > numB;
+            const bWins = Number.isFinite(numA) && Number.isFinite(numB) && numB > numA;
+            return (
+              <div key={label} className="grid grid-cols-3 border-b border-border px-3 py-2 text-xs last:border-b-0">
+                <span className={`font-mono font-bold ${aWins ? "text-accent-text" : "text-muted"}`}>{vA}</span>
+                <span className="text-center text-[10px] text-muted">{label}</span>
+                <span className={`text-right font-mono font-bold ${bWins ? "text-accent-text" : "text-muted"}`}>{vB}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── HorseRadarChart (#64) ──────────────────────────────────────── */
+function HorseRadarChart({ horse }: { horse?: HorsePrediction | null }) {
+  if (!horse) return null;
+  const CX = 80, CY = 80, R = 60;
+  const axes = [
+    { label: "KZ",     val: horse.kzScore / 99 },
+    { label: "P(Win)", val: horse.winProbability / 100 },
+    { label: "Top3",   val: horse.top3Probability / 100 },
+    { label: "Value",  val: Math.min(Math.max(horse.valueIndex, 0) / 30, 1) },
+    { label: "Conf.",  val: horse.confidence === "Forte" ? 0.9 : horse.confidence === "Moyenne" ? 0.55 : 0.25 },
+  ];
+  const n = axes.length;
+  function point(i: number, r: number): [number, number] {
+    const angle = (i * 2 * Math.PI) / n - Math.PI / 2;
+    return [CX + r * Math.cos(angle), CY + r * Math.sin(angle)];
+  }
+  const bgPts = axes.map((_, i) => point(i, R).join(",")).join(" ");
+  const dataPts = axes.map((a, i) => point(i, a.val * R).join(",")).join(" ");
+  return (
+    <svg viewBox="0 0 160 160" width="100%" className="max-w-[200px] mx-auto block" aria-label="Radar profil cheval">
+      {[0.25, 0.5, 0.75, 1].map((f) => (
+        <polygon key={f} points={axes.map((_, i) => point(i, f * R).join(",")).join(" ")}
+          fill="none" stroke="var(--color-border,#e2e8f0)" strokeWidth="0.8" opacity="0.6" />
+      ))}
+      {axes.map((_, i) => {
+        const [x, y] = point(i, R);
+        return <line key={i} x1={CX} y1={CY} x2={x} y2={y} stroke="var(--color-border,#e2e8f0)" strokeWidth="0.8" />;
+      })}
+      <polygon points={dataPts} fill="var(--color-accent,#16a34a)" fillOpacity="0.25" stroke="var(--color-accent,#16a34a)" strokeWidth="1.5" />
+      {axes.map((a, i) => {
+        const [dx, dy] = point(i, R + 14);
+        return <text key={i} x={dx} y={dy} textAnchor="middle" dominantBaseline="middle" fontSize="9" fill="var(--color-muted,#6b7280)">{a.label}</text>;
+      })}
+    </svg>
+  );
+}
+
+/* ─── OddsKzBubble (#93) ─────────────────────────────────────────── */
+function OddsKzBubble({ horses }: { horses: HorsePrediction[] }) {
+  const W = 260, H = 160, PX = 30, PY = 20;
+  const valid = horses.filter((h) => h.odds > 0 && Number.isFinite(h.kzScore));
+  if (valid.length < 2) return <p className="text-sm text-muted">Données insuffisantes.</p>;
+  const maxOdds = Math.max(...valid.map((h) => h.odds), 1);
+  const maxKz   = Math.max(...valid.map((h) => h.kzScore), 1);
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" aria-label="Bubble chart cote vs KZ Score">
+      <line x1={PX} y1={PY} x2={PX} y2={H - PY} stroke="var(--color-border,#e2e8f0)" strokeWidth="1" />
+      <line x1={PX} y1={H - PY} x2={W - 10} y2={H - PY} stroke="var(--color-border,#e2e8f0)" strokeWidth="1" />
+      <text x={PX - 4} y={PY + 4} fontSize="8" fill="var(--color-muted,#6b7280)" textAnchor="end">KZ↑</text>
+      <text x={W - 10} y={H - PY + 10} fontSize="8" fill="var(--color-muted,#6b7280)" textAnchor="end">Cote→</text>
+      {valid.map((h) => {
+        const cx = PX + ((h.odds / maxOdds) * (W - PX - 10));
+        const cy = (H - PY) - ((h.kzScore / maxKz) * (H - PY - PY));
+        const r  = Math.max(4, Math.min(10, (h.top3Probability / 100) * 12));
+        const isValue = h.valueIndex > 10;
+        return (
+          <g key={h.id}>
+            <circle cx={cx} cy={cy} r={r}
+              fill={isValue ? "var(--color-accent,#16a34a)" : "var(--color-border,#e2e8f0)"}
+              fillOpacity={isValue ? 0.7 : 0.5}
+              stroke={isValue ? "var(--color-accent,#16a34a)" : "var(--color-muted,#6b7280)"}
+              strokeWidth="1" />
+            <text x={cx} y={cy - r - 2} textAnchor="middle" fontSize="8" fill="var(--color-fg,#1e293b)">#{h.number}</text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+/* ─── Analyse des risques (#70) intégrée dans le sidebar ─────────── */
+export function RaceRiskPanel({ race }: { race: RaceAnalysis }) {
+  const risks: Array<{ label: string; level: "low" | "mid" | "high"; detail: string }> = [
+    {
+      label: "Volatilité marché",
+      level: race.marketVolatility > 25 ? "high" : race.marketVolatility > 15 ? "mid" : "low",
+      detail: `${race.marketVolatility}% — ${race.marketVolatility > 25 ? "Cotes fluctuantes, valeur incertaine" : race.marketVolatility > 15 ? "Marché instable" : "Marché stable"}`,
+    },
+    {
+      label: "Consensus modèle",
+      level: race.modelConsensus < 55 ? "high" : race.modelConsensus < 70 ? "mid" : "low",
+      detail: `${race.modelConsensus}% — ${race.modelConsensus < 55 ? "Désaccord fort entre simulations" : race.modelConsensus < 70 ? "Convergence partielle" : "Signaux convergents"}`,
+    },
+    {
+      label: "Niveau de risque",
+      level: race.riskLevel === "Speculatif" ? "high" : race.riskLevel === "Equilibre" ? "mid" : "low",
+      detail: race.riskLevel === "Speculatif" ? "Course spéculative — mises réduites" : race.riskLevel === "Equilibre" ? "Équilibré — approche mixte" : "Profil prudent",
+    },
+    {
+      label: "Qualité de course",
+      level: race.raceQualityScore < 55 ? "high" : race.raceQualityScore < 70 ? "mid" : "low",
+      detail: `${race.raceQualityScore}/100 — ${race.raceQualityScore < 55 ? "Données limitées" : race.raceQualityScore < 70 ? "Données partielles" : "Données complètes"}`,
+    },
+  ];
+  const clsMap = { low: "bg-green-100 text-green-700", mid: "bg-amber-100 text-amber-700", high: "bg-red-100 text-red-700" };
+  const lblMap = { low: "Faible", mid: "Moyen", high: "Élevé" };
+  return (
+    <div className="rounded-2xl border border-border bg-surface p-4">
+      <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-muted">Analyse des risques</p>
+      <div className="grid gap-2">
+        {risks.map(({ label, level, detail }) => (
+          <div key={label} className="flex items-start justify-between gap-2 rounded-xl border border-border bg-surface-sub px-3 py-2">
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-fg">{label}</p>
+              <p className="mt-0.5 text-[10px] text-muted">{detail}</p>
+            </div>
+            <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${clsMap[level]}`}>{lblMap[level]}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }

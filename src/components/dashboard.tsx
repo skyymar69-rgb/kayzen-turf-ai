@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {
   ArrowRight,
+  ArrowUpDown,
   BarChart3,
   BellRing,
   Brain,
@@ -57,6 +58,9 @@ export function Dashboard({ races }: DashboardProps) {
   const [disciplineFilter, setDisciplineFilter] = useState<DisciplineFilter>("Tous");
   const [selectedMeetingKey, setSelectedMeetingKey] = useState("");
   const [query, setQuery]                   = useState("");
+  const [valueBetsOnly, setValueBetsOnly]   = useState(false);
+  const [meetingSort, setMeetingSort]       = useState<"numero" | "score">("numero");
+  const [compactView, setCompactView]       = useState(false);
   const debounceRef   = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -66,12 +70,14 @@ export function Dashboard({ races }: DashboardProps) {
     [dayFilter, races],
   );
   const meetings   = useMemo(() => groupRacesByMeeting(dayRaces), [dayRaces]);
-  const filteredMeetings = useMemo(
-    () => disciplineFilter === "Tous"
+  const filteredMeetings = useMemo(() => {
+    const base = disciplineFilter === "Tous"
       ? meetings
-      : meetings.filter((m) => m.races.some((r) => r.discipline === disciplineFilter)),
-    [meetings, disciplineFilter],
-  );
+      : meetings.filter((m) => m.races.some((r) => r.discipline === disciplineFilter));
+    return meetingSort === "score"
+      ? [...base].sort((a, b) => b.score - a.score)
+      : base;
+  }, [meetings, disciplineFilter, meetingSort]);
   const timelineRace = useMemo(() => selectTimelineRace(dayRaces, currentMinute), [currentMinute, dayRaces]);
 
   const selectedMeeting =
@@ -86,6 +92,7 @@ export function Dashboard({ races }: DashboardProps) {
 
   const normalizedQuery = query.trim().toLowerCase();
   const visibleRaces = selectedMeeting?.races.filter((r) => {
+    if (valueBetsOnly && !r.horses.some((h) => h.valueIndex > 10)) return false;
     if (!normalizedQuery) return true;
     return `${r.programCode} ${r.name} ${r.specialty} ${r.startTime}`.toLowerCase().includes(normalizedQuery);
   }) ?? [];
@@ -352,6 +359,86 @@ export function Dashboard({ races }: DashboardProps) {
           </div>
         </section>
 
+        {/* ── TIMELINE DES COURSES DU JOUR (#54) ───────────────── */}
+        {dayRaces.length > 0 && (
+          <section aria-label="Timeline des courses" className="mb-4 overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+            <div className="flex items-center justify-between border-b border-border px-5 py-3">
+              <p className="text-xs font-bold uppercase tracking-widest text-muted">Timeline · {dayRaces.length} courses</p>
+              <p className="text-xs text-muted">{dayRaces[0]?.startTime ?? "—"} → {dayRaces[dayRaces.length - 1]?.startTime ?? "—"}</p>
+            </div>
+            <div className="flex overflow-x-auto kz-scroll px-4 py-3 gap-2">
+              {[...dayRaces].sort((a, b) => a.startTime.localeCompare(b.startTime)).map((race) => {
+                const status  = raceStatus(race, currentMinute);
+                const isPast  = status === "Arrivée disponible" || (!status.includes("imminent") && !status.includes("Départ à") && !status.includes("disponible") && minutesFromStartTime(race.startTime) < currentMinute);
+                const isNow   = status.includes("imminent");
+                const isValue = race.horses.some((h) => h.valueIndex > 10);
+                const discCls = race.discipline === "Trot" ? "bg-sky-500" : race.discipline === "Obstacle" ? "bg-orange-500" : "bg-violet-500";
+                return (
+                  <Link
+                    key={race.id}
+                    href={`/races/${encodeURIComponent(race.id)}`}
+                    className={`group flex shrink-0 flex-col gap-1 rounded-xl border px-3 py-2.5 text-center transition min-w-[90px] ${
+                      isNow   ? "border-cta/50 bg-cta/10 ring-1 ring-cta/30" :
+                      isPast  ? "border-border bg-surface-sub opacity-60" :
+                               "border-border bg-surface hover:border-accent/40 hover:bg-accent-lo"
+                    }`}
+                  >
+                    <span className="font-mono text-[11px] font-bold text-muted">{race.startTime}</span>
+                    <span className={`mx-auto rounded px-1.5 py-0.5 text-[10px] font-bold text-white ${discCls}`}>{race.programCode}</span>
+                    <span className="truncate text-[10px] text-muted max-w-[80px]">{titleCase(race.name).split(" ")[0]}</span>
+                    {isNow  && <span className="h-1 w-1 rounded-full bg-cta mx-auto animate-pulse" />}
+                    {isValue && !isNow && <span className="text-[9px] font-bold text-amber-600">Value</span>}
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* ── COURSE PHARE DU JOUR ──────────────────────────────── */}
+        {starRaceId && (() => {
+          const star = dayRaces.find((r) => r.id === starRaceId);
+          if (!star) return null;
+          const best = probableArrival(star.horses, raceToContext(star))[0];
+          const top3 = probableArrival(star.horses, raceToContext(star)).slice(0, 3);
+          return (
+            <section aria-label="Course phare du jour" className="mb-4">
+              <Link
+                href={`/races/${encodeURIComponent(star.id)}`}
+                className="group flex flex-col gap-4 overflow-hidden rounded-2xl border border-accent/30 bg-accent-lo p-5 shadow-sm transition hover:border-accent/60 hover:bg-accent-lo sm:flex-row sm:items-center"
+              >
+                <div className="flex shrink-0 items-center gap-3">
+                  <div className="grid h-12 w-12 place-items-center rounded-xl bg-accent font-mono text-lg font-bold text-white shadow">
+                    <Star size={22} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-accent-text">Course phare du jour</p>
+                    <p className="font-mono text-xs text-muted">{star.programCode} · {star.startTime}</p>
+                  </div>
+                </div>
+                <div className="flex flex-1 flex-col gap-1">
+                  <h2 className="font-display text-lg font-bold text-fg group-hover:text-accent-text leading-tight">
+                    {star.name.charAt(0).toUpperCase() + star.name.slice(1).toLowerCase()}
+                  </h2>
+                  <p className="text-xs text-muted">{star.racecourse.charAt(0).toUpperCase() + star.racecourse.slice(1).toLowerCase()} · {star.distance} · {star.discipline}</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+                  {top3.map((h, i) => (
+                    <span key={h.id} className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-bold ${i === 0 ? "bg-accent text-white" : "bg-surface border border-border text-fg"}`}>
+                      <span className="font-mono">#{h.number}</span> {h.horse.split(" ")[0]}
+                    </span>
+                  ))}
+                  {best && best.valueIndex > 8 && (
+                    <span className="flex items-center gap-1 rounded-lg bg-surface border border-border px-2.5 py-1.5 text-xs font-bold text-accent-text">
+                      <Zap size={11} /> Value +{Math.round(best.valueIndex)}%
+                    </span>
+                  )}
+                </div>
+              </Link>
+            </section>
+          );
+        })()}
+
         {/* ── INSIGHTS DU JOUR ──────────────────────────────────── */}
         <section aria-label="Indicateurs du jour" className="mb-4 grid gap-3 sm:grid-cols-3">
           <InsightCard
@@ -445,6 +532,24 @@ export function Dashboard({ races }: DashboardProps) {
                 <span><strong className="text-fg">{dayRaces.length}</strong> courses</span>
                 <span><strong className="text-fg">{dayFeatureCount}</strong> temps fort{dayFeatureCount > 1 ? "s" : ""}</span>
               </div>
+              <button
+                aria-label={meetingSort === "score" ? "Trier par numéro de réunion" : "Trier par score"}
+                className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold transition ${meetingSort === "score" ? "border-accent bg-accent-lo text-accent-text" : "border-border bg-surface text-muted hover:border-accent/40"}`}
+                onClick={() => setMeetingSort((s) => s === "score" ? "numero" : "score")}
+                type="button"
+                title="Trier les réunions"
+              >
+                <ArrowUpDown size={12} /> {meetingSort === "score" ? "Par score" : "Par R#"}
+              </button>
+              <button
+                aria-label={compactView ? "Vue étendue" : "Vue condensée"}
+                className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold transition ${compactView ? "border-accent bg-accent-lo text-accent-text" : "border-border bg-surface text-muted hover:border-accent/40"}`}
+                onClick={() => setCompactView((v) => !v)}
+                type="button"
+                title="Changer la densité d'affichage"
+              >
+                <BarChart3 size={12} /> {compactView ? "Condensé" : "Étendu"}
+              </button>
               <PdfDownloadButton date={dateForDay(races, dayFilter)} />
             </div>
           </div>
@@ -484,6 +589,14 @@ export function Dashboard({ races }: DashboardProps) {
                           {h}
                         </span>
                       ))}
+                      {(() => {
+                        const vbCount = meeting.races.filter((r) => r.horses.some((h) => h.valueIndex > 10)).length;
+                        return vbCount > 0 ? (
+                          <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${active ? "bg-amber-400/30 text-amber-200" : "bg-amber-100 text-amber-700"}`}>
+                            {vbCount} value
+                          </span>
+                        ) : null;
+                      })()}
                     </div>
                     {active && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/40" />}
                   </button>
@@ -509,6 +622,14 @@ export function Dashboard({ races }: DashboardProps) {
                   </button>
                 ))}
               </div>
+              <button
+                aria-pressed={valueBetsOnly}
+                className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold transition ${valueBetsOnly ? "border-amber-400 bg-amber-400/10 text-amber-700" : "border-border bg-surface text-muted hover:border-amber-400/50 hover:text-amber-700"}`}
+                onClick={() => setValueBetsOnly((v) => !v)}
+                type="button"
+              >
+                <Zap size={12} /> Value bets
+              </button>
               <span className="hidden text-sm text-muted sm:inline">{selectedMeeting.strategy}</span>
             </div>
             <div className="relative flex items-center gap-2 rounded-xl border border-border bg-surface-sub px-3 py-2 text-sm sm:min-w-[220px]" role="search">
@@ -539,8 +660,34 @@ export function Dashboard({ races }: DashboardProps) {
             </span>
           </div>
 
+          {/* Vue condensée (#60) */}
+          {compactView && (
+            <div className="grid gap-px bg-border p-0 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {visibleRaces.map((race) => {
+                const active = race.id === selectedRace.id;
+                const signal = raceOpportunity(race);
+                return (
+                  <Link
+                    key={race.id}
+                    href={`/races/${encodeURIComponent(race.id)}`}
+                    className={`flex items-center gap-3 bg-surface px-4 py-2.5 transition hover:bg-surface-sub ${active ? "bg-accent-lo" : ""}`}
+                  >
+                    <span className={`shrink-0 font-mono text-sm font-bold w-8 ${active ? "text-accent-text" : "text-muted"}`}>C{race.courseNumber}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-semibold text-fg">{titleCase(race.name)}</p>
+                      <p className="text-[10px] text-muted">{race.startTime} · {race.discipline}</p>
+                    </div>
+                    <span className={`shrink-0 text-[10px] font-bold ${signal.startsWith("Value") || signal.startsWith("Base") ? "text-accent-text" : "text-muted"}`}>
+                      {signal.split(" ")[0]}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+
           {/* Table desktop */}
-          <div className="hidden overflow-x-auto md:block">
+          <div className={`overflow-x-auto md:block ${compactView ? "hidden" : "hidden md:block"}`}>
             <table className="w-full min-w-[900px] border-collapse text-left">
               <caption className="sr-only">Courses de la réunion {selectedMeeting.racecourse}</caption>
               <thead>
@@ -787,6 +934,75 @@ export function Dashboard({ races }: DashboardProps) {
             </div>
           </section>
         )}
+
+        {/* ── BARRE PROGRESSION + DISTRIBUTION KZ (#53 #90) ────── */}
+        {dayRaces.length > 0 && (() => {
+          const kzScores  = dayRaces.flatMap((r) => r.horses.map((h) => h.kzScore)).filter((s) => Number.isFinite(s));
+          const buckets   = [0, 20, 40, 60, 80, 99];
+          const labels    = ["0-20", "20-40", "40-60", "60-80", "80+"];
+          const counts    = labels.map((_, i) => kzScores.filter((s) => s >= buckets[i] && s < buckets[i + 1]).length);
+          const maxCount  = Math.max(...counts, 1);
+          const valueBetRaces = dayRaces.filter((r) => r.horses.some((h) => h.valueIndex > 10));
+          return (
+            <section className="mt-4 grid gap-4 lg:grid-cols-2" aria-label="Distribution et value bets">
+              {/* Distribution KZ */}
+              <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Distribution · {kzScores.length} chevaux</p>
+                <h2 className="mt-0.5 font-display text-lg font-bold text-fg">Score KZ du jour</h2>
+                <div className="mt-4 flex items-end gap-2">
+                  {counts.map((count, i) => (
+                    <div key={labels[i]} className="flex flex-1 flex-col items-center gap-1">
+                      <span className="text-[10px] font-bold text-accent-text">{count > 0 ? count : ""}</span>
+                      <div className="w-full overflow-hidden rounded-t-md bg-border" style={{ height: 64 }}>
+                        <div
+                          className="w-full rounded-t-md bg-accent/70 transition-all"
+                          style={{ height: `${Math.round((count / maxCount) * 100)}%`, marginTop: "auto" }}
+                        />
+                      </div>
+                      <span className="text-[9px] text-muted">{labels[i]}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-border">
+                  <div
+                    className="h-full rounded-full bg-accent transition-all"
+                    style={{ width: `${Math.round((dayRaces.length / Math.max(dayRaces.length, 1)) * 100)}%` }}
+                  />
+                </div>
+                <p className="mt-1.5 text-xs text-muted"><strong className="text-fg">{dayRaces.length}</strong> courses analysées · <strong className="text-fg">{dayRaces.reduce((t, r) => t + r.horses.length, 0)}</strong> partants</p>
+              </div>
+              {/* Timeline value bets */}
+              <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Timeline · {valueBetRaces.length} course{valueBetRaces.length !== 1 ? "s" : ""}</p>
+                <h2 className="mt-0.5 font-display text-lg font-bold text-fg">Value Bets du jour</h2>
+                {valueBetRaces.length === 0 ? (
+                  <p className="mt-4 text-sm text-muted">Aucun signal value détecté sur ce programme.</p>
+                ) : (
+                  <div className="mt-4 grid gap-2">
+                    {valueBetRaces.slice(0, 5).map((race) => {
+                      const best = race.horses.slice().sort((a, b) => b.valueIndex - a.valueIndex)[0];
+                      return (
+                        <Link
+                          key={race.id}
+                          href={`/races/${encodeURIComponent(race.id)}`}
+                          className="flex items-center gap-3 rounded-xl border border-border bg-surface-sub px-3 py-2.5 transition hover:border-accent/30 hover:bg-accent-lo"
+                        >
+                          <span className="font-mono text-xs font-bold text-muted w-12 shrink-0">{race.startTime}</span>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-xs font-semibold text-fg">{race.programCode} · {race.name.charAt(0).toUpperCase() + race.name.slice(1).toLowerCase()}</p>
+                          </div>
+                          <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+                            #{best.number} +{Math.round(best.valueIndex)}%
+                          </span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </section>
+          );
+        })()}
 
         {/* ── PERFORMANCES IA — mémoire & auto-apprentissage ────── */}
         <section className="mt-4 rounded-2xl border border-border bg-surface shadow-sm" aria-labelledby="perf-title">
