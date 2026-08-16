@@ -15,7 +15,11 @@ on:
 jobs:
   import-pmu:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Le job dure normalement 21-31 min (import 13-19 min + apprentissage 8-11 min).
+    # L'ancienne limite de 30 min tuait l'étape "Learn from official results" environ
+    # une exécution sur deux. Marge portée à 90 min ; les garde-fous anti-blocage
+    # réels sont désormais posés par étape ci-dessous.
+    timeout-minutes: 90
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -37,14 +41,18 @@ jobs:
 
       - name: Import requested PMU date
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.date != '' }}
+        timeout-minutes: 45
         run: npm run data:import:pmu -- --date "${{ inputs.date }}"
 
       - name: Import rolling PMU window
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.date == '' }}
+        timeout-minutes: 45
         run: npm run data:import:pmu
 
       - name: Prune races outside France/Equidia scope
+        timeout-minutes: 10
         run: npm run data:prune:scope
 
       - name: Learn from official results
+        timeout-minutes: 30
         run: npm run model:learn
