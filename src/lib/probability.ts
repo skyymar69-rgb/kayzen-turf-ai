@@ -68,7 +68,15 @@ export function devig(odds: number[]): number[] {
 export function modelProbabilities(scores: number[], spread = MODEL_SPREAD): number[] {
   const n = scores.length;
   if (n === 0) return [];
-  const usable = scores.map((s) => (Number.isFinite(s) ? s : 0));
+
+  // Un score manquant (kz_score NULL en base → NaN) doit valoir la moyenne du
+  // peloton, pas zéro : le remplacer par 0 revenait à décréter le cheval pire
+  // que tous les autres, ce qui écrasait sa probabilité à près de rien alors
+  // que la seule information dont on dispose est l'absence d'information.
+  const known = scores.filter((s): s is number => Number.isFinite(s));
+  if (known.length === 0) return scores.map(() => 1 / n);
+  const knownMean = known.reduce((a, b) => a + b, 0) / known.length;
+  const usable = scores.map((s) => (Number.isFinite(s) ? s : knownMean));
 
   const mean = usable.reduce((a, b) => a + b, 0) / n;
   const variance = usable.reduce((a, s) => a + (s - mean) ** 2, 0) / n;
