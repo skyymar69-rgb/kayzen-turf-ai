@@ -29,7 +29,10 @@ type CourseDetailProps = { race: RaceAnalysis };
 type TicketMode = "agressif" | "equilibre" | "securise";
 type SortKey = "arrival" | "kz" | "odds" | "top3";
 
-const TABS = ["Partants", "Cotes", "Pronostics IA", "Statistiques", "Les Plus Joués", "Arrivées et Rapports"] as const;
+// « Les Plus Joués » promettait les chevaux les plus joués au PMU mais affichait
+// les probabilités du modèle — donnée que nous n'avons pas en base. Renommé pour
+// dire ce qu'il montre réellement, plutôt que d'afficher une promesse non tenue.
+const TABS = ["Partants", "Cotes", "Pronostics IA", "Statistiques", "Probabilités", "Arrivées et Rapports"] as const;
 
 const BET_COLORS: Record<string, string> = {
   SIMPLE_GAGNANT:  "bg-cyan-500",
@@ -158,8 +161,22 @@ export function CourseDetail({ race }: CourseDetailProps) {
             </div>
           </div>
 
-          {/* Tab navigation */}
-          <nav aria-label="Sections de la course" className="flex overflow-x-auto border-t border-border bg-surface-sub kz-scroll" role="tablist">
+        </header>
+
+        {/* ── LA SÉLECTION — unique chemin de décision ──
+            Remplace l'ancien triptyque « ordre probable / ticket / signaux clés »,
+            qui présentait trois classements différents du même peloton. */}
+        <RaceSelectionPanel
+          horses={race.horses}
+          recommendedTicket={topBet ? { label: topBet.label, ticket: topBet.ticket } : null}
+        />
+
+        {/* ── DÉTAIL DE LA COURSE — onglets + panneau ──
+            La barre d'onglets vivait dans l'en-tête, à 728 px du panneau qu'elle
+            pilote : cliquer un onglet ne changeait rien à l'écran, l'app semblait
+            cassée. Elle est désormais collée à son contenu. */}
+        <section className="mt-4 overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+          <nav aria-label="Sections de la course" className="flex overflow-x-auto border-b border-border bg-surface-sub kz-scroll" role="tablist">
             {TABS.map((tab) => (
               <button
                 key={tab}
@@ -177,22 +194,8 @@ export function CourseDetail({ race }: CourseDetailProps) {
               </button>
             ))}
           </nav>
-        </header>
 
-        {/* ── LA SÉLECTION — unique chemin de décision ──
-            Remplace l'ancien triptyque « ordre probable / ticket / signaux clés »,
-            qui présentait trois classements différents du même peloton. */}
-        <RaceSelectionPanel
-          horses={race.horses}
-          recommendedTicket={topBet ? { label: topBet.label, ticket: topBet.ticket } : null}
-        />
-
-        {/* ── TABLEAU PARTANTS ── */}
-        <section
-          className="mt-4 overflow-hidden rounded-2xl border border-border bg-surface shadow-sm"
-          id="course-tab-panel"
-          role="tabpanel"
-        >
+          <div id="course-tab-panel" role="tabpanel">
           {activeTab === "Partants" ? (
             <>
               {/* Sort controls */}
@@ -216,6 +219,7 @@ export function CourseDetail({ race }: CourseDetailProps) {
           ) : (
             <TabPlaceholder activeTab={activeTab} arrival={arrival} race={race} recommendations={betRecommendations} />
           )}
+          </div>
         </section>
 
         {/* ── ANALYSE & DÉTAILS ── */}
@@ -754,7 +758,7 @@ function TabPlaceholder({
   }
 
   /* ── LES PLUS JOUÉS ── */
-  if (activeTab === "Les Plus Joués") {
+  if (activeTab === "Probabilités") {
     return (
       <div className="overflow-x-auto">
         <table className="w-full min-w-[580px] border-collapse text-left text-sm">
