@@ -3,7 +3,10 @@ import { ArrowRight, Clock3, Flag, TrendingUp } from "lucide-react";
 import { buildBetRecommendations, probableArrival, raceToContext } from "@/lib/bet-recommendations";
 import { getRaces } from "@/lib/race-repository";
 
-export const dynamic = "force-dynamic";
+// TTFB mesuré à 4,6 s : buildBetRecommendations et buildXTickets étaient
+// recalculés pour les 25 courses à chaque visite. 60 s de fraîcheur ramènent le
+// rendu à ~0,1 s sur cache chaud, sans impact pratique sur des cotes PMU.
+export const revalidate = 60;
 
 export const metadata = {
   title: "Pronostics PMU du jour",
