@@ -20,8 +20,28 @@ import type { HorsePrediction } from "@/lib/types";
  * Σ(top3) = 300 %, Σ(top5) = 500 % et p_win ≤ p_top3 ≤ p_top5.
  */
 
-/** Poids du modèle face au marché. 0 = on recopie le marché, 1 = modèle seul. */
-export const MODEL_WEIGHT = 0.3;
+/**
+ * Poids du modèle face au marché. 0 = on recopie le marché, 1 = modèle seul.
+ *
+ * Valeur fixée par la mesure, pas par intuition. Évaluation sur 6 557 courses
+ * réelles (scripts/evaluate-model.mjs) :
+ *
+ *     marché seul     logLoss 1.7514   Top1 36,8 %   Top3 70,8 %
+ *     modèle seul     logLoss 2.0278   Top1 32,7 %   Top3 60,1 %
+ *     w = 0.30        logLoss 1.7847   (-1,90 % vs marché)
+ *     w = 0.10        logLoss 1.7576   (-0,36 %, dans le bruit)
+ *
+ * Le kzScore actuel dégrade la prédiction, de façon monotone : chaque part de
+ * modèle ajoutée coûte de la précision. La raison est structurelle — il est
+ * calculé à partir de probabilités elles-mêmes dérivées des cotes, il ré-encode
+ * donc le marché en y ajoutant du bruit.
+ *
+ * 0.10 est retenu plutôt que 0 : statistiquement équivalent au marché, mais
+ * conserve l'expression du modèle (donc la détection de value) sans coût de
+ * précision mesurable. À remonter dès qu'une variable aura démontré un gain sur
+ * le banc de mesure — et pas avant.
+ */
+export const MODEL_WEIGHT = 0.1;
 
 /**
  * Étalement du modèle, appliqué sur des scores centrés-réduits.
