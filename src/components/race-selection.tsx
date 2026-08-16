@@ -50,19 +50,34 @@ export function RaceSelectionPanel({
   }
 
   const { top3, tocard } = selection;
+  const complements = selection.horses.slice(3);
 
   return (
     <section className="mt-4 overflow-hidden rounded-2xl border-2 border-accent/30 bg-surface shadow-sm">
-      {/* En-tête : le Top 3 en grand, lisible d'un coup d'œil */}
+      {/* En-tête : les 6 chevaux à jouer, Top 3 détaché du reste.
+          C'est la seule chose à lire pour décider — tout le reste de la page
+          n'est là que pour justifier ces six numéros. */}
       <header className="border-b border-border bg-accent-lo px-5 py-4 sm:px-6">
-        <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-accent-text">Notre sélection</p>
-            <p className="mt-2 font-mono text-4xl font-bold leading-none tracking-tight text-accent-text">
-              {top3.map((s) => s.horse.number).join(" – ")}
+            <p className="text-[10px] font-bold uppercase tracking-widest text-accent-text">
+              Notre sélection — {selection.horses.length} chevaux
             </p>
+
+            <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <span className="font-mono text-4xl font-bold leading-none tracking-tight text-accent-text">
+                {top3.map((s) => s.horse.number).join(" – ")}
+              </span>
+              {complements.length > 0 && (
+                <span className="font-mono text-2xl font-bold leading-none tracking-tight text-accent-text/55">
+                  – {complements.map((s) => s.horse.number).join(" – ")}
+                </span>
+              )}
+            </div>
+
             <p className="mt-2 text-xs text-accent-text/80">
-              Top 3 — les trois plus fortes probabilités de la course
+              <span className="font-bold">Top 3</span> en gras — les trois plus fortes probabilités
+              {complements.length > 0 && <> · les {complements.length} suivants complètent les tickets larges</>}
             </p>
           </div>
 

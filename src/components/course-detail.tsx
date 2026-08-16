@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { RaceSelectionPanel } from "@/components/race-selection";
+import { SELECTION_SIZE } from "@/lib/selection";
 import { buildBetRecommendations, buildXTickets, probableArrival, raceToContext, type XTicket } from "@/lib/bet-recommendations";
 import { simulateBet } from "@/lib/betting-engine";
 import { buildPostRaceAnalysis } from "@/lib/post-race-analysis";
@@ -306,8 +307,8 @@ export function CourseDetail({ race }: CourseDetailProps) {
             {/* Pourquoi ce pronostic */}
             <PredictionMethodology race={race} arrival={arrival} />
 
-            {/* FAQ */}
-            <details open className="overflow-hidden rounded-2xl border border-border bg-surface">
+            {/* FAQ — fermée par défaut, c'est de l'aide, pas de la décision. */}
+            <details className="overflow-hidden rounded-2xl border border-border bg-surface">
               <summary className="flex cursor-pointer list-none items-center justify-between p-5">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Comprendre</p>
@@ -382,10 +383,22 @@ export function CourseDetail({ race }: CourseDetailProps) {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <Result label="Prédiction" value={postRaceAnalysis.predictedArrival.join("–") || "—"} />
-                  <Result label="Arrivée"    value={postRaceAnalysis.actualArrival.join("–") || "—"} />
+                  <Result
+                    label={postRaceAnalysis.actualArrival.length > 0 && postRaceAnalysis.actualArrival.length < 5
+                      ? `Arrivée (${postRaceAnalysis.actualArrival.length} places publiées)`
+                      : "Arrivée"}
+                    value={postRaceAnalysis.actualArrival.join("–") || "—"}
+                  />
                   <Result label="Top 3"      value={`${postRaceAnalysis.metrics.top3Hits}/3`} />
                   <Result label="Top 5"      value={`${postRaceAnalysis.metrics.top5Hits}/5`} />
                 </div>
+                {postRaceAnalysis.actualArrival.length > 0 && postRaceAnalysis.actualArrival.length < 5 && (
+                  <p className="mt-2 rounded-lg border border-border bg-surface-sub px-3 py-2 text-xs leading-5 text-muted">
+                    Le PMU n&apos;a publié que {postRaceAnalysis.actualArrival.length} places pour cette course.
+                    Le Top 5 est donc mécaniquement plafonné à {postRaceAnalysis.actualArrival.length}/5 : ce n&apos;est
+                    pas une erreur du modèle. Les places manquantes seront reprises au prochain import.
+                  </p>
+                )}
               </div>
             </Panel>
 
@@ -895,13 +908,16 @@ function Panel({ children, icon: Icon, title }: { children: ReactNode; icon: typ
 
 function PredictionMethodology({ arrival, race }: { arrival: HorsePrediction[]; race: RaceAnalysis }) {
   const ctx = raceToContext(race);
-  const reviewedHorses = arrival.map((horse, index) => ({
+  // Limité aux chevaux de la sélection : détailler les 10 à 18 partants noyait
+  // la décision sous des paragraphes que personne ne lit avant de jouer.
+  const reviewedHorses = arrival.slice(0, SELECTION_SIZE).map((horse, index) => ({
     analysis: explainPredictionScore(horse, arrival, ctx),
     horse, rank: index + 1,
   }));
 
+  // Fermé par défaut : c'est la justification du pronostic, pas le pronostic.
   return (
-    <details open className="mt-4 rounded-2xl border border-border bg-surface-sub p-5">
+    <details className="mt-4 rounded-2xl border border-border bg-surface-sub p-5">
       <summary className="cursor-pointer list-none">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
