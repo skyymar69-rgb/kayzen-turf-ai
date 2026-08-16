@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CookiePreferencesButton } from "@/components/cookie-banner";
 import { COMPANY } from "@/lib/site-config";
 
 const PRODUCT_LINKS = [
@@ -37,7 +38,7 @@ export function SiteFooter() {
               </div>
             </div>
             <p className="mt-4 max-w-sm text-sm leading-6 text-white/60">
-              Plateforme SaaS d'aide à la décision pour pronostics hippiques.
+              Plateforme SaaS d&apos;aide à la décision pour pronostics hippiques.
               Analyses IA, tickets optimisés et suivi de performance en temps réel.
             </p>
             <p className="mt-3 text-xs leading-5 text-white/50">
@@ -47,13 +48,22 @@ export function SiteFooter() {
 
             {/* amélioration #19 — numéro jeu responsable */}
             <div className="mt-4 rounded-lg border border-warn/30 bg-warn-lo/10 px-3 py-2.5 text-xs leading-5 text-amber-300">
-              <p className="font-semibold">Jouez responsable — Joueurs Info Service</p>
-              <p className="mt-0.5 text-amber-400/80">
+              <p className="flex flex-wrap items-center gap-2 font-semibold">
+                {/* Le service s'adresse exclusivement aux majeurs : les paris hippiques
+                    sont interdits aux mineurs (code de la sécurité intérieure, art. L. 320-8). */}
+                <span className="grid size-6 shrink-0 place-items-center rounded-full border border-amber-300/60 text-[10px] font-bold text-amber-200">
+                  18+
+                </span>
+                Interdit aux mineurs — jouez responsable
+              </p>
+              <p className="mt-1.5 text-amber-400/80">
+                Joueurs Info Service :{" "}
                 <a href="tel:0974751313" className="font-bold hover:underline">09 74 75 13 13</a>
                 {" "}(appel non surtaxé, 7j/7)
               </p>
               <p className="mt-1 text-amber-400/60">
-                Aucun pronostic ne garantit un gain. Les jeux comportent des risques.
+                Aucun pronostic ne garantit un gain. Les jeux comportent des risques : endettement,
+                isolement, dépendance.
               </p>
             </div>
           </div>
@@ -89,6 +99,11 @@ export function SiteFooter() {
                   </Link>
                 </li>
               ))}
+              {/* RGPD art. 7.3 : retirer son consentement doit être aussi simple
+                  que de le donner. Ce bouton rouvre la bannière de choix. */}
+              <li>
+                <CookiePreferencesButton className="text-left text-sm font-medium text-white/60 underline-offset-4 transition hover:text-cta hover:underline" />
+              </li>
             </ul>
           </div>
         </div>

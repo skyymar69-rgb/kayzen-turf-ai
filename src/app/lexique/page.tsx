@@ -3,8 +3,9 @@ import { ArrowLeft, BookOpen } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Lexique turf | Kayzen Pronostic",
+  title: "Lexique turf",
   description: "Tous les termes du turf expliqués : KZ Score, value bet, Kelly criterion, Quinté+, PMU, arrivée, cote, mise…",
+  alternates: { canonical: "/lexique" },
 };
 
 const GLOSSARY: Array<{ term: string; definition: string; category: string }> = [

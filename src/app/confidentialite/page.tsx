@@ -1,5 +1,12 @@
+import type { Metadata } from "next";
 import { LegalPage, editorSection } from "@/components/legal-page";
 import { PrivacyForm } from "@/components/privacy-form";
+
+export const metadata: Metadata = {
+  title: "Politique de confidentialité",
+  description: "Traitements de données personnelles opérés par Kayzen Turf AI : bases légales, durées de conservation, sous-traitants et exercice des droits RGPD.",
+  alternates: { canonical: "/confidentialite" },
+};
 
 export default function ConfidentialitéPage() {
   return (

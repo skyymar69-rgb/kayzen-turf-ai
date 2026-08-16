@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Clock3, Flag, TrendingUp } from "lucide-react";
+import { AiDisclosure } from "@/components/ai-disclosure";
 import { buildBetRecommendations, probableArrival, raceToContext } from "@/lib/bet-recommendations";
 import { getRaces } from "@/lib/race-repository";
 
@@ -11,6 +12,7 @@ export const revalidate = 60;
 export const metadata = {
   title: "Pronostics PMU du jour",
   description: "Toutes les courses françaises du jour avec ordre probable, base IA, value bet prioritaire et tickets proposés.",
+  alternates: { canonical: "/pronostics" },
 };
 
 export default async function PronosticsPage() {
@@ -61,6 +63,8 @@ export default async function PronosticsPage() {
             </div>
           )}
         </section>
+
+        <AiDisclosure />
 
         {/* Liste des courses */}
         <div className="space-y-3">

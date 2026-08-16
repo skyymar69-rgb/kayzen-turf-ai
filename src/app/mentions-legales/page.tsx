@@ -1,5 +1,12 @@
+import type { Metadata } from "next";
 import { LegalPage, editorSection } from "@/components/legal-page";
 import { COMPANY } from "@/lib/site-config";
+
+export const metadata: Metadata = {
+  title: "Mentions légales",
+  description: "Éditeur, directeur de la publication, hébergeur et coordonnées du site Kayzen Turf AI, conformément à la LCEN.",
+  alternates: { canonical: "/mentions-legales" },
+};
 
 export default function MentionsLegalesPage() {
   return (

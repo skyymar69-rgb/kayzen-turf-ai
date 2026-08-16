@@ -3,9 +3,13 @@ import { BackToTop } from "@/components/back-to-top";
 import { CookieBanner } from "@/components/cookie-banner";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  // Sans `metadataBase`, Next ne sait pas résoudre les URLs relatives : les
+  // canonicals et les images Open Graph des pages filles restaient absents.
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "Kayzen Turf AI — Pronostics PMU assistés par IA",
     template: "%s — Kayzen Turf AI",
@@ -15,41 +19,50 @@ export const metadata: Metadata = {
   keywords: ["pronostics PMU", "turf IA", "value bet", "courses hippiques", "Quinte+", "analyse turf"],
   authors: [{ name: "Kayzen Lyon", url: "https://kayzen-lyon.fr" }],
   robots: { index: true, follow: true },
+  alternates: { canonical: "/" },
   openGraph: {
     type: "website",
     locale: "fr_FR",
     siteName: "Kayzen Turf AI",
+    url: "/",
+    title: "Kayzen Turf AI — Pronostics PMU assistés par IA",
+    description:
+      "Analysez les courses PMU avec l'intelligence artificielle : probabilités, value bets, tickets optimisés et suivi de performance.",
+  },
+  twitter: {
+    card: "summary_large_image",
     title: "Kayzen Turf AI — Pronostics PMU assistés par IA",
     description:
       "Analysez les courses PMU avec l'intelligence artificielle : probabilités, value bets, tickets optimisés et suivi de performance.",
   },
 };
 
-/* amélioration #11 — JSON-LD structured data */
+/* JSON-LD structured data. Le domaine vient de `SITE_URL` pour ne plus
+   diverger du sitemap et des canonicals. */
 const jsonLd = {
   "@context": "https://schema.org",
   "@graph": [
     {
       "@type": "WebSite",
-      "@id": "https://kayzen-turf-ai.vercel.app/#website",
-      url: "https://kayzen-turf-ai.vercel.app/",
+      "@id": `${SITE_URL}/#website`,
+      url: `${SITE_URL}/`,
       name: "Kayzen Turf AI",
       description: "Plateforme d'aide à la décision pour pronostics hippiques PMU assistée par IA.",
       inLanguage: "fr-FR",
       potentialAction: {
         "@type": "SearchAction",
-        target: "https://kayzen-turf-ai.vercel.app/?q={search_term_string}",
+        target: `${SITE_URL}/?q={search_term_string}`,
         "query-input": "required name=search_term_string",
       },
     },
     {
       "@type": "Organization",
-      "@id": "https://kayzen-turf-ai.vercel.app/#organization",
+      "@id": `${SITE_URL}/#organization`,
       name: "Kayzen",
       url: "https://kayzen-lyon.fr",
       logo: {
         "@type": "ImageObject",
-        url: "https://kayzen-turf-ai.vercel.app/logo.png",
+        url: `${SITE_URL}/logo.png`,
       },
     },
   ],

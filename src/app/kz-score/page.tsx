@@ -3,8 +3,9 @@ import { ArrowLeft, BarChart3, Brain, Gauge, Sparkles, TrendingUp, Zap } from "l
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Comment fonctionne le KZ Score | Kayzen Pronostic",
+  title: "Comment fonctionne le KZ Score",
   description: "Explication complète du KZ Score : méthode de calcul, composantes (probabilité gagnant, value index, confiance), interprétation et limites.",
+  alternates: { canonical: "/kz-score" },
 };
 
 const COMPONENTS = [

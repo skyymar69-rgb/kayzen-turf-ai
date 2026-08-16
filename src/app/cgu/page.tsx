@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
 import { LegalPage, editorSection } from "@/components/legal-page";
+
+export const metadata: Metadata = {
+  title: "Conditions générales d'utilisation",
+  description: "Règles d'accès et d'usage du site Kayzen Turf AI : objet du service, absence de garantie de gain, responsabilités et propriété intellectuelle.",
+  alternates: { canonical: "/cgu" },
+};
 
 export default function CguPage() {
   return (

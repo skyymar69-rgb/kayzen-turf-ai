@@ -4,6 +4,7 @@ import { ArrowRight, BarChart3, Brain, Check, Shield, Sparkles, Trophy, Zap } fr
 export const metadata = {
   title: "Tarifs & Offres",
   description: "Découvrez les offres Kayzen Turf AI : accès gratuit, Starter, Premium et Pro. Analyses IA, value bets et tickets optimisés pour chaque profil de parieur.",
+  alternates: { canonical: "/tarifs" },
 };
 
 const PLANS = [

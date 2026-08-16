@@ -116,13 +116,84 @@ export async function getRaces(filters?: { date?: string | null; day?: string | 
     return demoRaces;
   }
 
-  const races = await Promise.all(rows.map((row) => getRaceById(row.id, row)));
-  const hydratedRaces = races.filter((race): race is RaceAnalysis => Boolean(race));
+  // Une requête pour les partants de toutes les courses, au lieu d'une par
+  // course : le chargement du programme passait 104 allers-retours en base
+  // (1 + 103 courses), chacun payant la latence réseau du serverless Neon.
+  let entriesByRace: Map<string, EntryRow[]>;
+  try {
+    entriesByRace = await fetchEntriesByRace(rows.map((row) => row.id));
+  } catch {
+    return demoRaces;
+  }
+
+  const hydratedRaces = rows.flatMap((row) => {
+    const entries = entriesByRace.get(row.id);
+    // Une course sans partant n'est pas affichable. L'ancien code lui
+    // substituait la course de démonstration, qui apparaissait alors dans le
+    // programme réel — autant de doublons que de courses vides.
+    return entries?.length ? [mapRace(row, entries)] : [];
+  });
 
   return sortByStartTime(hydratedRaces);
 }
 
-export async function getRaceById(id?: string | null, baseRow?: RaceRow, options: { fallback?: boolean } = {}) {
+/**
+ * Charge les partants d'un lot de courses et les regroupe par course.
+ * Partagé entre le programme et la page course pour qu'une seule requête,
+ * unique, décrive ce qu'est un partant.
+ */
+async function fetchEntriesByRace(raceIds: string[]) {
+  const byRace = new Map<string, EntryRow[]>();
+  if (raceIds.length === 0) return byRace;
+
+  const sql = getSql();
+  const rows = (await sql`
+    select
+      entries.race_id,
+      entries.id,
+      entries.number,
+      horses.name as horse,
+      coalesce(entries.age, horses.age) as age,
+      entries.sex,
+      entries.music,
+      entries.earnings::text,
+      entries.handicap_distance,
+      entries.reduction_km,
+      entries.equipment,
+      entries.silks_url,
+      jockeys.name as jockey,
+      trainers.name as trainer,
+      entries.odds::text,
+      entries.fair_odds::text,
+      entries.market_edge::text,
+      entries.win_probability::text,
+      entries.top3_probability::text,
+      entries.top5_probability::text,
+      entries.kz_score::text,
+      entries.value_index::text,
+      entries.confidence,
+      entries.factors,
+      results.finish_position,
+      results.won
+    from entries
+    join horses on horses.id = entries.horse_id
+    left join jockeys on jockeys.id = entries.jockey_id
+    left join trainers on trainers.id = entries.trainer_id
+    left join results on results.race_id = entries.race_id and results.horse_id = entries.horse_id
+    where entries.race_id = any(${raceIds})
+    order by entries.race_id, entries.kz_score desc
+  `) as Array<EntryRow & { race_id: string }>;
+
+  for (const row of rows) {
+    const liste = byRace.get(row.race_id);
+    if (liste) liste.push(row);
+    else byRace.set(row.race_id, [row]);
+  }
+
+  return byRace;
+}
+
+export async function getRaceById(id?: string | null, options: { fallback?: boolean } = {}) {
   const fallback = options.fallback ?? true;
 
   if (!hasDatabase()) {
@@ -131,10 +202,10 @@ export async function getRaceById(id?: string | null, baseRow?: RaceRow, options
   }
 
   const sql = getSql();
-  let row: RaceRow | undefined = baseRow;
+  let row: RaceRow | undefined;
 
   try {
-    row ??= (await sql`
+    row = (await sql`
       select
         races.id,
         races.race_date::text,
@@ -167,41 +238,7 @@ export async function getRaceById(id?: string | null, baseRow?: RaceRow, options
 
   if (!row) return demoRaces.find((race) => race.id === id) ?? (fallback ? demoRace : null);
 
-  const entries = await sql`
-    select
-      entries.id,
-      entries.number,
-      horses.name as horse,
-      coalesce(entries.age, horses.age) as age,
-      entries.sex,
-      entries.music,
-      entries.earnings::text,
-      entries.handicap_distance,
-      entries.reduction_km,
-      entries.equipment,
-      entries.silks_url,
-      jockeys.name as jockey,
-      trainers.name as trainer,
-      entries.odds::text,
-      entries.fair_odds::text,
-      entries.market_edge::text,
-      entries.win_probability::text,
-      entries.top3_probability::text,
-      entries.top5_probability::text,
-      entries.kz_score::text,
-      entries.value_index::text,
-      entries.confidence,
-      entries.factors,
-      results.finish_position,
-      results.won
-    from entries
-    join horses on horses.id = entries.horse_id
-    left join jockeys on jockeys.id = entries.jockey_id
-    left join trainers on trainers.id = entries.trainer_id
-    left join results on results.race_id = entries.race_id and results.horse_id = entries.horse_id
-    where entries.race_id = ${row.id}
-    order by entries.kz_score desc
-  ` as EntryRow[];
+  const entries = (await fetchEntriesByRace([row.id])).get(row.id) ?? [];
 
   return entries.length > 0 ? mapRace(row, entries) : demoRaces.find((race) => race.id === row.id) ?? (fallback ? demoRace : null);
 }

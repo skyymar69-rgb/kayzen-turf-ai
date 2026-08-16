@@ -1,4 +1,8 @@
-export const SITE_URL = "https://kayzen-turf-ai.vercel.app";
+// Source unique du domaine : `@/lib/site`. Ce ré-export évite qu'une seconde
+// constante en dur ne diverge du sitemap et des canonicals.
+import { SITE_URL } from "@/lib/site";
+
+export { SITE_URL };
 
 export const COMPANY = {
   brand: "Kayzen Pronostic Turf PMU",

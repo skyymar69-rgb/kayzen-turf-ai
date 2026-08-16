@@ -250,10 +250,16 @@ export function Dashboard({ races }: DashboardProps) {
               </div>
 
               {/* ── Corps : réunions à gauche, courses à droite ─────── */}
-              <div className="grid lg:grid-cols-[280px_1fr]">
+              {/* Les pistes de grille valent `auto` par défaut, soit la largeur du
+                  contenu : les tuiles de réunion (160 px chacune) étiraient la
+                  colonne à 640 px en mobile. Le `overflow-hidden` du conteneur
+                  masquait le débordement — la liste était coupée, sans possibilité
+                  de la faire défiler. `min-w-0` laisse la piste se réduire et rend
+                  la main au défilement horizontal interne. */}
+              <div className="grid min-w-0 lg:grid-cols-[280px_1fr]">
 
                 {/* Colonne réunions */}
-                <div className="border-b border-white/10 lg:border-b-0 lg:border-r lg:border-white/10">
+                <div className="min-w-0 border-b border-white/10 lg:border-b-0 lg:border-r lg:border-white/10">
                   <div className="flex overflow-x-auto lg:flex-col kz-scroll">
                     {filteredMeetings.map((meeting) => {
                       const active = meeting.key === selectedMeeting.key;
@@ -286,7 +292,7 @@ export function Dashboard({ races }: DashboardProps) {
                 </div>
 
                 {/* Colonne courses */}
-                <div className="kz-scroll max-h-[420px] overflow-y-auto lg:max-h-[440px]">
+                <div className="kz-scroll min-w-0 max-h-[420px] overflow-y-auto lg:max-h-[440px]">
                   {visibleRaces.length === 0 ? (
                     <p className="px-5 py-8 text-center text-sm text-white/40">Aucune course disponible.</p>
                   ) : (

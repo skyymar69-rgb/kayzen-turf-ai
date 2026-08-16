@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
 import { LegalPage, editorSection } from "@/components/legal-page";
+
+export const metadata: Metadata = {
+  title: "Politique cookies",
+  description: "Traceurs déposés par Kayzen Turf AI, base juridique, durées de conservation et moyen de retirer son consentement à tout moment.",
+  alternates: { canonical: "/cookies" },
+};
 
 export default function CookiesPage() {
   return (

@@ -3,8 +3,9 @@ import { ArrowLeft, AlertTriangle, Phone, ShieldCheck, HeartHandshake } from "lu
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Jeu responsable | Kayzen Pronostic",
+  title: "Jeu responsable",
   description: "Informations sur le jeu responsable, les risques liés aux paris hippiques et les ressources d'aide disponibles.",
+  alternates: { canonical: "/jeu-responsable" },
 };
 
 export default function JeuResponsablePage() {

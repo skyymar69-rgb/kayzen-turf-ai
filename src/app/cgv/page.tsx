@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
 import { LegalPage, editorSection } from "@/components/legal-page";
+
+export const metadata: Metadata = {
+  title: "Conditions générales de vente",
+  description: "Abonnements, prix, paiement, durée, résiliation et droit de rétractation applicables aux offres payantes Kayzen Turf AI.",
+  alternates: { canonical: "/cgv" },
+};
 
 export default function CgvPage() {
   return (

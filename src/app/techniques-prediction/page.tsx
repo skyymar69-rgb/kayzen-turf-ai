@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
 import { Brain, GitBranch, LineChart, Network, ShieldCheck, Sparkles } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Techniques de prédiction",
+  description: "Les méthodes derrière les pronostics Kayzen : modèles tabulaires, deep learning, graphes relationnels, calibration et garde-fous anti-fuite de données.",
+  alternates: { canonical: "/techniques-prediction" },
+};
 
 const techniques = [
   {
