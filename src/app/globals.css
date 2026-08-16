@@ -21,8 +21,14 @@
   --accent-text:   #004a38;
   --cta:           #1eb854;
   --cta-hi:        #189a47;
-  --cta-text:      #ffffff;
-  --focus:         #1eb854;
+  /* Blanc sur le vert CTA ne donnait que 2,61:1, sous le minimum WCAG de 4,5:1
+     pour du texte. Le texte sombre monte à 6,79:1 sans changer la couleur de
+     marque. */
+  --cta-text:      #111827;
+  /* L'ancien #1eb854 en anneau de focus ne faisait que 2,41:1 sur le fond clair,
+     sous le minimum de 3:1 pour un élément non textuel : le focus clavier était
+     quasi invisible en thème clair. */
+  --focus:         #0b6b31;
   --danger:        #be123c;
   --warn:          #b45309;
   --warn-lo:       #fffbeb;

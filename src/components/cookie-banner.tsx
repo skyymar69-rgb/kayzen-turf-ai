@@ -1,12 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const STORAGE_KEY = "kayzen-cookie-choice";
 
+/** Efface le choix enregistré, pour permettre le retrait du consentement (RGPD art. 7.3). */
+export function resetCookieChoice() {
+  window.localStorage.removeItem(STORAGE_KEY);
+}
+
 export function CookieBanner() {
-  const [visible, setVisible] = useState(() => (typeof window === "undefined" ? false : !window.localStorage.getItem(STORAGE_KEY)));
+  // Lire localStorage dans l'initialiseur de useState divergeait entre le rendu
+  // serveur (toujours `false`, donc rien) et le rendu client (`true` à la
+  // première visite, donc une section entière) — mismatch d'hydratation sur
+  // 100 % des nouveaux visiteurs, et sur toutes les pages.
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (!window.localStorage.getItem(STORAGE_KEY)) setVisible(true);
+  }, []);
 
   function saveChoice(choice: "accepted" | "refused") {
     window.localStorage.setItem(STORAGE_KEY, choice);

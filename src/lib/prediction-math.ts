@@ -919,9 +919,29 @@ const PL_TEMPERATURE = 10;
 // Monte Carlo simulations per field. 2000 gives ±1.5pp std error at n=15 in <5ms.
 const PL_N_SIM = 2000;
 
-function gumbelNoise(): number {
+/**
+ * Générateur congruentiel linéaire semé.
+ *
+ * `Math.random()` était utilisé ici, alors que ce code s'exécute pendant le
+ * rendu serveur ET pendant l'hydratation client (appelé depuis un useMemo de
+ * course-detail.tsx et directement dans dashboard.tsx). Les deux rendus
+ * produisaient des probabilités différentes — « 41.3% » côté serveur, « 40.8% »
+ * côté client — d'où l'erreur d'hydratation React #418 sur toutes les pages.
+ *
+ * Effet de bord bénéfique : les probabilités affichées cessent de bouger d'un
+ * rafraîchissement à l'autre, ce qui les rend enfin vérifiables.
+ */
+function makeRng(seed: number): () => number {
+  let state = seed >>> 0;
+  return () => {
+    state = (state * 1664525 + 1013904223) >>> 0;
+    return state / 4294967296;
+  };
+}
+
+function gumbelNoise(rand: () => number): number {
   // Gumbel(0,1) via inverse CDF: -log(-log(U)), U ~ Uniform(0,1)
-  return -Math.log(-Math.log(Math.random() + 1e-12));
+  return -Math.log(-Math.log(rand() + 1e-12));
 }
 
 function plSoftmax(scores: number[]): number[] {
@@ -936,10 +956,14 @@ function monteCarloTopKMulti(scores: number[], ks: [number, number], nSim: numbe
   const maxK = Math.max(...ks);
   const counts: [number[], number[]] = [new Array(n).fill(0), new Array(n).fill(0)];
   const scaled = scores.map((s) => s / PL_TEMPERATURE);
+  // Graine dérivée des scores : déterministe, et distincte d'une course à l'autre.
+  const rand = makeRng(
+    scores.reduce((acc, s, i) => (acc + Math.round(s * 1000) * (i + 1)) >>> 0, 1013904223 + n * 2654435761),
+  );
 
   for (let sim = 0; sim < nSim; sim++) {
     // Gumbel-max trick: argmax(score_i + Gumbel_i) ~ Plackett-Luce draw
-    const perturbed = scaled.map((s) => s + gumbelNoise());
+    const perturbed = scaled.map((s) => s + gumbelNoise(rand));
     // Partial sort: only top maxK indices needed
     const ranked: number[] = [];
     for (let i = 0; i < n; i++) ranked.push(i);
