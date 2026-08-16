@@ -151,6 +151,93 @@ export function monteCarloTopK(pWin: number[], ks: number[], nSim = N_SIM): Map<
 }
 
 /**
+ * Tire `nSim` ordres d'arrivée partiels (les `depth` premières places) selon le
+ * même modèle Plackett-Luce que `monteCarloTopK`. Chaque ligne contient les
+ * indices des chevaux, dans l'ordre d'arrivée.
+ *
+ * Sert à estimer la probabilité qu'un ticket passe : il suffit de compter la
+ * fraction des ordres simulés qui le satisfont. C'est la seule façon d'obtenir
+ * une confiance qui discrimine un Simple Gagnant d'un Trio dans l'ordre, là où
+ * une moyenne de scores les rendait tous équivalents.
+ *
+ * `depth` = 5 couvre tous les paris PMU jusqu'au Quinté.
+ */
+export function simulateTopOrders(pWin: number[], depth = 5, nSim = 4000): number[][] {
+  const n = pWin.length;
+  if (n === 0) return [];
+  const realDepth = Math.min(depth, n);
+
+  let seed = 2463534242 + n * 40503;
+  const rand = () => {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    return seed / 4294967296;
+  };
+
+  const orders: number[][] = new Array(nSim);
+  const idx = new Array<number>(n);
+  const weights = new Array<number>(n);
+
+  for (let sim = 0; sim < nSim; sim++) {
+    for (let i = 0; i < n; i++) {
+      idx[i] = i;
+      weights[i] = pWin[i];
+    }
+    let remaining = n;
+    let total = weights.reduce((a, b) => a + b, 0);
+    const order: number[] = [];
+
+    for (let pos = 0; pos < realDepth && remaining > 0 && total > 0; pos++) {
+      const target = rand() * total;
+      let acc = 0;
+      let picked = remaining - 1;
+      for (let j = 0; j < remaining; j++) {
+        acc += weights[j];
+        if (acc >= target) {
+          picked = j;
+          break;
+        }
+      }
+      order.push(idx[picked]);
+      total -= weights[picked];
+      idx[picked] = idx[remaining - 1];
+      weights[picked] = weights[remaining - 1];
+      remaining--;
+    }
+    orders[sim] = order;
+  }
+
+  return orders;
+}
+
+/**
+ * Probabilité (0-100) qu'un ticket passe, estimée sur des ordres simulés.
+ *
+ * @param picks   indices des chevaux joués
+ * @param places  nombre de places à couvrir (1 = gagnant, 3 = trio…)
+ * @param ordered true si l'ordre exact est exigé
+ */
+export function ticketProbability(orders: number[][], picks: number[], places: number, ordered: boolean): number {
+  if (orders.length === 0 || picks.length === 0) return 0;
+
+  let hits = 0;
+  for (const order of orders) {
+    const window = order.slice(0, places);
+    if (window.length < places) continue;
+
+    if (ordered) {
+      // L'ordre exact exige que chaque cheval soit à sa position annoncée.
+      let ok = picks.length <= window.length;
+      for (let i = 0; ok && i < picks.length; i++) if (window[i] !== picks[i]) ok = false;
+      if (ok) hits++;
+    } else {
+      // Sinon il suffit que tous les chevaux joués figurent dans la fenêtre.
+      if (picks.every((p) => window.includes(p))) hits++;
+    }
+  }
+  return (hits / orders.length) * 100;
+}
+
+/**
  * Recalibre tout un peloton d'un coup et renvoie les chevaux enrichis.
  * Les champs `winProbability`, `top3Probability`, `top5Probability`,
  * `fairOdds`, `marketEdge` et `valueIndex` sont écrasés par des valeurs

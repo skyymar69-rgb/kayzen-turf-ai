@@ -322,7 +322,7 @@ export function CourseDetail({ race }: CourseDetailProps) {
               </summary>
               <div className="grid gap-3 px-5 pb-5 sm:grid-cols-2">
                 {[
-                  { q: "Conf. X/99 sur un ticket ?", a: "Convergence algorithmique 0-99 : alignement entre probabilité gagnant, edge marché, forme et stabilité des rangs. 99 = tous les signaux convergent. Pas une promesse de gain." },
+                  { q: "Conf. X/99 sur un ticket ?", a: "Probabilité estimée que le ticket passe, en %. Un Simple Placé à 70 a environ 7 chances sur 10 d'aboutir, un Trio à 10 environ 1 sur 10. Estimation issue du modèle, pas une promesse de gain." },
                   { q: "Pourquoi le #1 peut avoir un KZ plus bas que le #2 ?", a: "Le classement d'arrivée pénalise les favoris fragiles et valorise la stabilité. Un cheval peut avoir un KZ brut plus faible mais une meilleure probabilité gagnant nette." },
                   { q: "Heatmap vs ordre d'arrivée ?", a: "La heatmap trie par prob. Top 3 décroissante. L'ordre d'arrivée utilise la prob. gagnant stricte — un cheval régulièrement placé peut avoir une prob. Top 3 élevée mais être classé 2e ou 3e." },
                   { q: "Confiance vs Value vs Spéculatif ?", a: "Confiance : chevaux les mieux classés, risque faible. Value : sous-évalués par le marché, potentiel élevé. Spéculatif : outsiders avec signal surprise Top 3, risque fort." },
@@ -652,7 +652,7 @@ function TabPlaceholder({
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Analyse modèle</p>
             <h2 className="mt-0.5 font-display text-lg font-bold text-fg">Tickets recommandés par stratégie</h2>
           </div>
-          <p className="text-xs text-muted">Conf. = convergence des signaux 0-99</p>
+          <p className="text-xs text-muted">Conf. = probabilité estimée que le ticket passe, en %</p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {recommendations.map((r) => (

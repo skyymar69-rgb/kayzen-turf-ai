@@ -1,4 +1,5 @@
-import { coverageArrival, exactArrival, enhancedArrival, watchedLongshot } from "@/lib/prediction-math";
+import { coverageArrival, exactArrival, watchedLongshot } from "@/lib/prediction-math";
+import { calibrateField, simulateTopOrders, ticketProbability } from "@/lib/probability";
 import type { RaceContext } from "@/lib/prediction-math";
 import type { BetOffer, BetRecommendation, BetTicketVariant, HorsePrediction, RaceAnalysis } from "@/lib/types";
 
@@ -61,7 +62,7 @@ export function buildBetRecommendations(
       {
         audience: offer.audience,
         baseStake: offer.baseStake,
-        confidence: confidenceFor(type, selection, context),
+        confidence: confidenceFor(type, selection, horses),
         horses: selection.map((horse) => ({ name: horse.horse, number: horse.number })),
         label: offer.label,
         rationale: rationaleFor(type, selection, variantResult.pool, context),
@@ -108,8 +109,14 @@ function variantsFor(
   const required = Math.max(1, offer.requiredHorses || requiredHorsesFor(type));
   const ordered = isOrdered(type, offer);
   const groups = ordered ? permutations(pool, required) : combinations(pool, required);
+
+  // Les ordres sont simulés une seule fois pour toute la course : chaque
+  // variante n'a plus qu'à être comptée contre le même échantillon.
+  const calibrated = calibrateField(arrival);
+  const orders = simulateTopOrders(calibrated.map((h) => h.winProbability));
+
   const variants = groups
-    .map((group) => variantFor(type, group, ordered, context))
+    .map((group) => variantFor(type, group, ordered, calibrated, orders))
     .sort((a, b) => b.confidence - a.confidence || a.ticket.localeCompare(b.ticket, "fr"));
 
   return { pool, total: groups.length, variants };
@@ -136,12 +143,23 @@ function ticketFor(type: string, horses: HorsePrediction[]) {
   return numbers;
 }
 
-function variantFor(type: string, horses: HorsePrediction[], ordered: boolean, context: RaceContext): BetTicketVariant {
+function variantFor(
+  type: string,
+  horses: HorsePrediction[],
+  ordered: boolean,
+  field: HorsePrediction[],
+  orders: number[][],
+): BetTicketVariant {
   const numbers = horses.map((horse) => horse.number);
-  const scored = enhancedArrival(horses, context);
-  const averageScore = safeAverage(horses.map((horse) => scored.find((item) => item.horse.id === horse.id)?.score));
-  const orderedPenalty = ordered ? Math.max(4, horses.length * 4) : 0;
-  const confidence = Math.max(1, Math.min(99, Math.round(averageScore - orderedPenalty)));
+
+  // Même logique que `confidenceFor` : la confiance est la probabilité estimée
+  // que la variante passe, et non une moyenne de scores saturés.
+  const picks = horses
+    .map((horse) => field.findIndex((h) => h.id === horse.id))
+    .filter((i) => i >= 0);
+  const confidence = picks.length === 0
+    ? 1
+    : Math.max(1, Math.min(99, Math.round(ticketProbability(orders, picks, placesCoveredFor(type, picks.length), ordered))));
 
   return {
     confidence,
@@ -151,19 +169,43 @@ function variantFor(type: string, horses: HorsePrediction[], ordered: boolean, c
   };
 }
 
-function confidenceFor(type: string, horses: HorsePrediction[], context: RaceContext) {
-  const enhanced = enhancedArrival(horses, context);
-  const avg = safeAverage(enhanced.map((item) => item.score));
-  const orderedPenalty = isOrderedType(type) ? 12 : 0;
-  const spreadPenalty = Math.max(0, horses.length - 2) * 3;
-  return Math.max(1, Math.min(99, Math.round(avg - orderedPenalty - spreadPenalty)));
+/**
+ * Nombre de places que le ticket doit couvrir.
+ * Pour la plupart des paris il y a autant de places que de chevaux joués ; les
+ * paris « placé » et le 2 sur 4 élargissent la fenêtre.
+ */
+function placesCoveredFor(type: string, picks: number): number {
+  if (type === "SIMPLE_PLACE" || type === "COUPLE_PLACE") return 3;
+  if (type === "DEUX_SUR_QUATRE") return 4;
+  return picks;
 }
 
-function safeAverage(values: Array<number | undefined>) {
-  const clean = values.filter((value): value is number => Number.isFinite(value));
-  if (clean.length === 0) return 1;
-  return clean.reduce((sum, value) => sum + value, 0) / clean.length;
+/**
+ * Confiance d'un ticket = probabilité estimée qu'il passe, en %.
+ *
+ * L'ancienne version moyennait le `score` enrichi des chevaux. Or ce score est
+ * borné à 99 et sature en pratique pour la plupart des partants : tous les
+ * tickets d'une course ressortaient à 99/99, quel que soit le type de pari.
+ * Un Simple Gagnant et un Trio dans l'ordre affichaient la même confiance.
+ *
+ * La probabilité est désormais estimée sur des ordres d'arrivée simulés, avec
+ * le même modèle que les probabilités affichées — un Trio est donc
+ * mécaniquement moins « sûr » qu'un Simple Placé, comme il se doit.
+ */
+function confidenceFor(type: string, selection: HorsePrediction[], field: HorsePrediction[]) {
+  const calibrated = calibrateField(field);
+  const pWin = calibrated.map((h) => h.winProbability);
+  const orders = simulateTopOrders(pWin);
+
+  const picks = selection
+    .map((horse) => calibrated.findIndex((h) => h.id === horse.id))
+    .filter((i) => i >= 0);
+  if (picks.length === 0) return 1;
+
+  const probability = ticketProbability(orders, picks, placesCoveredFor(type, picks.length), isOrderedType(type));
+  return Math.max(1, Math.min(99, Math.round(probability)));
 }
+
 
 function strategyFor(type: string): BetRecommendation["strategy"] {
   if (type === "SIMPLE_GAGNANT" || type === "COUPLE_ORDRE" || type === "TRIO_ORDRE" || type === "TIERCE") return "Confiance";

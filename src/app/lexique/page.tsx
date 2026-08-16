@@ -27,7 +27,7 @@ const GLOSSARY: Array<{ term: string; definition: string; category: string }> = 
   { category: "Algorithme", term: "Plackett-Luce", definition: "Modèle probabiliste utilisé pour simuler des ordres d'arrivée complets. Kayzen réalise 2 000 tirages Monte Carlo (Gumbel-max trick) pour estimer les probabilités Top 1/3/5." },
   { category: "Algorithme", term: "Monte Carlo", definition: "Technique de simulation stochastique : on génère de nombreux scénarios aléatoires pour estimer une distribution de probabilités." },
   { category: "Algorithme", term: "Softmax / température", definition: "La température T contrôle l'étalement de la distribution. T élevée = probabilités plus uniformes (course ouverte). T faible = favori très dominant." },
-  { category: "Algorithme", term: "Modèle de confiance", definition: "Score 0-99 mesurant la convergence des signaux sur un ticket. 70+ = plusieurs signaux concordants." },
+  { category: "Algorithme", term: "Modèle de confiance", definition: "Probabilité estimée qu'un ticket passe, exprimée en %. Un Simple Placé à 70 a environ 7 chances sur 10 d'aboutir." },
   { category: "Algorithme", term: "Consensus modèle", definition: "% d'accord entre les simulations sur le cheval favori. >75% = favori très stable." },
   { category: "Algorithme", term: "Calibration probabiliste", definition: "Vérification que les probabilités estimées correspondent aux fréquences réelles. Un modèle bien calibré dit '30%' et gagne 30% du temps." },
   /* Turf général */
