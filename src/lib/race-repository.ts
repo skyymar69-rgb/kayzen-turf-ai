@@ -1,6 +1,12 @@
 import { getSql, hasDatabase } from "@/lib/db";
 import { probableArrival, raceToContext } from "@/lib/bet-recommendations";
 import { raceAnalysis, raceCards, valueBets } from "@/lib/mock-data";
+import { calibrateField } from "@/lib/probability";
+
+// Les jeux de démonstration passent par la même calibration que la base : sans
+// ça, un environnement sans DB afficherait des probabilités d'une autre source.
+const demoRaces: RaceAnalysis[] = raceCards.map((race) => ({ ...race, horses: calibrateField(race.horses) }));
+const demoRace: RaceAnalysis = { ...raceAnalysis, horses: calibrateField(raceAnalysis.horses) };
 import type { BetOffer, Confidence, HorsePrediction, RaceAnalysis } from "@/lib/types";
 
 type RaceRow = {
@@ -62,7 +68,7 @@ export async function getRaces(filters?: { date?: string | null; day?: string | 
   const rollingDates = [yesterdayDate, todayDate, tomorrowDate].filter((date): date is string => Boolean(date));
 
   if (!hasDatabase()) {
-    return raceCards.filter((race) => {
+    return demoRaces.filter((race) => {
       if (filterDate && race.raceDate !== filterDate) return false;
       if (!filterDate && !filters?.day && !rollingDates.includes(race.raceDate)) return false;
       if (filters?.day && relativeDayFromDate(race.raceDate) !== filters.day) return false;
@@ -107,7 +113,7 @@ export async function getRaces(filters?: { date?: string | null; day?: string | 
       order by races.race_date, races.start_time, races.reunion_number nulls last, races.course_number nulls last
     ` as RaceRow[];
   } catch {
-    return raceCards;
+    return demoRaces;
   }
 
   const races = await Promise.all(rows.map((row) => getRaceById(row.id, row)));
@@ -120,8 +126,8 @@ export async function getRaceById(id?: string | null, baseRow?: RaceRow, options
   const fallback = options.fallback ?? true;
 
   if (!hasDatabase()) {
-    if (!id) return fallback ? raceAnalysis : null;
-    return raceCards.find((race) => race.id === id) ?? (fallback ? raceAnalysis : null);
+    if (!id) return fallback ? demoRace : null;
+    return demoRaces.find((race) => race.id === id) ?? (fallback ? demoRace : null);
   }
 
   const sql = getSql();
@@ -156,10 +162,10 @@ export async function getRaceById(id?: string | null, baseRow?: RaceRow, options
       limit 1
     ` as RaceRow[])[0];
   } catch {
-    return raceCards.find((race) => race.id === id) ?? (fallback ? raceAnalysis : null);
+    return demoRaces.find((race) => race.id === id) ?? (fallback ? demoRace : null);
   }
 
-  if (!row) return raceCards.find((race) => race.id === id) ?? (fallback ? raceAnalysis : null);
+  if (!row) return demoRaces.find((race) => race.id === id) ?? (fallback ? demoRace : null);
 
   const entries = await sql`
     select
@@ -197,7 +203,7 @@ export async function getRaceById(id?: string | null, baseRow?: RaceRow, options
     order by entries.kz_score desc
   ` as EntryRow[];
 
-  return entries.length > 0 ? mapRace(row, entries) : raceCards.find((race) => race.id === row.id) ?? (fallback ? raceAnalysis : null);
+  return entries.length > 0 ? mapRace(row, entries) : demoRaces.find((race) => race.id === row.id) ?? (fallback ? demoRace : null);
 }
 
 export async function getPredictions() {
@@ -239,7 +245,11 @@ function mapRace(row: RaceRow, entries: EntryRow[]): RaceAnalysis {
     bettingTier: row.betting_tier,
     riskLevel: row.risk_level,
     betTypes: parseJsonArray<BetOffer>(row.bet_types),
-    horses: entries.map(mapHorse),
+    // Recalibrage à l'échelle de la course : les probabilités stockées en base
+    // sont calculées cheval par cheval, sans normalisation (Σ win ≈ 185 %).
+    // On les remplace ici, une seule fois, pour que tous les consommateurs —
+    // page course, dashboard, tickets, API — lisent les mêmes valeurs.
+    horses: calibrateField(entries.map(mapHorse)),
   };
 }
 

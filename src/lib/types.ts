@@ -26,6 +26,10 @@ export type HorsePrediction = {
   factors: string[];
   finishPosition?: number | null;
   won?: boolean | null;
+  /** Probabilité implicite du marché, overround retiré (%). Renseigné par `calibrateField`. */
+  marketProbability?: number;
+  /** Probabilité retenue ÷ probabilité marché. > 1 = sous-coté. Renseigné par `calibrateField`. */
+  valueRatio?: number;
 };
 
 export type BetOffer = {

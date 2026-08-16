@@ -17,11 +17,11 @@ import {
   Timer,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { RaceSelectionPanel } from "@/components/race-selection";
 import { buildBetRecommendations, buildXTickets, probableArrival, raceToContext, type XTicket } from "@/lib/bet-recommendations";
 import { simulateBet } from "@/lib/betting-engine";
 import { buildPostRaceAnalysis } from "@/lib/post-race-analysis";
-import { explainPredictionScore, watchedLongshot } from "@/lib/prediction-math";
-import type { RaceContext } from "@/lib/prediction-math";
+import { explainPredictionScore } from "@/lib/prediction-math";
 import type { BetOffer, HorsePrediction, RaceAnalysis } from "@/lib/types";
 
 type CourseDetailProps = { race: RaceAnalysis };
@@ -59,7 +59,6 @@ export function CourseDetail({ race }: CourseDetailProps) {
   const ctx                 = useMemo(() => raceToContext(race), [race]);
   const arrival             = useMemo(() => probableArrival(race.horses, ctx), [race.horses, ctx]);
   const displayedHorses     = useMemo(() => sortHorses(arrival, sortBy), [arrival, sortBy]);
-  const horseRoles          = useMemo(() => buildHorseRoles(arrival, ctx), [arrival, ctx]);
   const betRecommendations  = useMemo(() => buildBetRecommendations(race.horses, race.betTypes, ctx), [race.betTypes, race.horses, ctx]);
   const xTickets            = useMemo(() => buildXTickets(race.horses, race.betTypes, ctx), [race.horses, race.betTypes, ctx]);
   const ticketPlan          = useMemo(() => buildTicketPlan(betRecommendations, ticketMode, ticketBudget), [betRecommendations, ticketBudget, ticketMode]);
@@ -179,57 +178,13 @@ export function CourseDetail({ race }: CourseDetailProps) {
           </nav>
         </header>
 
-        {/* ── ZONE DE DÉCISION ── */}
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
-
-          {/* 1. Ordre probable */}
-          <div className="rounded-2xl border-2 border-accent/30 bg-accent-lo p-5">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-accent-text">Ordre probable</p>
-            <p className="mt-3 font-mono text-4xl font-bold leading-none tracking-tight text-accent-text">
-              {arrival.slice(0, 5).map((h) => h.number).join(" – ")}
-            </p>
-            <p className="mt-3 text-xs text-accent-text/70">
-              {arrival.length > 5 && `+${arrival.length - 5} autres · `}KZ Score, probabilités, forme
-            </p>
-          </div>
-
-          {/* 2. Ticket recommandé */}
-          {topBet ? (
-            <div className="rounded-2xl border border-border bg-surface p-5">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Ticket recommandé</p>
-              <p className="mt-0.5 text-sm font-semibold text-fg">{topBet.label}</p>
-              <p className="mt-3 font-mono text-3xl font-bold text-accent-text">{topBet.ticket}</p>
-              <p className="mt-3 flex items-center text-xs text-muted">
-                <span>Conf. {topBet.confidence}/99</span>
-                <InfoTip text="Convergence des signaux algorithmiques (probabilités, edge marché, forme). 99 = signaux très alignés. Ne garantit pas le gain." />
-                <span className="ml-1">· {formatStrategyLabel(topBet.strategy)}</span>
-              </p>
-            </div>
-          ) : (
-            <div className="flex items-center justify-center rounded-2xl border border-border bg-surface p-5 text-sm text-muted">
-              Aucun ticket disponible
-            </div>
-          )}
-
-          {/* 3. Signaux clés */}
-          <div className="rounded-2xl border border-border bg-surface p-5">
-            <div className="flex items-center">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Signaux clés</p>
-              <InfoTip text="Base : meilleur score global. Outsider : edge marché positif, cote ≥ 6. Tocard : signal surprise Top 3 malgré cote haute. KZ Score 0-99 = composite probabilités + cote + musique + terrain." />
-            </div>
-            <div className="mt-3 grid gap-2">
-              {horseRoles.map((role) => (
-                <div key={role.label} className="flex items-center justify-between gap-2 rounded-xl bg-surface-sub px-3 py-2.5">
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-bold uppercase text-accent-text">{role.label}</p>
-                    <p className="truncate font-semibold text-fg">#{role.horse.number} {role.horse.horse}</p>
-                  </div>
-                  <span className="shrink-0 font-mono text-xl font-bold text-fg">{fmtScore(role.horse.kzScore)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        {/* ── LA SÉLECTION — unique chemin de décision ──
+            Remplace l'ancien triptyque « ordre probable / ticket / signaux clés »,
+            qui présentait trois classements différents du même peloton. */}
+        <RaceSelectionPanel
+          horses={race.horses}
+          recommendedTicket={topBet ? { label: topBet.label, ticket: topBet.ticket } : null}
+        />
 
         {/* ── TABLEAU PARTANTS ── */}
         <section
@@ -268,8 +223,9 @@ export function CourseDetail({ race }: CourseDetailProps) {
           {/* Colonne principale — accordéons */}
           <div className="grid gap-3">
 
-            {/* Accordion: Tous les tickets */}
-            <details open className="overflow-hidden rounded-2xl border border-border bg-surface">
+            {/* Accordion: Tous les tickets — fermé par défaut, hors du chemin de
+                décision. Le ticket retenu est affiché dans la sélection. */}
+            <details className="overflow-hidden rounded-2xl border border-border bg-surface">
               <summary className="flex cursor-pointer list-none items-center justify-between p-5">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Tous les paris</p>
@@ -287,58 +243,13 @@ export function CourseDetail({ race }: CourseDetailProps) {
             {/* Accordion: Tickets en X (bases + champ variable) */}
             {xTickets.length > 0 && <XTicketsSection xTickets={xTickets} />}
 
-            {/* Accordion: Analyse IA — Heatmap + Signaux */}
-            <details open className="overflow-hidden rounded-2xl border border-border bg-surface">
-              <summary className="flex cursor-pointer list-none items-center justify-between p-5">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Analyse IA</p>
-                  <p className="mt-0.5 text-base font-bold text-fg">Heatmap Top 3 & Signaux cheval</p>
-                </div>
-                <span className="shrink-0 rounded-full border border-border bg-surface-sub px-3 py-1 text-xs font-bold text-muted">Voir →</span>
-              </summary>
-              <div className="grid gap-4 px-5 pb-5 lg:grid-cols-2">
-                {/* Topology */}
-                <section className="rounded-xl border border-border bg-surface-sub p-4">
-                  <p className="text-xs font-bold uppercase tracking-widest text-muted">Rôles IA</p>
-                  <div className="mt-3 grid gap-2">
-                    {horseRoles.map((role) => (
-                      <article key={role.label} className="rounded-xl border border-border bg-surface p-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-accent-text">{role.label}</p>
-                            <h3 className="mt-0.5 font-bold text-fg">#{role.horse.number} {role.horse.horse}</h3>
-                          </div>
-                          <span className="font-mono text-sm font-bold text-fg">{fmtScore(role.horse.kzScore)}</span>
-                        </div>
-                        <p className="mt-2 text-xs leading-5 text-muted">{role.reason}</p>
-                      </article>
-                    ))}
-                  </div>
-                </section>
-
-                {/* Heatmap */}
-                <section className="rounded-xl border border-border bg-surface-sub p-4">
-                  <div className="flex items-center">
-                    <p className="text-xs font-bold uppercase tracking-widest text-muted">Probabilité Top 3</p>
-                    <InfoTip text="Probabilité que le cheval finisse dans les 3 premiers (Plackett-Luce). Triés du plus élevé au plus bas. L'ordre d'arrivée prédit peut différer car il intègre aussi la probabilité gagnant stricte et la cote." />
-                  </div>
-                  <div className="mt-3 grid gap-3">
-                    {arrival.slice(0, 8).slice().sort((a, b) => (b.top3Probability ?? 0) - (a.top3Probability ?? 0)).map((horse) => (
-                      <div key={horse.id} className="grid grid-cols-[36px_1fr_48px] items-center gap-3">
-                        <span className="font-mono text-sm font-bold text-fg">#{horse.number}</span>
-                        <div className="h-2.5 overflow-hidden rounded-full bg-border">
-                          <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${safeWidth(horse.top3Probability)}%` }} />
-                        </div>
-                        <span className="text-right font-mono text-xs font-bold text-accent-text">{fmtProb(horse.top3Probability)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              </div>
-            </details>
+            {/* La heatmap « Probabilité Top 3 » a été retirée : elle reclassait le
+                peloton selon un critère différent de l'ordre d'arrivée, ce qui
+                produisait deux Top 3 contradictoires sur la même page. Cette
+                information vit désormais dans la sélection, en haut. */}
 
             {/* Accordion: Générateur de tickets */}
-            <details open className="overflow-hidden rounded-2xl border border-border bg-surface">
+            <details className="overflow-hidden rounded-2xl border border-border bg-surface">
               <summary className="flex cursor-pointer list-none items-center justify-between p-5">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Générateur</p>
@@ -917,7 +828,9 @@ function SimpleGrid({ children, title }: { children: ReactNode; title: string })
 function TicketCombinationsPanel({ recommendations }: { recommendations: ReturnType<typeof buildBetRecommendations> }) {
   if (!recommendations.length) return null;
   return (
-    <details open className="mt-4 rounded-2xl border border-border bg-surface">
+    // Fermé par défaut : cette grille proposait jusqu'à 5 chevaux différents en
+    // Simple Gagnant, ce qui contredisait le ticket recommandé de la sélection.
+    <details className="mt-4 rounded-2xl border border-border bg-surface">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5">
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-muted">Jeux disponibles</p>
@@ -1112,7 +1025,9 @@ function XTicketsSection({ xTickets }: { xTickets: XTicket[] }) {
   }, [xTickets]);
 
   return (
-    <details open className="overflow-hidden rounded-2xl border border-border bg-surface">
+    // Fermé par défaut : les tickets en X sont un outil de construction avancée,
+    // pas une étape de la décision rapide.
+    <details className="overflow-hidden rounded-2xl border border-border bg-surface">
       <summary className="flex cursor-pointer list-none items-center justify-between p-5">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Notation X</p>
@@ -1355,18 +1270,10 @@ function shortBetLabel(offer: BetOffer) {
   return labels[offer.type] ?? offer.label;
 }
 
-function buildHorseRoles(arrival: HorsePrediction[], context: RaceContext = {}) {
-  const base     = arrival[0];
-  const outsider = arrival.find((h) => h.valueIndex >= 10 && h.odds >= 6) ?? arrival[3] ?? arrival[1];
-  const longshot = watchedLongshot(arrival, context) ?? arrival.slice().reverse().find((h) => h.valueIndex >= 5 && h.top3Probability >= 18) ?? arrival[6] ?? arrival.at(-1);
-  const roles    = [
-    base     ? { horse: base,     label: "Base",            reason: `Score enrichi ${explainPredictionScore(base, arrival, context).score}/99 : probabilité gagnant, top 3, cote juste et stabilité des rangs.` } : null,
-    outsider ? { horse: outsider, label: "Outsider",        reason: `Signal value ${outsider.valueIndex}% avec cote ${outsider.odds} : intéressant si la probabilité estimée reste supérieure au marché.` } : null,
-    longshot ? { horse: longshot, label: "Tocard surveillé",reason: `Signal Top 3 surprise ${explainPredictionScore(longshot, arrival, context).top3UpsetScore}/60 : à intégrer dans les tickets larges ou flexi.` } : null,
-  ].filter((r): r is { horse: HorsePrediction; label: string; reason: string } => Boolean(r));
-  const seen = new Set<string>();
-  return roles.filter((r) => { if (seen.has(r.horse.id)) return false; seen.add(r.horse.id); return true; });
-}
+// `buildHorseRoles` a été supprimé : il attribuait les rôles indépendamment du
+// classement affiché, d'où des libellés contradictoires (un « Outsider » coté
+// 6.3 classé 3e, un « Tocard » classé 7e). Les rôles sont désormais dérivés de
+// la sélection elle-même — voir `buildSelection` dans src/lib/selection.ts.
 
 function formatLongDate(date: string) {
   return new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" }).format(new Date(`${date}T12:00:00`));
