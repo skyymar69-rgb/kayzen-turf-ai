@@ -58,8 +58,8 @@ export default function ConfidentialitePage() {
           {
             title: "Sous-traitants et transferts hors UE",
             body: [
-              "Hébergement de l'application : Vercel Inc. Le déploiement est configuré sur une région européenne. Vercel Inc. étant établie aux États-Unis, un transfert reste possible pour l'exploitation et le support ; il est encadré par les clauses contractuelles types de la Commission européenne et par la certification EU-US Data Privacy Framework.",
-              "Base de données : Neon Inc., instance hébergée dans l'Union européenne, encadrée par les clauses contractuelles types.",
+              "Hébergement de l'application : Vercel Inc. Les fonctions serveur sont déployées sur la région de Francfort (fra1), dans l'Union européenne. Vercel Inc. étant établie aux États-Unis, un accès distant reste possible pour l'exploitation et le support ; il est encadré par les clauses contractuelles types de la Commission européenne et par la certification EU-US Data Privacy Framework.",
+              "Base de données : Neon Inc., instance hébergée à Francfort (eu-central-1), dans l'Union européenne, encadrée par les clauses contractuelles types.",
               "Données publiques des courses : les programmes, partants et cotes proviennent des services du PMU. Ce sont des données sportives publiques, sans caractère personnel au sens du RGPD.",
               "Aucun autre sous-traitant n'intervient : ni prestataire d'emailing, ni prestataire de paiement, ni régie publicitaire, ni outil de mesure d'audience.",
             ],
