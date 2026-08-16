@@ -1,19 +1,31 @@
+# Build & dépendances
 .next
 node_modules
 out
 dist
 coverage
+*.tsbuildinfo
+
+# Environnement
 .env
 .env*
 !.env.example
+.env*.local
+
+# Déploiement
+.vercel
+
+# Logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-.vercel
-*.tsbuildinfo
-.DS_Store
-.tmp_*
 
-.vercel
-.env*.local
+# Fichiers temporaires
+.tmp_*
+.DS_Store
+
+# Claude Code — config machine-locale (launch.json est versionné)
+.claude/settings.local.json
+.claude/worktrees/
