@@ -102,10 +102,6 @@ const s = StyleSheet.create({
 });
 
 /* ─── Helpers ─────────────────────────────────────────────────────── */
-function fmt(v: number | null | undefined) {
-  if (v == null || !Number.isFinite(v as number)) return "—";
-  return Math.round(v as number).toString();
-}
 function formatDate(d: string) {
   return new Intl.DateTimeFormat("fr-FR", {
     weekday: "long", day: "2-digit", month: "long", year: "numeric",
@@ -133,22 +129,14 @@ function RaceRow({ race, idx }: { race: RaceAnalysis; idx: number }) {
   const recs     = buildBetRecommendations(race.horses, race.betTypes, ctx);
   const topRec   = recs[0];
   const base     = arrival[0];
-  const outsider = arrival.find((h) => h.id !== base?.id && h.valueIndex >= 10 && h.odds >= 6);
 
   const ordreStr  = arrival.slice(0, 5).map((h) => h.number).join("-");
   const ticketStr = topRec ? topRec.ticket : "—";
   const confStr   = topRec ? `${topRec.confidence}` : "—";
   const baseStr   = base ? `#${base.number}` : "—";
-  const outStr    = outsider ? `#${outsider.number}` : "—";
   const distStr   = formatMeters(race.distance);
   const isAlt     = idx % 2 === 1;
 
-  const codeParts = race.programCode.match(/^(R\d+)(C\d+)$/);
-  const codeDisp  = codeParts ? (
-    <Text style={[s.cCode, s.th, { color: C.cta }]}>{codeParts[1]}<Text style={{ color: C.white }}>{codeParts[2]}</Text></Text>
-  ) : (
-    <Text style={[s.cCode, s.tdGreen]}>{race.programCode}</Text>
-  );
 
   return (
     <View style={[s.row, isAlt ? s.rowAlt : {}]}>
@@ -263,7 +251,7 @@ export function PronosticsPDF({ races, date }: { races: RaceAnalysis[]; date: st
         {/* Fixed footer */}
         <View style={s.ftr} fixed>
           <Text style={s.ftrTxt}>
-            Kayzen Turf AI — Outil d'aide à la décision uniquement. Les jeux d'argent comportent des risques.
+            Kayzen Turf AI — Outil d’aide à la décision uniquement. Les jeux d’argent comportent des risques.
           </Text>
           <Text style={s.ftrTxt}>{date}</Text>
         </View>

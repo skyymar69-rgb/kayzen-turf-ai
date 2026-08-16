@@ -71,7 +71,7 @@ export default async function PronosticsPage() {
           {races.length === 0 ? (
             <div className="rounded-2xl border border-border bg-surface p-12 text-center">
               <Flag className="mx-auto text-muted" size={36} />
-              <p className="mt-4 text-lg font-semibold text-fg">Aucune course disponible aujourd'hui.</p>
+              <p className="mt-4 text-lg font-semibold text-fg">Aucune course disponible aujourd’hui.</p>
               <Link href="/" className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-accent-text hover:text-accent">
                 Voir le programme complet <ArrowRight size={14} />
               </Link>
@@ -85,7 +85,6 @@ export default async function PronosticsPage() {
               const hasQuinte = race.betTypes.some((b) => b.type === "QUINTE_PLUS");
               const hasQuarte = race.betTypes.some((b) => b.type === "QUARTE_PLUS" && b.audience === "REGIONAL");
               const hasPick5  = race.betTypes.some((b) => b.type === "PICK5");
-              const isImminent = false; // would need client time
 
               return (
                 <article

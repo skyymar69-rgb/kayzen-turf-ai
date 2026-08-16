@@ -29,7 +29,14 @@ async function main() {
 
   const sql = neon(process.env.DATABASE_URL);
   const schema = await readFile(resolve(process.cwd(), "db/schema.sql"), "utf8");
-  const statements = schema
+
+  // Le découpage se faisait sur un simple `split(";")`, sans retirer les
+  // commentaires : un point-virgule dans un commentaire `--` coupait
+  // l'instruction en deux et la seconde moitié partait telle quelle vers
+  // PostgreSQL (« syntax error at or near … »). On retire donc les commentaires
+  // de ligne avant de découper — en épargnant ceux qui vivent à l'intérieur
+  // d'une chaîne littérale.
+  const statements = retirerCommentaires(schema)
     .split(";")
     .map((statement) => statement.trim())
     .filter(Boolean);
@@ -45,3 +52,46 @@ main().catch((error) => {
   console.error(error);
   process.exit(1);
 });
+
+/**
+ * Retire les commentaires `--` jusqu'à la fin de ligne, sauf lorsqu'ils
+ * apparaissent dans une chaîne littérale `'…'`.
+ */
+function retirerCommentaires(sql) {
+  let sortie = "";
+  let dansChaine = false;
+
+  for (let i = 0; i < sql.length; i += 1) {
+    const c = sql[i];
+
+    if (dansChaine) {
+      sortie += c;
+      // `''` échappe une apostrophe à l'intérieur d'une chaîne SQL.
+      if (c === "'" && sql[i + 1] === "'") {
+        sortie += sql[i + 1];
+        i += 1;
+      } else if (c === "'") {
+        dansChaine = false;
+      }
+      continue;
+    }
+
+    if (c === "'") {
+      dansChaine = true;
+      sortie += c;
+      continue;
+    }
+
+    if (c === "-" && sql[i + 1] === "-") {
+      const finLigne = sql.indexOf("\n", i);
+      if (finLigne === -1) break;
+      i = finLigne - 1;
+      sortie += "\n";
+      continue;
+    }
+
+    sortie += c;
+  }
+
+  return sortie;
+}

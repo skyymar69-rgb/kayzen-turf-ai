@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { cache } from "react";
 import { notFound } from "next/navigation";
 import { CourseDetail } from "@/components/course-detail";
+import { JsonLd } from "@/components/json-ld";
 import { getRaceById } from "@/lib/race-repository";
 import { SITE_URL } from "@/lib/site";
 
@@ -11,14 +12,24 @@ type RacePageProps = {
   }>;
 };
 
-export const dynamic = "force-dynamic";
+/**
+ * `force-dynamic` refaisait les deux requêtes base à chaque visite, sur la
+ * surface la plus crawlée du site — une centaine de pages renouvelées chaque
+ * jour. L'accueil et /pronostics étaient déjà passés en rendu incrémental ;
+ * les pages de course, non. 60 s de fraîcheur suffisent pour des cotes PMU et
+ * ramènent le TTFB au niveau du cache.
+ *
+ * `dynamicParams` reste implicite à `true` : une course publiée après le
+ * dernier build doit être rendue à la demande, pas répondre 404.
+ */
+export const revalidate = 60;
 
 /**
  * `generateMetadata` et le rendu de page demandent la même course. Sans `cache`,
  * chaque visite paie deux fois la requête base. React déduplique l'appel sur la
  * durée d'un rendu.
  */
-const loadRace = cache((id: string) => getRaceById(id, { fallback: false }));
+const loadRace = cache((id: string) => getRaceById(id));
 
 const dateLongue = new Intl.DateTimeFormat("fr-FR", {
   day: "numeric",
@@ -71,6 +82,18 @@ export async function generateMetadata({ params }: RacePageProps): Promise<Metad
     (favori ? ` Favori du modèle : ${favori.number} ${favori.horse}.` : "") +
     " Probabilités, top 3 et value bets.";
 
+  // Déclarer un bloc `openGraph` dans `generateMetadata` remplace celui du
+  // layout — image comprise. Les cent et quelques pages de course, la surface
+  // la plus partagée du site, sortaient donc sans `og:image` : lien collé sur
+  // WhatsApp, X ou LinkedIn, la carte s'affichait en texte nu. L'image doit
+  // être reprise explicitement.
+  const image = {
+    url: "/opengraph-image",
+    width: 1200,
+    height: 630,
+    alt: "Kayzen Turf AI — pronostics PMU assistés par IA",
+  };
+
   return {
     title: titre,
     description,
@@ -80,11 +103,13 @@ export async function generateMetadata({ params }: RacePageProps): Promise<Metad
       url: chemin,
       title: `${titre} — Kayzen Turf AI`,
       description,
+      images: [image],
     },
     twitter: {
       card: "summary_large_image",
       title: `${titre} — Kayzen Turf AI`,
       description,
+      images: [image],
     },
   };
 }
@@ -118,10 +143,9 @@ export default async function RacePage({ params }: RacePageProps) {
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      {/* Les noms de course, d'hippodrome et de cheval viennent de l'API PMU :
+          `JSON.stringify` seul laissait passer `</script>`. */}
+      <JsonLd data={jsonLd} />
       <CourseDetail race={race} />
     </>
   );

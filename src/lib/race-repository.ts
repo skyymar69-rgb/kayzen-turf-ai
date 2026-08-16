@@ -1,13 +1,41 @@
 import { getSql, hasDatabase } from "@/lib/db";
 import { probableArrival, raceToContext } from "@/lib/bet-recommendations";
-import { raceAnalysis, raceCards, valueBets } from "@/lib/mock-data";
+import { raceCards, valueBets } from "@/lib/mock-data";
 import { calibrateField } from "@/lib/probability";
+import type { BetOffer, Confidence, HorsePrediction, RaceAnalysis } from "@/lib/types";
 
 // Les jeux de démonstration passent par la même calibration que la base : sans
 // ça, un environnement sans DB afficherait des probabilités d'une autre source.
 const demoRaces: RaceAnalysis[] = raceCards.map((race) => ({ ...race, horses: calibrateField(race.horses) }));
-const demoRace: RaceAnalysis = { ...raceAnalysis, horses: calibrateField(raceAnalysis.horses) };
-import type { BetOffer, Confidence, HorsePrediction, RaceAnalysis } from "@/lib/types";
+
+/**
+ * Vrai quand aucune base n'est configurée : le site tourne alors sur des
+ * courses fictives.
+ *
+ * Ce drapeau existe parce que la substitution était jusqu'ici invisible. Toute
+ * panne base renvoyait `demoRaces`, et le site affichait des chevaux, des
+ * cotes et des pronostics inventés avec la même présentation que les vraies
+ * courses PMU. Sur un service d'aide à la décision de pari, présenter des
+ * données fabriquées comme authentiques relève de la pratique commerciale
+ * trompeuse (code de la consommation, art. L. 121-2).
+ *
+ * Deux règles en découlent :
+ *  - une panne base ne fabrique plus rien, elle remonte l'erreur ;
+ *  - l'absence volontaire de base reste possible pour la démonstration, mais
+ *    l'interface l'annonce (voir `BandeauDemonstration`).
+ */
+export function estModeDemonstration() {
+  return !hasDatabase();
+}
+
+/** Panne de la source de données. Distincte d'un « aucun résultat ». */
+export class ErreurSourceDonnees extends Error {
+  constructor(operation: string, cause: unknown) {
+    super(`Source de données indisponible (${operation})`);
+    this.name = "ErreurSourceDonnees";
+    this.cause = cause;
+  }
+}
 
 type RaceRow = {
   id: string;
@@ -112,8 +140,12 @@ export async function getRaces(filters?: { date?: string | null; day?: string | 
         )
       order by races.race_date, races.start_time, races.reunion_number nulls last, races.course_number nulls last
     ` as RaceRow[];
-  } catch {
-    return demoRaces;
+  } catch (cause) {
+    // Renvoyer `demoRaces` ici transformait une panne base en programme fictif
+    // servi comme authentique. On remonte : la page conserve alors sa dernière
+    // version valide en cache ISR, ou affiche la frontière d'erreur.
+    console.error("Lecture des courses impossible", cause);
+    throw new ErreurSourceDonnees("lecture des courses", cause);
   }
 
   // Une requête pour les partants de toutes les courses, au lieu d'une par
@@ -122,8 +154,9 @@ export async function getRaces(filters?: { date?: string | null; day?: string | 
   let entriesByRace: Map<string, EntryRow[]>;
   try {
     entriesByRace = await fetchEntriesByRace(rows.map((row) => row.id));
-  } catch {
-    return demoRaces;
+  } catch (cause) {
+    console.error("Lecture des partants impossible", cause);
+    throw new ErreurSourceDonnees("lecture des partants", cause);
   }
 
   const hydratedRaces = rows.flatMap((row) => {
@@ -193,12 +226,20 @@ async function fetchEntriesByRace(raceIds: string[]) {
   return byRace;
 }
 
-export async function getRaceById(id?: string | null, options: { fallback?: boolean } = {}) {
-  const fallback = options.fallback ?? true;
+/**
+ * Une course, ou `null` si l'identifiant est inconnu.
+ *
+ * L'option `fallback` a disparu : elle valait `true` par défaut et renvoyait la
+ * course de démonstration pour n'importe quel identifiant inexistant. Une URL
+ * `/races/nimporte-quoi` affichait donc une course complète — partants, cotes,
+ * pronostics — au lieu d'un 404, et Google indexait autant de pages fantômes
+ * qu'on lui en présentait.
+ */
+export async function getRaceById(id?: string | null): Promise<RaceAnalysis | null> {
+  if (!id) return null;
 
   if (!hasDatabase()) {
-    if (!id) return fallback ? demoRace : null;
-    return demoRaces.find((race) => race.id === id) ?? (fallback ? demoRace : null);
+    return demoRaces.find((race) => race.id === id) ?? null;
   }
 
   const sql = getSql();
@@ -229,18 +270,21 @@ export async function getRaceById(id?: string | null, options: { fallback?: bool
         races.bet_types
       from races
       left join racecourses on racecourses.id = races.racecourse_id
-      where races.id = ${id ?? raceAnalysis.id}
+      where races.id = ${id}
       limit 1
     ` as RaceRow[])[0];
-  } catch {
-    return demoRaces.find((race) => race.id === id) ?? (fallback ? demoRace : null);
+  } catch (cause) {
+    console.error("Lecture de la course %s impossible", id, cause);
+    throw new ErreurSourceDonnees("lecture d'une course", cause);
   }
 
-  if (!row) return demoRaces.find((race) => race.id === id) ?? (fallback ? demoRace : null);
+  if (!row) return null;
 
   const entries = (await fetchEntriesByRace([row.id])).get(row.id) ?? [];
 
-  return entries.length > 0 ? mapRace(row, entries) : demoRaces.find((race) => race.id === row.id) ?? (fallback ? demoRace : null);
+  // Une course sans partant n'est pas affichable : elle vaut 404, pas une
+  // page de démonstration.
+  return entries.length > 0 ? mapRace(row, entries) : null;
 }
 
 export async function getPredictions() {

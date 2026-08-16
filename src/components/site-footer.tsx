@@ -31,17 +31,17 @@ export function SiteFooter() {
           {/* Brand block */}
           <div>
             <div className="flex items-center gap-3">
-              <span className="grid h-9 w-9 place-items-center rounded-lg bg-cta font-display text-sm font-bold text-fg">KZ</span>
+              <span className="grid size-9 place-items-center rounded-lg bg-cta font-display text-sm font-bold text-cta-text">KZ</span>
               <div>
                 <p className="font-display text-base font-bold leading-tight text-white">Kayzen</p>
-                <p className="text-[11px] font-medium uppercase tracking-widest text-white/50">Pronostic Turf PMU</p>
+                <p className="text-[11px] font-medium uppercase tracking-widest text-white/75">Pronostic Turf PMU</p>
               </div>
             </div>
-            <p className="mt-4 max-w-sm text-sm leading-6 text-white/60">
+            <p className="mt-4 max-w-sm text-sm leading-6 text-white/80">
               Plateforme SaaS d&apos;aide à la décision pour pronostics hippiques.
               Analyses IA, tickets optimisés et suivi de performance en temps réel.
             </p>
-            <p className="mt-3 text-xs leading-5 text-white/50">
+            <p className="mt-3 text-xs leading-5 text-white/70">
               <strong className="text-white/80">{COMPANY.editor}</strong> — {COMPANY.legalForm}<br />
               {COMPANY.address}
             </p>
@@ -56,12 +56,12 @@ export function SiteFooter() {
                 </span>
                 Interdit aux mineurs — jouez responsable
               </p>
-              <p className="mt-1.5 text-amber-400/80">
+              <p className="mt-1.5 text-amber-200/90">
                 Joueurs Info Service :{" "}
                 <a href="tel:0974751313" className="font-bold hover:underline">09 74 75 13 13</a>
                 {" "}(appel non surtaxé, 7j/7)
               </p>
-              <p className="mt-1 text-amber-400/60">
+              <p className="mt-1 text-amber-200/85">
                 Aucun pronostic ne garantit un gain. Les jeux comportent des risques : endettement,
                 isolement, dépendance.
               </p>
@@ -70,13 +70,13 @@ export function SiteFooter() {
 
           {/* Product links */}
           <div>
-            <p className="mb-4 text-xs font-bold uppercase tracking-widest text-white/40">Plateforme</p>
+            <p className="mb-4 text-xs font-bold uppercase tracking-widest text-white/70">Plateforme</p>
             <ul className="flex flex-col gap-2.5">
               {PRODUCT_LINKS.map(({ href, label }) => (
                 <li key={href}>
                   <Link
                     href={href}
-                    className="text-sm font-medium text-white/60 transition hover:text-cta"
+                    className="inline-block py-1 text-sm font-medium text-white/80 transition hover:text-cta"
                   >
                     {label}
                   </Link>
@@ -87,13 +87,13 @@ export function SiteFooter() {
 
           {/* Legal links */}
           <div>
-            <p className="mb-4 text-xs font-bold uppercase tracking-widest text-white/40">Légal</p>
+            <p className="mb-4 text-xs font-bold uppercase tracking-widest text-white/70">Légal</p>
             <ul className="flex flex-col gap-2.5">
               {LEGAL_LINKS.map(({ href, label }) => (
                 <li key={href}>
                   <Link
                     href={href}
-                    className="text-sm font-medium text-white/60 transition hover:text-cta"
+                    className="inline-block py-1 text-sm font-medium text-white/80 transition hover:text-cta"
                   >
                     {label}
                   </Link>
@@ -102,14 +102,14 @@ export function SiteFooter() {
               {/* RGPD art. 7.3 : retirer son consentement doit être aussi simple
                   que de le donner. Ce bouton rouvre la bannière de choix. */}
               <li>
-                <CookiePreferencesButton className="text-left text-sm font-medium text-white/60 underline-offset-4 transition hover:text-cta hover:underline" />
+                <CookiePreferencesButton className="min-h-11 text-left text-sm font-medium text-white/80 underline-offset-4 transition hover:text-cta hover:underline" />
               </li>
             </ul>
           </div>
         </div>
 
         {/* Bottom bar */}
-        <div className="mt-10 flex flex-col gap-2 border-t border-white/10 pt-6 text-xs text-white/40 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-10 flex flex-col gap-2 border-t border-white/10 pt-6 text-xs text-white/70 sm:flex-row sm:items-center sm:justify-between">
           <p>© {new Date().getFullYear()} {COMPANY.editor}. Tous droits réservés.</p>
           <a
             href={COMPANY.agencyUrl}

@@ -26,29 +26,48 @@ export const CONTACT_LINKS = {
   vcard: "/kayzen-contact.vcf",
 };
 
+/**
+ * Sources réglementaires citées en bas des pages légales.
+ *
+ * Trois de ces liens étaient morts : une passe d'accentuation avait réécrit les
+ * noms de domaine eux-mêmes. `accèssibilité.numérique.gouv.fr` ne résout pas en
+ * DNS, `cnil.fr/fr/données-personnelles` répond 404, et le chemin France Num
+ * accentué était introuvable. Un site qui cite ses sources et pointe vers des
+ * pages inexistantes affaiblit précisément ce qu'il cherche à démontrer.
+ *
+ * Toutes les URL ci-dessous ont été vérifiées en HTTP 200.
+ */
 export const LEGAL_SOURCES = [
   {
-    label: "Service-Public Entreprendre - mentions obligatoires",
+    label: "Service-Public Entreprendre — mentions obligatoires",
     href: "https://entreprendre.service-public.gouv.fr/vosdroits/F37351",
   },
   {
-    label: "CNIL - cookies et traceurs",
+    label: "CNIL — cookies et traceurs",
     href: "https://www.cnil.fr/fr/cookies-et-autres-traceurs/regles/cookies",
   },
   {
-    label: "CNIL - données personnelles",
-    href: "https://cnil.fr/fr/données-personnelles",
+    label: "CNIL — données personnelles",
+    href: "https://www.cnil.fr/fr/donnees-personnelles",
   },
   {
-    label: "RGAA 4.1.2 - 106 critères",
-    href: "https://accèssibilité.numérique.gouv.fr/",
+    label: "CNIL — comprendre le RGPD",
+    href: "https://www.cnil.fr/fr/comprendre-le-rgpd",
   },
   {
-    label: "France Num - obligations accèssibilité e-commerce",
-    href: "https://www.francenum.gouv.fr/guides-et-conseils/developpement-commercial/site-e-commerce/accèssibilité-des-sites-de-e-commerce",
+    label: "RGAA 4.1.2 — référentiel d'accessibilité",
+    href: "https://accessibilite.numerique.gouv.fr/",
   },
   {
-    label: "DGCCRF - conditions generales de vente",
+    label: "France Num — accessibilité des sites e-commerce",
+    href: "https://www.francenum.gouv.fr/guides-et-conseils/developpement-commercial/site-e-commerce/accessibilite-des-sites-de-e-commerce",
+  },
+  {
+    label: "DGCCRF — conditions générales de vente",
     href: "https://www.economie.gouv.fr/dgccrf/les-fiches-pratiques/conditions-generales-de-vente-quelles-mentions-sont-obligatoires",
+  },
+  {
+    label: "Joueurs Info Service — jeu responsable",
+    href: "https://www.joueurs-info-service.fr",
   },
 ];

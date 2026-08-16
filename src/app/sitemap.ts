@@ -9,6 +9,13 @@ import { SITE_URL } from "@/lib/site";
  * ailleurs que les pages statiques, en omettant les pages de courses — le cœur
  * du contenu, plusieurs dizaines d'URLs par jour.
  */
+/**
+ * Le sitemap rejouait la cascade de requêtes base à chaque passage de robot —
+ * et un sitemap est appelé souvent. Une heure de fraîcheur suffit : le
+ * programme ne bouge qu'à l'import matinal.
+ */
+export const revalidate = 3600;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = SITE_URL;
   const now = new Date().toISOString();

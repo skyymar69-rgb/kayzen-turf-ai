@@ -15,7 +15,7 @@ export function LegalPage({ intro, sections, title }: { intro: string; sections:
         <h1 className="mt-2 text-3xl font-bold tracking-normal sm:text-4xl">{title}</h1>
         <p className="mt-4 max-w-3xl text-base leading-7 text-[#52615d]">{intro}</p>
         <div className="mt-5 rounded-md border border-amber-500/30 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
-          <AlertTriangle className="mb-2 text-amber-700" size={18} />
+          <AlertTriangle aria-hidden="true" className="mb-2 text-amber-700" size={18} />
           Document opérationnel de conformité. Une validation par un avocat ou conseil habilité reste recommandée avant exploitation commerciale définitive.
         </div>
         <div className="mt-8 grid gap-5">
@@ -32,8 +32,8 @@ export function LegalPage({ intro, sections, title }: { intro: string; sections:
         </div>
         <section className="mt-8 rounded-md border border-emerald-700/20 bg-emerald-50 p-4">
           <h2 className="flex items-center gap-2 text-lg font-bold text-emerald-900">
-            <CheckCircle2 size={18} />
-            References utilisees
+            <CheckCircle2 aria-hidden="true" size={18} />
+            Références utilisées
           </h2>
           <ul className="mt-3 grid gap-2 text-sm text-emerald-900 sm:grid-cols-2">
             {LEGAL_SOURCES.map((source) => (
@@ -59,6 +59,6 @@ export const editorSection: Section = {
   title: "Identification de l'éditeur",
   body: [
     `${COMPANY.editor}, ${COMPANY.legalForm}, SIREN/SIRET ${COMPANY.siren}, RCS ${COMPANY.rcs}, TVA intracommunautaire ${COMPANY.vat}, code APE ${COMPANY.ape}.`,
-    `Siege social : ${COMPANY.address}. Telephone : ${COMPANY.phone}. Email : ${COMPANY.email}. Agence web : ${COMPANY.agencyUrl}.`,
+    `Siège social : ${COMPANY.address}. Téléphone : ${COMPANY.phone}. Email : ${COMPANY.email}. Agence web : ${COMPANY.agencyUrl}.`,
   ],
 };

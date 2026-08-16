@@ -73,7 +73,7 @@ export default function KzScorePage() {
           <div>
             <p className="text-xs font-bold uppercase tracking-widest text-muted">Méthodologie</p>
             <h1 className="font-display text-3xl font-bold text-fg">Comment fonctionne le KZ Score ?</h1>
-            <p className="mt-1 text-sm text-muted">Score composite 0–99 calculé par simulation probabiliste sur l'ensemble des partants.</p>
+            <p className="mt-1 text-sm text-muted">Score composite 0–99 calculé par simulation probabiliste sur l’ensemble des partants.</p>
           </div>
         </div>
 
@@ -81,11 +81,11 @@ export default function KzScorePage() {
 
           {/* Définition */}
           <section className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
-            <h2 className="font-display text-xl font-bold text-fg mb-3">Qu'est-ce que le KZ Score ?</h2>
+            <h2 className="font-display text-xl font-bold text-fg mb-3">Qu’est-ce que le KZ Score ?</h2>
             <p className="text-sm leading-7 text-muted">
-              Le <strong className="text-fg">KZ Score</strong> est un indicateur composite de 0 à 99 synthétisant la force prédictive d'un cheval pour une course donnée.
-              Il n'est pas une probabilité brute — c'est une <em>note de confiance algorithmique</em> pondérant plusieurs signaux indépendants.
-              Un cheval avec un KZ de 87 n'a pas 87% de chances de gagner : il cumule simplement des signaux particulièrement convergents.
+              Le <strong className="text-fg">KZ Score</strong> est un indicateur composite de 0 à 99 synthétisant la force prédictive d’un cheval pour une course donnée.
+              Il n’est pas une probabilité brute — c’est une <em>note de confiance algorithmique</em> pondérant plusieurs signaux indépendants.
+              Un cheval avec un KZ de 87 n’a pas 87% de chances de gagner : il cumule simplement des signaux particulièrement convergents.
             </p>
             <p className="mt-3 text-sm leading-7 text-muted">
               Le score est recalculé pour chaque course en tenant compte du contexte complet : taille du champ, discipline, distance, hippodrome, météo et historique des partants.
@@ -116,7 +116,7 @@ export default function KzScorePage() {
 
           {/* Grille d'interprétation */}
           <section>
-            <h2 className="font-display text-xl font-bold text-fg mb-4">Grille d'interprétation</h2>
+            <h2 className="font-display text-xl font-bold text-fg mb-4">Grille d’interprétation</h2>
             <div className="grid gap-2">
               {RANGES.map(({ min, max, label, desc, cls }) => (
                 <div key={label} className={`flex items-start gap-4 rounded-xl border p-4 ${cls}`}>

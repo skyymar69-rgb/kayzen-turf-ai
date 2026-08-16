@@ -14,10 +14,11 @@ import {
   Share2,
   Sparkles,
   Target,
-  Timer,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { Countdown } from "@/components/countdown";
 import { RaceSelectionPanel } from "@/components/race-selection";
+import { useClipboard, type EtatCopie } from "@/hooks/use-clipboard";
 import { SELECTION_SIZE } from "@/lib/selection";
 import { buildBetRecommendations, buildXTickets, probableArrival, raceToContext, type XTicket } from "@/lib/bet-recommendations";
 import { simulateBet } from "@/lib/betting-engine";
@@ -57,7 +58,6 @@ export function CourseDetail({ race }: CourseDetailProps) {
   const [ticketMode, setTicketMode] = useState<TicketMode>("equilibre");
   const [activeTab, setActiveTab]   = useState<(typeof TABS)[number]>("Partants");
   const [sortBy, setSortBy]         = useState<SortKey>("arrival");
-  const [countdown, setCountdown]   = useState<string | null>(null);
 
   const selectedHorse       = race.horses.find((h) => h.id === selectedHorseId) ?? race.horses[0];
   const ctx                 = useMemo(() => raceToContext(race), [race]);
@@ -70,33 +70,23 @@ export function CourseDetail({ race }: CourseDetailProps) {
   const simulation          = selectedHorse ? simulateBet(stake, selectedHorse.odds, selectedHorse.winProbability, 500, 0) : null;
   const partantsCount       = race.horses.length;
 
-  useEffect(() => {
-    if (race.relativeDay !== "today") return;
-    function tick() {
-      const [h = "0", m = "0"] = race.startTime.split(":");
-      const now  = new Date();
-      const race_t = new Date();
-      race_t.setHours(Number(h), Number(m), 0, 0);
-      const diff = Math.floor((race_t.getTime() - now.getTime()) / 1000);
-      if (diff <= 0) { setCountdown(null); return; }
-      const hh = Math.floor(diff / 3600);
-      const mm = Math.floor((diff % 3600) / 60);
-      const ss = diff % 60;
-      setCountdown(hh > 0 ? `${hh}h${String(mm).padStart(2, "0")}` : `${mm}m${String(ss).padStart(2, "0")}s`);
-    }
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [race.startTime, race.relativeDay]);
-
   const topBet = betRecommendations[0];
 
   /* #87 — raccourcis clavier 1-6 pour naviguer entre tabs */
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if ((e.target as HTMLElement).tagName === "INPUT" || (e.target as HTMLElement).tagName === "SELECT") return;
+      // Ctrl+1 et Cmd+1 changent d'onglet dans le navigateur, Alt+chiffre
+      // ouvre des menus : intercepter la touche sans regarder les modificateurs
+      // détournait ces raccourcis système.
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+      const cible = e.target as HTMLElement | null;
+      // `INPUT`/`SELECT` seuls laissaient passer la saisie dans un `TEXTAREA`
+      // ou dans un bloc éditable — la frappe changeait d'onglet sous le curseur.
+      if (cible?.closest("input, select, textarea, [contenteditable='true']")) return;
+
       const idx = Number(e.key) - 1;
-      if (idx >= 0 && idx < TABS.length) setActiveTab(TABS[idx]);
+      if (Number.isInteger(idx) && idx >= 0 && idx < TABS.length) setActiveTab(TABS[idx]);
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
@@ -138,13 +128,9 @@ export function CourseDetail({ race }: CourseDetailProps) {
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 <span className="flex items-center gap-2 font-bold text-accent-text">
-                  <Clock3 size={18} />
+                  <Clock3 aria-hidden="true" size={18} />
                   Départ {race.startTime}
-                  {countdown && (
-                    <span className="flex items-center gap-1 rounded-lg bg-cta/10 px-2 py-0.5 text-sm font-bold text-cta">
-                      <Timer size={12} /> {countdown}
-                    </span>
-                  )}
+                  <Countdown relativeDay={race.relativeDay} startTime={race.startTime} />
                 </span>
                 <ShareButton programCode={race.programCode} name={race.name} />
               </div>
@@ -476,7 +462,7 @@ function PartantsTable({
             <div className="grid grid-cols-[44px_1fr_auto] items-start gap-3">
               {horse.silksUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img alt={`Casaque ${horse.horse}`} className="premium-silk h-10 w-10 rounded-lg object-contain" decoding="async" loading="lazy" src={horse.silksUrl} />
+                <img alt="" className="premium-silk size-10 rounded-lg object-contain" decoding="async" height={40} loading="lazy" src={horse.silksUrl} width={40} />
               ) : (
                 <span className="grid h-10 w-10 place-items-center rounded-lg bg-accent-lo font-mono font-bold text-accent-text">
                   {horse.number}
@@ -542,7 +528,7 @@ function PartantsTable({
                   <div className="flex min-w-[220px] items-center gap-3">
                     {horse.silksUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img alt={`Casaque ${horse.horse}`} className="premium-silk h-8 w-8 rounded-lg object-contain" decoding="async" loading="lazy" src={horse.silksUrl} />
+                      <img alt="" className="premium-silk size-8 rounded-lg object-contain" decoding="async" height={32} loading="lazy" src={horse.silksUrl} width={32} />
                     ) : (
                       <span className="grid h-8 w-8 place-items-center rounded-lg bg-accent-lo font-mono text-xs font-bold text-accent-text">
                         {horse.number}
@@ -791,7 +777,7 @@ function TabPlaceholder({
             ))}
           </tbody>
         </table>
-        <p className="px-4 py-3 text-[11px] text-muted">Triés par ordre d'arrivée prédit · P(Top N) = probabilité de finir dans les N premiers selon le modèle Plackett-Luce.</p>
+        <p className="px-4 py-3 text-[11px] text-muted">Triés par ordre d’arrivée prédit · P(Top N) = probabilité de finir dans les N premiers selon le modèle Plackett-Luce.</p>
       </div>
     );
   }
@@ -823,7 +809,7 @@ function TabPlaceholder({
         ))}
         {!arrival.some((h) => h.won) && (
           <p className="col-span-2 rounded-xl border border-border bg-surface-sub p-4 text-sm text-muted">
-            Résultats non encore disponibles — disponibles après l'arrivée officielle PMU.
+            Résultats non encore disponibles — disponibles après l’arrivée officielle PMU.
           </p>
         )}
       </div>
@@ -833,14 +819,6 @@ function TabPlaceholder({
 
 /* ─── Sub-components ─────────────────────────────────────────────── */
 
-function SimpleGrid({ children, title }: { children: ReactNode; title: string }) {
-  return (
-    <div className="p-5">
-      <h2 className="mb-4 font-display text-lg font-bold text-fg">{title}</h2>
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">{children}</div>
-    </div>
-  );
-}
 
 function TicketCombinationsPanel({ recommendations }: { recommendations: ReturnType<typeof buildBetRecommendations> }) {
   if (!recommendations.length) return null;
@@ -928,7 +906,7 @@ function PredictionMethodology({ arrival, race }: { arrival: HorsePrediction[]; 
             <p className="text-xs font-bold uppercase tracking-widest text-muted">Pourquoi ce pronostic ?</p>
             <h3 className="mt-1 font-display text-lg font-bold text-fg">Méthode probabiliste et avis cheval par cheval</h3>
           </div>
-          <span className="rounded-full border border-border bg-surface px-3 py-1 text-xs font-bold text-muted">Ouvrir l'analyse</span>
+          <span className="rounded-full border border-border bg-surface px-3 py-1 text-xs font-bold text-muted">Ouvrir l’analyse</span>
         </div>
       </summary>
 
@@ -1011,16 +989,6 @@ function PredictionMethodology({ arrival, race }: { arrival: HorsePrediction[]; 
   );
 }
 
-function InfoTip({ text }: { text: string }) {
-  return (
-    <span className="group/tip relative ml-1.5 inline-flex shrink-0">
-      <span className="inline-flex h-4 w-4 cursor-help select-none items-center justify-center rounded-full border border-muted/40 bg-surface text-[9px] font-bold text-muted">?</span>
-      <span className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 w-64 -translate-x-1/2 rounded-xl border border-border bg-surface p-3 text-left text-[11px] leading-5 text-muted shadow-xl opacity-0 transition-opacity duration-150 group-hover/tip:opacity-100">
-        {text}
-      </span>
-    </span>
-  );
-}
 
 function Result({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
@@ -1058,7 +1026,7 @@ function XTicketsSection({ xTickets }: { xTickets: XTicket[] }) {
       <div className="px-5 pb-5">
         <p className="mb-4 rounded-xl border border-border bg-surface-sub px-4 py-3 text-xs leading-5 text-muted">
           <strong className="text-fg">Base</strong> = cheval sélectionné fixe ·{" "}
-          <strong className="text-fg">X</strong> = n'importe quel cheval du champ ·{" "}
+          <strong className="text-fg">X</strong> = n’importe quel cheval du champ ·{" "}
           Le coût estimé correspond au nombre de combinaisons × mise de base PMU.
         </p>
         <div className="grid gap-5">
@@ -1081,29 +1049,15 @@ function XTicketsSection({ xTickets }: { xTickets: XTicket[] }) {
 }
 
 function XTicketCard({ ticket: t }: { ticket: XTicket }) {
-  const [copied, setCopied] = useState(false);
+  const { etat, copier } = useClipboard();
 
-  function handleCopy() {
-    navigator.clipboard.writeText(t.ticket).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }).catch(() => {});
-  }
-
-  const confColor = t.confidence >= 65 ? "text-emerald-600" : t.confidence >= 45 ? "text-amber-600" : "text-muted";
+  const confColor = t.confidence >= 65 ? "text-emerald-700" : t.confidence >= 45 ? "text-amber-700" : "text-muted";
 
   return (
     <div className="rounded-xl border border-border bg-surface-sub p-3">
       <div className="flex items-start justify-between gap-2">
         <p className="text-xs font-semibold text-fg">{t.label}</p>
-        <button
-          aria-label="Copier le ticket"
-          className="shrink-0 rounded-lg border border-border bg-surface px-2 py-0.5 text-[10px] font-bold text-muted transition hover:text-accent-text"
-          onClick={handleCopy}
-          type="button"
-        >
-          {copied ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
-        </button>
+        <BoutonCopier etat={etat} onCopier={() => copier(t.ticket)} taille={11} />
       </div>
       <p className="mt-2 font-mono text-xl font-bold text-accent-text">{t.ticket}</p>
       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted">
@@ -1120,29 +1074,15 @@ function XTicketCard({ ticket: t }: { ticket: XTicket }) {
 function TicketCard({ label, ticket, confidence, strategy }: {
   label: string; ticket: string; confidence: number; strategy: string;
 }) {
-  const [copied, setCopied] = useState(false);
+  const { etat, copier } = useClipboard();
 
-  function handleCopy() {
-    navigator.clipboard.writeText(ticket).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }).catch(() => {});
-  }
-
-  const confColor = confidence >= 65 ? "text-emerald-600" : confidence >= 45 ? "text-amber-600" : "text-muted";
+  const confColor = confidence >= 65 ? "text-emerald-700" : confidence >= 45 ? "text-amber-700" : "text-muted";
 
   return (
     <div className="rounded-xl border border-border bg-surface-sub p-3">
       <div className="flex items-start justify-between gap-2">
         <p className="text-xs font-semibold text-fg">{label}</p>
-        <button
-          aria-label="Copier le ticket"
-          className="shrink-0 rounded-lg border border-border bg-surface px-2 py-0.5 transition hover:text-accent-text"
-          onClick={handleCopy}
-          type="button"
-        >
-          {copied ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
-        </button>
+        <BoutonCopier etat={etat} onCopier={() => copier(ticket)} taille={11} />
       </div>
       <p className="mt-1 font-mono text-base font-bold text-accent-text">{ticket}</p>
       <p className="mt-1 text-[10px] text-muted">
@@ -1154,29 +1094,44 @@ function TicketCard({ label, ticket, confidence, strategy }: {
 }
 
 function ShareButton({ programCode, name }: { programCode: string; name: string }) {
-  const [shared, setShared] = useState(false);
+  const { etat, copier } = useClipboard();
 
   async function handleShare() {
     const text = `${programCode} — ${name} | Pronostics Kayzen Turf AI`;
-    const url  = window.location.href;
+    const url = window.location.href;
+
     if (typeof navigator.share === "function") {
-      try { await navigator.share({ title: text, url }); return; } catch {}
+      try {
+        await navigator.share({ title: text, url });
+        return;
+      } catch (cause) {
+        // `AbortError` = l'utilisateur a fermé la feuille de partage. Retomber
+        // sur la copie dans ce cas reviendrait à agir contre son choix.
+        if (cause instanceof DOMException && cause.name === "AbortError") return;
+      }
     }
-    navigator.clipboard.writeText(`${text}\n${url}`).then(() => {
-      setShared(true);
-      setTimeout(() => setShared(false), 2000);
-    }).catch(() => {});
+
+    await copier(`${text}\n${url}`);
   }
 
   return (
     <button
       aria-label="Partager cette course"
-      className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-muted transition hover:text-accent-text"
+      className="flex min-h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-muted transition hover:text-accent-text"
       onClick={handleShare}
       type="button"
     >
-      {shared ? <Check size={13} className="text-emerald-600" /> : <Share2 size={13} />}
-      {shared ? "Copié !" : "Partager"}
+      {etat === "copie" ? (
+        <Check aria-hidden="true" className="text-emerald-700" size={13} />
+      ) : etat === "echec" ? (
+        <AlertTriangle aria-hidden="true" className="text-danger" size={13} />
+      ) : (
+        <Share2 aria-hidden="true" size={13} />
+      )}
+      {etat === "copie" ? "Lien copié" : etat === "echec" ? "Échec" : "Partager"}
+      <span className="sr-only" role="status">
+        {etat === "copie" ? "Lien de la course copié" : etat === "echec" ? "Partage impossible" : ""}
+      </span>
     </button>
   );
 }
@@ -1299,7 +1254,6 @@ function formatLongDate(date: string) {
   return new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" }).format(new Date(`${date}T12:00:00`));
 }
 function formatMeters(distance: string) { return String(distance).replace(/\D/g, "") || distance; }
-function formatPrize(score: number)     { return `${Math.round(score * 500)} €`; }
 function formatEuros(value?: number | null) { return value ? `${new Intl.NumberFormat("fr-FR").format(Math.round(value))} €` : "—"; }
 function formatSexAge(horse: HorsePrediction) { const s = horse.sex?.slice(0, 1) ?? ""; return `${s}${horse.age ?? ""}` || "—"; }
 function formatEquipment(value?: string | null) { if (!value || value === "SANS_OEILLERES") return "—"; return value.replaceAll("_", " ").toLowerCase(); }
@@ -1377,21 +1331,55 @@ function MusicSparkline({ music }: { music?: string | null }) {
 
 /* ─── CopyTicketButton (#80) ─────────────────────────────────────── */
 function CopyTicketButton({ ticket }: { ticket: string }) {
-  const [copied, setCopied] = useState(false);
-  function handleCopy() {
-    navigator.clipboard.writeText(ticket).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }
+  const { etat, copier } = useClipboard();
+  return (
+    <BoutonCopier
+      className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-surface transition hover:border-accent hover:text-accent-text"
+      etat={etat}
+      onCopier={() => copier(ticket)}
+      taille={14}
+    />
+  );
+}
+
+/**
+ * Bouton de copie partagé.
+ *
+ * L'état d'échec était jusqu'ici invisible : le bouton ne bougeait pas et rien
+ * n'était annoncé. `role="status"` porte maintenant le résultat aux lecteurs
+ * d'écran, dans les deux cas.
+ */
+function BoutonCopier({
+  className,
+  etat,
+  onCopier,
+  taille,
+}: {
+  className?: string;
+  etat: EtatCopie;
+  onCopier: () => void;
+  taille: number;
+}) {
   return (
     <button
       aria-label="Copier le ticket"
-      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-surface transition hover:border-accent hover:text-accent-text"
-      onClick={handleCopy}
+      className={
+        className ??
+        "shrink-0 rounded-lg border border-border bg-surface px-2 py-0.5 text-[10px] font-bold text-muted transition hover:text-accent-text"
+      }
+      onClick={onCopier}
       type="button"
     >
-      {copied ? <Check size={14} className="text-accent-text" /> : <Copy size={14} className="text-muted" />}
+      {etat === "copie" ? (
+        <Check aria-hidden="true" className="text-emerald-700" size={taille} />
+      ) : etat === "echec" ? (
+        <AlertTriangle aria-hidden="true" className="text-danger" size={taille} />
+      ) : (
+        <Copy aria-hidden="true" className="text-muted" size={taille} />
+      )}
+      <span className="sr-only" role="status">
+        {etat === "copie" ? "Ticket copié" : etat === "echec" ? "Copie impossible" : ""}
+      </span>
     </button>
   );
 }
@@ -1526,7 +1514,6 @@ function HorseRadarChart({ horse }: { horse?: HorsePrediction | null }) {
     const angle = (i * 2 * Math.PI) / n - Math.PI / 2;
     return [CX + r * Math.cos(angle), CY + r * Math.sin(angle)];
   }
-  const bgPts = axes.map((_, i) => point(i, R).join(",")).join(" ");
   const dataPts = axes.map((a, i) => point(i, a.val * R).join(",")).join(" ");
   return (
     <svg viewBox="0 0 160 160" width="100%" className="max-w-[200px] mx-auto block" aria-label="Radar profil cheval">

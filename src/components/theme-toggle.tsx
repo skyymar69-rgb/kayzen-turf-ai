@@ -1,60 +1,73 @@
 "use client";
 
 import { Moon, Sun } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 type Theme = "light" | "dark";
+
 const STORAGE_KEY = "kayzen-theme";
+/** Propage le changement aux autres bascules montées, dans le même onglet. */
+const CHANGE_EVENT = "kayzen-theme-change";
+
+/**
+ * Le thème vit déjà sur `document.documentElement.dataset.theme`, écrit par le
+ * script anti-FOUC du layout avant le premier rendu. C'est donc lui la source
+ * de vérité, et non un état React.
+ *
+ * L'ancienne version relisait localStorage dans un `useEffect` puis appelait
+ * `setTheme` et `setMounted` : deux rendus en cascade après chaque hydratation,
+ * sur toutes les pages, pour une information déjà connue du DOM. Le linter React
+ * le signalait (`react-hooks/set-state-in-effect`).
+ *
+ * `useSyncExternalStore` lit la valeur directement, avec un instantané serveur
+ * distinct — l'hydratation est donc garantie identique au HTML rendu.
+ */
+function souscrire(onChange: () => void) {
+  window.addEventListener(CHANGE_EVENT, onChange);
+  // Synchronise les onglets ouverts sur le même site.
+  window.addEventListener("storage", onChange);
+  return () => {
+    window.removeEventListener(CHANGE_EVENT, onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
+
+function lireTheme(): Theme {
+  return document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+}
+
+/** Le serveur ne connaît pas la préférence : il rend le thème clair. */
+function themeServeur(): Theme {
+  return "light";
+}
 
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>("light");
-  const [mounted, setMounted] = useState(false);
+  const theme = useSyncExternalStore(souscrire, lireTheme, themeServeur);
+  const sombre = theme === "dark";
 
-  useEffect(() => {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    const resolved: Theme =
-      stored === "dark" || stored === "light"
-        ? stored
-        : window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light";
-    setTheme(resolved);
-    document.documentElement.dataset.theme = resolved;
-    setMounted(true);
-  }, []);
-
-  function toggleTheme() {
-    const next: Theme = theme === "dark" ? "light" : "dark";
-    setTheme(next);
-    document.documentElement.dataset.theme = next;
-    window.localStorage.setItem(STORAGE_KEY, next);
+  function basculer() {
+    const suivant: Theme = sombre ? "light" : "dark";
+    document.documentElement.dataset.theme = suivant;
+    try {
+      window.localStorage.setItem(STORAGE_KEY, suivant);
+    } catch {
+      // Stockage indisponible (navigation privée stricte) : le thème reste
+      // appliqué pour la session, il ne sera simplement pas mémorisé.
+    }
+    window.dispatchEvent(new Event(CHANGE_EVENT));
   }
 
   return (
     <button
-      aria-label={theme === "dark" ? "Activer le mode clair" : "Activer le mode sombre"}
-      aria-pressed={theme === "dark"}
-      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/30 bg-white/12 text-slate-100 transition hover:bg-white/20 hover:text-white"
-      onClick={toggleTheme}
+      aria-label={sombre ? "Activer le mode clair" : "Activer le mode sombre"}
+      aria-pressed={sombre}
+      className="inline-flex size-9 items-center justify-center rounded-lg border border-white/30 bg-white/12 text-slate-100 transition hover:bg-white/20 hover:text-white"
+      onClick={basculer}
+      title={sombre ? "Mode clair" : "Mode sombre"}
       type="button"
-      title={theme === "dark" ? "Mode clair" : "Mode sombre"}
     >
-      {/* amélioration #18 — transition fluide entre les icônes */}
-      <span
-        className="transition-all duration-300"
-        style={{
-          display: "inline-flex",
-          transform: mounted ? "rotate(0deg) scale(1)" : "rotate(-30deg) scale(0.8)",
-          opacity: mounted ? 1 : 0,
-        }}
-      >
-        {mounted ? (
-          theme === "dark"
-            ? <Sun aria-hidden="true" size={16} />
-            : <Moon aria-hidden="true" size={16} />
-        ) : (
-          <Moon aria-hidden="true" size={16} />
-        )}
+      <span className="inline-flex transition-transform duration-300">
+        {sombre ? <Sun aria-hidden="true" size={16} /> : <Moon aria-hidden="true" size={16} />}
       </span>
     </button>
   );

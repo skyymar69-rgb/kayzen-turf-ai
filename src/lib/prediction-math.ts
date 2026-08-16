@@ -819,7 +819,6 @@ function obstacleScore(
   const confidence = confidenceScore(horse.confidence);
   const music = musicParserObstacle(horse.music);
   const volatility = clamp(sane(context.marketVolatility), 0, 40);
-  const consensus = clamp(sane(context.modelConsensus, 55), 0, 100);
   const fieldPressure = clamp((stats.fieldSize - 8) * 1.8, -8, 18);
   const favoriteGap = clamp((stats.favoriteOdds || odds) - odds, -20, 20);
 

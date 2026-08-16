@@ -21,6 +21,7 @@ import {
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useFavorites } from "@/hooks/use-favorites";
 import { probableArrival, raceToContext } from "@/lib/bet-recommendations";
+import { minutesActuellesParis, minutesDepuisHeure } from "@/lib/paris-time";
 import type { BetOffer, RaceAnalysis } from "@/lib/types";
 
 type DashboardProps = { races: RaceAnalysis[] };
@@ -99,7 +100,6 @@ export function Dashboard({ races }: DashboardProps) {
 
   const topArrival      = selectedRace ? probableArrival(selectedRace.horses, raceToContext(selectedRace)).slice(0, 5) : [];
   const dayInsights     = buildDayInsights(dayRaces);
-  const todayDate       = dateForDay(races, "today");
   const dayRunnerCount  = dayRaces.reduce((t, r) => t + r.horses.length, 0);
   const dayFeatureCount = dayRaces.filter((r) => raceHighlights(r.betTypes).length > 0).length;
 
@@ -125,7 +125,9 @@ export function Dashboard({ races }: DashboardProps) {
   /* amélioration #22 — raccourcis clavier ←/→ pour changer de jour */
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if ((e.target as HTMLElement).tagName === "INPUT") return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const cible = e.target as HTMLElement | null;
+      if (cible?.closest("input, select, textarea, [contenteditable='true']")) return;
       if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
         const idx = DAY_ORDER.indexOf(dayFilter as typeof DAY_ORDER[number]);
         if (idx === -1) return;
@@ -135,7 +137,6 @@ export function Dashboard({ races }: DashboardProps) {
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dayFilter]);
 
   /* amélioration #24 — course phare : meilleur score parmi les courses du jour */
@@ -163,7 +164,7 @@ export function Dashboard({ races }: DashboardProps) {
               onClick={() => selectDay("today")}
               type="button"
             >
-              Voir aujourd'hui
+              Voir aujourd’hui
             </button>
             <Link
               href="/pronostics"
@@ -355,7 +356,7 @@ export function Dashboard({ races }: DashboardProps) {
 
               {/* ── Footer hero ──────────────────────────────────────── */}
               <div className="flex items-center justify-between border-t border-white/10 px-5 py-2.5">
-                <p className="text-[10px] text-slate-400">Outil d'aide à la décision — aucun résultat ni gain garanti</p>
+                <p className="text-[10px] text-slate-400">Outil d’aide à la décision — aucun résultat ni gain garanti</p>
                 <Link href="/tarifs" className="text-[10px] font-semibold text-cta transition hover:text-cta-hi">
                   Accès premium →
                 </Link>
@@ -644,7 +645,7 @@ export function Dashboard({ races }: DashboardProps) {
               <input
                 id="race-search"
                 ref={searchInputRef}
-                className="min-w-0 flex-1 bg-transparent text-fg outline-none placeholder:text-muted"
+                className="min-h-11 min-w-0 flex-1 bg-transparent text-fg outline-none placeholder:text-muted"
                 placeholder="Filtrer par course, prix…"
                 defaultValue=""
                 onChange={(e) => handleQueryChange(e.target.value)}
@@ -698,13 +699,13 @@ export function Dashboard({ races }: DashboardProps) {
               <caption className="sr-only">Courses de la réunion {selectedMeeting.racecourse}</caption>
               <thead>
                 <tr className="border-b border-border bg-surface-sub text-xs font-bold uppercase tracking-widest text-muted">
-                  <th className="px-5 py-3">Course</th>
-                  <th className="px-5 py-3">Prix</th>
-                  <th className="px-5 py-3">Départ</th>
-                  <th className="px-5 py-3">Discipline</th>
-                  <th className="px-5 py-3">Signal IA</th>
-                  <th className="px-5 py-3">Paris ouverts</th>
-                  <th className="px-5 py-3 text-right">Action</th>
+                  <th className="px-5 py-3" scope="col">Course</th>
+                  <th className="px-5 py-3" scope="col">Prix</th>
+                  <th className="px-5 py-3" scope="col">Départ</th>
+                  <th className="px-5 py-3" scope="col">Discipline</th>
+                  <th className="px-5 py-3" scope="col">Signal IA</th>
+                  <th className="px-5 py-3" scope="col">Paris ouverts</th>
+                  <th className="px-5 py-3 text-right" scope="col">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -868,12 +869,12 @@ export function Dashboard({ races }: DashboardProps) {
                   <caption className="sr-only">Top 5 partants KAYZEN</caption>
                   <thead>
                     <tr className="border-b border-border bg-surface-sub text-xs font-bold uppercase tracking-widest text-muted">
-                      <th className="px-5 py-3">N°</th>
-                      <th className="px-5 py-3">Cheval</th>
-                      <th className="px-5 py-3">{selectedRace?.discipline === "Trot" ? "Driver" : selectedRace?.discipline === "Obstacle" ? "Jockey" : "Jockey"}</th>
-                      <th className="px-5 py-3 text-right">Cote</th>
-                      <th className="px-5 py-3 text-right">Score KZ</th>
-                      <th className="px-5 py-3 text-right">Top 3</th>
+                      <th className="px-5 py-3" scope="col">N°</th>
+                      <th className="px-5 py-3" scope="col">Cheval</th>
+                      <th className="px-5 py-3" scope="col">{selectedRace?.discipline === "Trot" ? "Driver" : selectedRace?.discipline === "Obstacle" ? "Jockey" : "Jockey"}</th>
+                      <th className="px-5 py-3 text-right" scope="col">Cote</th>
+                      <th className="px-5 py-3 text-right" scope="col">Score KZ</th>
+                      <th className="px-5 py-3 text-right" scope="col">Top 3</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
@@ -934,7 +935,7 @@ export function Dashboard({ races }: DashboardProps) {
               </div>
               <div className="border-t border-border px-5 pb-5">
                 <div className="rounded-xl border border-warn/30 bg-warn-lo px-4 py-3 text-xs leading-5 text-warn">
-                  Outil d'aide à la décision — aucun pronostic ne garantit un gain.
+                  Outil d’aide à la décision — aucun pronostic ne garantit un gain.
                 </div>
               </div>
             </div>
@@ -1014,7 +1015,7 @@ export function Dashboard({ races }: DashboardProps) {
         <section className="mt-4 rounded-2xl border border-border bg-surface shadow-sm" aria-labelledby="perf-title">
           <div className="border-b border-border px-5 py-4">
             <p className="text-xs font-bold uppercase tracking-widest text-muted">Mémoire & auto-apprentissage</p>
-            <h2 id="perf-title" className="font-display text-xl font-bold text-fg">Performances de l'IA</h2>
+            <h2 id="perf-title" className="font-display text-xl font-bold text-fg">Performances de l’IA</h2>
             <p className="mt-1 text-sm text-muted">
               Toutes les prédictions sont stockées et comparées aux arrivées officielles.
               Le modèle se recalibre à chaque résultat pour affiner ses prochaines analyses.
@@ -1093,19 +1094,6 @@ function PdfDownloadButton({ date }: { date: string }) {
 
 /* ─── Sub-components ─────────────────────────────────────────────── */
 
-function HeroStat({ label, value, icon, dark }: { label: string; value: string; icon: React.ReactNode; dark?: boolean }) {
-  return dark ? (
-    <div className="rounded-xl border border-white/10 bg-white/8 p-4 backdrop-blur-sm">
-      <div className="flex items-center gap-2 text-white/50">{icon}<span className="text-xs font-bold uppercase tracking-widest">{label}</span></div>
-      <p className="mt-2 font-display text-3xl font-bold text-white">{value}</p>
-    </div>
-  ) : (
-    <div className="rounded-xl border border-border bg-surface-sub p-4">
-      <div className="flex items-center gap-2 text-muted">{icon}<span className="text-xs font-bold uppercase tracking-widest">{label}</span></div>
-      <p className="mt-2 font-display text-3xl font-bold text-fg">{value}</p>
-    </div>
-  );
-}
 
 function InsightCard({ icon, label, tone, value, detail }: {
   icon: React.ReactNode; label: string; tone: "green" | "amber" | "dark"; value: string; detail: string;
@@ -1269,7 +1257,6 @@ function raceOpportunity(race: RaceAnalysis) {
 
   // Favori très fragile
   const fav = race.horses.slice().sort((a, b) => a.odds - b.odds)[0];
-  const favAnalysis = fav ? race.horses.indexOf(fav) : -1;
   const favIsFragile = fav && fav.odds < 3 && fav.top3Probability < 40;
 
   // Outsider avec value
@@ -1326,14 +1313,26 @@ function fmtProb(v: number | null | undefined): string {
   if (v === null || v === undefined || (typeof v === "number" && isNaN(v))) return "—";
   return `${v}%`;
 }
+/**
+ * Une heure de départ illisible renvoyait NaN, et toute comparaison avec NaN
+ * étant fausse, la course était traitée comme partant à minuit — donc toujours
+ * « déjà courue ». On la repousse en fin de journée : elle reste visible plutôt
+ * que de disparaître silencieusement de la ligne du temps.
+ */
 function minutesFromStartTime(t: string) {
-  const [h = "0", m = "0"] = t.split(":");
-  return Number(h) * 60 + Number(m);
+  return minutesDepuisHeure(t) ?? 24 * 60;
 }
+
+/**
+ * `new Date().getHours()` donnait l'heure du navigateur, alors que les heures
+ * de départ sont des heures de Paris. Un visiteur outre-mer voyait donc la
+ * mauvaise course mise en avant et des « Départ imminent » sur des épreuves
+ * déjà courues.
+ */
 function useCurrentMinute() {
   return useSyncExternalStore(
     (notify) => { const id = window.setInterval(notify, 60_000); return () => window.clearInterval(id); },
-    () => { const n = new Date(); return n.getHours() * 60 + n.getMinutes(); },
+    () => minutesActuellesParis(),
     () => 0,
   );
 }
@@ -1344,7 +1343,7 @@ function formatRelativeDay(day: RaceAnalysis["relativeDay"]) {
   return "Aujourd'hui";
 }
 function formatShortDate(date: string) {
-  const [y, m, d] = date.split("-");
+  const [, m, d] = date.split("-");
   return `${d}/${m}`;
 }
 function dateForDay(races: RaceAnalysis[], day: RaceAnalysis["relativeDay"]) {

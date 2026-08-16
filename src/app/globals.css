@@ -1,8 +1,16 @@
 @import "tailwindcss";
-@import "@fontsource/inter/400.css";
-@import "@fontsource/inter/500.css";
-@import "@fontsource/inter/600.css";
-@import "@fontsource/inter/700.css";
+/* Les feuilles génériques de @fontsource déclarent les sept sous-ensembles
+   d'Inter — latin, latin-ext, cyrillique, cyrillique-ext, grec, grec-ext et
+   vietnamien — soit 28 règles @font-face pour quatre graisses. Le navigateur
+   ne télécharge que ce que l'unicode-range réclame, mais tout cela transite
+   par le CSS critique, qui bloque le premier rendu. Le site est en français :
+   latin et latin-ext suffisent. */
+@import "@fontsource/inter/latin-400.css";
+@import "@fontsource/inter/latin-500.css";
+@import "@fontsource/inter/latin-600.css";
+@import "@fontsource/inter/latin-700.css";
+@import "@fontsource/inter/latin-ext-400.css";
+@import "@fontsource/inter/latin-ext-700.css";
 
 /* ─── Design tokens ─────────────────────────────────────────────── */
 :root {

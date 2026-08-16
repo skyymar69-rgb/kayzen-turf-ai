@@ -1,6 +1,35 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
+import { adresseAppelant, limiterDebit, reponseTropDeRequetes } from "@/lib/rate-limit";
+import { schemaDate } from "@/lib/validation";
 
 const PORTFOLIO_SERVICE_URL = process.env.PORTFOLIO_SERVICE_URL ?? "http://localhost:8004";
+
+const LIMITE_APPELS = 30;
+const FENETRE_MS = 60_000;
+
+/**
+ * `parseFloat` renvoyait NaN sur une entrée non numérique, NaN partait dans
+ * l'URL du service Python sous forme de chaîne « NaN », et l'erreur remontait
+ * en 500. Chaque paramètre est désormais borné à un intervalle exploitable.
+ */
+const schemaRequete = z.object({
+  date: schemaDate,
+  bankroll: z.coerce.number().finite().gt(0).lte(10_000_000).default(1000),
+  drawdown: z.coerce.number().finite().gte(0).lte(1).default(0),
+  budgetFrac: z.coerce.number().finite().gt(0).lte(1).default(0.2),
+  minEdge: z.coerce.number().finite().gte(0).lte(1).default(0.05),
+  minClv: z.coerce.number().finite().gte(0).lte(1).default(0.02),
+});
+
+function aujourdhuiParis(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Paris",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
 
 /**
  * GET /api/portfolio?date=2026-05-07&bankroll=1000&drawdown=0
@@ -9,13 +38,34 @@ const PORTFOLIO_SERVICE_URL = process.env.PORTFOLIO_SERVICE_URL ?? "http://local
  * et retourne le portefeuille optimisé du jour.
  */
 export async function GET(request: Request) {
+  const limite = limiterDebit(`portfolio:${adresseAppelant(request)}`, LIMITE_APPELS, FENETRE_MS);
+  if (!limite.autorise) return reponseTropDeRequetes(limite);
+
   const { searchParams } = new URL(request.url);
-  const date = searchParams.get("date") ?? new Date().toISOString().slice(0, 10);
-  const bankroll = parseFloat(searchParams.get("bankroll") ?? "1000");
-  const drawdown = parseFloat(searchParams.get("drawdown") ?? "0");
-  const budgetFrac = parseFloat(searchParams.get("budgetFrac") ?? "0.20");
-  const minEdge = parseFloat(searchParams.get("minEdge") ?? "0.05");
-  const minClv = parseFloat(searchParams.get("minClv") ?? "0.02");
+
+  const resultat = schemaRequete.safeParse({
+    date: searchParams.get("date") ?? aujourdhuiParis(),
+    bankroll: searchParams.get("bankroll") ?? undefined,
+    drawdown: searchParams.get("drawdown") ?? undefined,
+    budgetFrac: searchParams.get("budgetFrac") ?? undefined,
+    minEdge: searchParams.get("minEdge") ?? undefined,
+    minClv: searchParams.get("minClv") ?? undefined,
+  });
+
+  if (!resultat.success) {
+    return NextResponse.json(
+      {
+        error: "Paramètres invalides.",
+        details: resultat.error.issues.map((probleme) => ({
+          champ: probleme.path.join(".") || "(racine)",
+          message: probleme.message,
+        })),
+      },
+      { status: 400, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
+  const { date, bankroll, drawdown, budgetFrac, minEdge, minClv } = resultat.data;
 
   try {
     const url = new URL("/portfolio", PORTFOLIO_SERVICE_URL);
@@ -29,23 +79,27 @@ export async function GET(request: Request) {
     const res = await fetch(url.toString(), {
       method: "GET",
       headers: { "Content-Type": "application/json" },
-      next: { revalidate: 300 },  // cache 5 min
+      next: { revalidate: 300 },
     });
 
     if (!res.ok) {
-      const text = await res.text();
+      // Le corps amont n'est plus relayé au client : il exposait les traces du
+      // service Python interne.
+      console.error("portfolio_service a répondu %d pour le %s", res.status, date);
       return NextResponse.json(
-        { error: "Portfolio service error", detail: text },
-        { status: res.status }
+        { error: "Service portefeuille indisponible.", bets: [], summary: { reason: "upstream_error" } },
+        { status: 502, headers: { "Cache-Control": "no-store" } },
       );
     }
 
     const data = await res.json();
-    return NextResponse.json(data);
+    return NextResponse.json(data, {
+      headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" },
+    });
   } catch {
     return NextResponse.json(
-      { error: "Portfolio service unavailable", bets: [], summary: { reason: "service_unavailable" } },
-      { status: 503 }
+      { error: "Service portefeuille indisponible.", bets: [], summary: { reason: "service_unavailable" } },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
     );
   }
 }

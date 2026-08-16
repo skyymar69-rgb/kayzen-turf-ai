@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, BarChart3, Brain, Check, Shield, Sparkles, Trophy, Zap } from "lucide-react";
+import { ArrowRight, BarChart3, Brain, Check, Shield, Sparkles, Zap } from "lucide-react";
 
 export const metadata = {
   title: "Tarifs & Offres",
@@ -120,8 +120,8 @@ export default function TarifsPage() {
             Monétiser la clarté,<br className="hidden sm:block" /> pas une promesse de gain
           </h1>
           <p className="mt-4 mx-auto max-w-2xl text-base leading-7 text-muted">
-            Kayzen Turf AI est un outil d'aide à la décision. Nous vendons de l'analyse et de la transparence,
-            pas des certitudes. Chaque offre correspond à un niveau d'engagement dans votre pratique du turf.
+            Kayzen Turf AI est un outil d’aide à la décision. Nous vendons de l’analyse et de la transparence,
+            pas des certitudes. Chaque offre correspond à un niveau d’engagement dans votre pratique du turf.
           </p>
         </section>
 
@@ -180,7 +180,7 @@ export default function TarifsPage() {
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] border-collapse text-left">
-              <caption className="sr-only">Comparaison des fonctionnalités selon l'offre</caption>
+              <caption className="sr-only">Comparaison des fonctionnalités selon l’offre</caption>
               <thead>
                 <tr className="border-b border-border bg-surface-sub text-xs font-bold uppercase tracking-widest text-muted">
                   <th className="px-6 py-4">Fonctionnalité</th>
@@ -241,9 +241,9 @@ export default function TarifsPage() {
             <div>
               <h2 className="font-semibold text-fg">Jeu responsable</h2>
               <p className="mt-2 text-sm leading-6 text-fg">
-                Les jeux d'argent comportent des risques : endettement, isolement, dépendance.
+                Les jeux d’argent comportent des risques : endettement, isolement, dépendance.
                 Aucun pronostic, aussi précis soit-il, ne garantit un gain. Kayzen Turf AI est un outil
-                d'aide à la décision et non un système de gains assurés. Si le jeu devient un problème,
+                d’aide à la décision et non un système de gains assurés. Si le jeu devient un problème,
                 contactez{" "}
                 <a href="https://www.joueurs-info-service.fr" rel="noopener noreferrer" target="_blank" className="font-semibold text-warn underline underline-offset-4">
                   Joueurs Info Service au 09 74 75 13 13

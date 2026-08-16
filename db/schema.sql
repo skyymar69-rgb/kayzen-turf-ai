@@ -188,3 +188,30 @@ create index if not exists value_bets_race_id_idx on value_bets (race_id);
 create unique index if not exists value_bets_race_horse_unique_idx on value_bets (race_id, horse_id);
 create index if not exists model_calibrations_active_idx on model_calibrations (segment, active, created_at desc);
 create index if not exists race_feedback_race_id_idx on race_feedback (race_id);
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Demandes d'exercice des droits RGPD (art. 15 à 21 du règlement 2016/679).
+--
+-- Le formulaire de la page /confidentialite n'envoyait la demande nulle part :
+-- il affichait « branchement email/API à finaliser » et jetait la saisie. Une
+-- demande d'accès ou d'effacement doit être tracée et traitée sous un mois
+-- (art. 12.3) ; sans registre, aucun délai n'est opposable ni démontrable.
+--
+-- Minimisation (art. 5.1.c) : on ne stocke que l'email de contact, la nature de
+-- la demande et son message. Aucune adresse IP, aucun agent utilisateur.
+-- La purge des demandes closes est décrite dans docs/DATA_RETENTION_POLICY.md.
+-- ─────────────────────────────────────────────────────────────────────────────
+create table if not exists privacy_requests (
+  id uuid primary key default gen_random_uuid(),
+  reference text not null unique,
+  email text not null,
+  request_type text not null check (
+    request_type in ('access', 'rectification', 'erasure', 'opposition', 'limitation', 'portability')
+  ),
+  message text not null,
+  status text not null default 'received' check (status in ('received', 'in_progress', 'closed')),
+  created_at timestamptz not null default now(),
+  handled_at timestamptz
+);
+
+create index if not exists privacy_requests_status_idx on privacy_requests (status, created_at);
