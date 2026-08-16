@@ -506,19 +506,35 @@ async function importDate(sql, pmuDate, maxRaces) {
         }
       }
 
+      // Arrivée : le PMU publie d'abord une arrivée provisoire (podium + 4e pour
+      // les rapports Quarté), puis l'arrivée définitive complète. Sans le
+      // remplacement ci-dessous, la première version partielle restait figée en
+      // base — d'où des courses à 4 places alors que l'API en renvoyait 10, et
+      // un Top 5 mécaniquement plafonné qui se lisait comme un échec du modèle.
       const arrival = course.ordreArrivee?.flat?.() ?? [];
-      for (let index = 0; index < arrival.length; index += 1) {
-        const number = Number(arrival[index]);
-        const participant = participants.find((item) => Number(item.numPmu) === number);
-        if (!participant) continue;
-        const id = horseId(participant);
-        await sql`
-          insert into results (race_id, horse_id, finish_position, won)
-          values (${raceId}, ${id}, ${index + 1}, ${index === 0})
-          on conflict (race_id, horse_id) do update set
-            finish_position = excluded.finish_position,
-            won = excluded.won
-        `;
+      if (arrival.length > 0) {
+        // Remplacement intégral plutôt qu'un upsert ligne à ligne : une arrivée
+        // peut être rectifiée (disqualification), et un upsert laisserait les
+        // anciennes positions orphelines.
+        await sql`delete from results where race_id = ${raceId}`;
+
+        for (let index = 0; index < arrival.length; index += 1) {
+          const number = Number(arrival[index]);
+          const participant = participants.find((item) => Number(item.numPmu) === number);
+          if (!participant) continue;
+          const id = horseId(participant);
+          await sql`
+            insert into results (race_id, horse_id, finish_position, won)
+            values (${raceId}, ${id}, ${index + 1}, ${index === 0})
+            on conflict (race_id, horse_id) do update set
+              finish_position = excluded.finish_position,
+              won = excluded.won
+          `;
+        }
+
+        if (course.statut && course.statut !== "ARRIVEE_DEFINITIVE_COMPLETE") {
+          console.log(`[pmu] ${raceId}: arrivée ${arrival.length} places, statut ${course.statut} — sera complétée au prochain passage`);
+        }
       }
 
       importedRaces += 1;
