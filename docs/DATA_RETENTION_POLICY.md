@@ -41,6 +41,37 @@ Phase 3:
 - Keep normalized analytical tables in Postgres.
 - Train models from full historical exports.
 
+## Redundancy Compaction (approved deletion workflow)
+
+Retaining history is not the same as retaining duplicates. The import workflow
+runs three times a day over a rolling three-day window, so every race day is
+re-imported about nine times. `entries` and `value_bets` are upserted, but
+`predictions` and `odds_snapshots` used to be inserted blindly — producing nine
+near-identical copies per runner. On 2026-08-16 this filled the 512 MB Neon
+project limit and every write started failing with
+`could not extend file because project size limit has been exceeded`.
+
+Two changes address it:
+
+- `scripts/import-pmu-day.mjs` now replaces the previous `prediction_run` for a
+  race instead of stacking a new one, and only records an odds snapshot when the
+  odds actually moved.
+- `npm run db:compact` removes the redundancy already stored, then rewrites the
+  affected tables so the pages are returned to Neon.
+
+```bash
+npm run db:compact            # simulation, no write
+npm run db:compact -- --apply # execution
+```
+
+The compaction deletes **no race, no runner, no result and no distinct market
+observation**. It removes superseded predictions, odds re-recorded at an
+unchanged value, and orphan `prediction_runs`. First odds, last odds and every
+price level are preserved, so drift analysis is unaffected.
+
+This is the explicit, reviewed and documented deletion workflow the policy
+requires. It is not age-based and must never become one.
+
 ## Monitoring
 
 Use:

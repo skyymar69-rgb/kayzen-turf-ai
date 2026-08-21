@@ -474,10 +474,24 @@ async function importDate(sql, pmuDate, maxRaces) {
             factors = excluded.factors
         `;
 
+        // Un relevé n'est enregistré que si la cote a bougé depuis le dernier.
+        // Le cron passe 3 fois par jour sur une fenêtre de 3 jours, soit ~9
+        // relevés par partant : sans ce filtre, la moitié de la table était de
+        // la cote réenregistrée à l'identique, sans aucune information de
+        // marché — et c'est ce qui a saturé le plafond de 512 Mo du projet Neon.
         if (prediction.odds > 1) {
           await sql`
             insert into odds_snapshots (race_id, horse_id, odds, source, observed_at)
-            values (${raceId}, ${id}, ${prediction.odds}, ${"PMU"}, now())
+            select ${raceId}::text, ${id}::text, ${prediction.odds}::numeric, ${"PMU"}::text, now()
+            where ${prediction.odds}::numeric is distinct from (
+              select previous.odds
+              from odds_snapshots previous
+              where previous.race_id = ${raceId}
+                and previous.horse_id = ${id}
+                and previous.source = ${"PMU"}
+              order by previous.observed_at desc
+              limit 1
+            )
           `;
         }
 
@@ -505,6 +519,16 @@ async function importDate(sql, pmuDate, maxRaces) {
           `;
         }
       }
+
+      // Une course réimportée reçoit un nouveau prediction_run : les prédictions
+      // du passage précédent sont périmées, remplacées par celles qu'on vient
+      // d'écrire. Les conserver empilait 9 copies quasi identiques par partant
+      // (70 % de la table `predictions`) pour aucune valeur analytique.
+      await sql`
+        delete from predictions
+        where race_id = ${raceId}
+          and prediction_run_id is distinct from ${predictionRunId}
+      `;
 
       // Arrivée : le PMU publie d'abord une arrivée provisoire (podium + 4e pour
       // les rapports Quarté), puis l'arrivée définitive complète. Sans le
@@ -563,7 +587,22 @@ async function main() {
     if (total >= maxRaces) break;
   }
 
+  // Chaque passage crée un prediction_run ; celui du passage précédent n'a plus
+  // aucune prédiction rattachée depuis le remplacement par course ci-dessus.
+  const orphanRuns = await sql`
+    delete from prediction_runs
+    where not exists (
+      select 1 from predictions where predictions.prediction_run_id = prediction_runs.id
+    )
+    returning id
+  `;
+
+  const [{ size }] = await sql`
+    select pg_size_pretty(pg_database_size(current_database())) as size
+  `;
+
   console.log(`[pmu] imported ${total} races`);
+  console.log(`[pmu] purged ${orphanRuns.length} orphan prediction runs — database size ${size}`);
 }
 
 main().catch((error) => {
