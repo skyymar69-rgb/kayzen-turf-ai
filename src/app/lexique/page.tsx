@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Lexique turf",
-  description: "Tous les termes du turf expliqués : KZ Score, value bet, Kelly criterion, Quinté+, PMU, arrivée, cote, mise…",
+  description: "Tous les termes du turf expliqués : PronoScore, value bet, Kelly criterion, Quinté+, PMU, arrivée, cote, mise…",
   alternates: { canonical: "/lexique" },
 };
 
@@ -21,11 +21,11 @@ const GLOSSARY: Array<{ term: string; definition: string; category: string }> = 
   { category: "Paris", term: "Multi", definition: "Pari combinatoire sur 4 à 8 chevaux dans les 4 premiers. Flexi possible pour réduire la mise." },
   { category: "Paris", term: "Flexi", definition: "Option permettant de parier une fraction du ticket de base (ex : 25%). Réduit la mise, réduit proportionnellement le rapport." },
   /* Algorithme */
-  { category: "Algorithme", term: "KZ Score", definition: "Score composite Kayzen de 0 à 99. Combine probabilité gagnant, probabilité Top 3, edge marché, stabilité des rangs par Monte Carlo et niveau de confiance." },
+  { category: "Algorithme", term: "PronoScore", definition: "Score composite PronoTurf de 0 à 99. Combine probabilité gagnant, probabilité Top 3, edge marché, stabilité des rangs par Monte Carlo et niveau de confiance." },
   { category: "Algorithme", term: "Value Bet", definition: "Pari à valeur positive : la probabilité estimée dépasse la probabilité implicite de la cote. Edge > 10% = signal fort." },
   { category: "Algorithme", term: "Edge marché", definition: "Écart en % entre la probabilité du modèle et la probabilité implicite du marché. Positif = sous-évaluation, négatif = surcote." },
-  { category: "Algorithme", term: "Kelly Criterion", definition: "Formule mathématique donnant la fraction optimale de bankroll à miser : f = (bp − q) / b. Kayzen utilise Kelly fractionné (50%) pour limiter la variance." },
-  { category: "Algorithme", term: "Plackett-Luce", definition: "Modèle probabiliste utilisé pour simuler des ordres d'arrivée complets. Kayzen réalise 2 000 tirages Monte Carlo (Gumbel-max trick) pour estimer les probabilités Top 1/3/5." },
+  { category: "Algorithme", term: "Kelly Criterion", definition: "Formule mathématique donnant la fraction optimale de bankroll à miser : f = (bp − q) / b. PronoTurf utilise Kelly fractionné (50%) pour limiter la variance." },
+  { category: "Algorithme", term: "Plackett-Luce", definition: "Modèle probabiliste utilisé pour simuler des ordres d'arrivée complets. PronoTurf réalise 2 000 tirages Monte Carlo (Gumbel-max trick) pour estimer les probabilités Top 1/3/5." },
   { category: "Algorithme", term: "Monte Carlo", definition: "Technique de simulation stochastique : on génère de nombreux scénarios aléatoires pour estimer une distribution de probabilités." },
   { category: "Algorithme", term: "Softmax / température", definition: "La température T contrôle l'étalement de la distribution. T élevée = probabilités plus uniformes (course ouverte). T faible = favori très dominant." },
   { category: "Algorithme", term: "Modèle de confiance", definition: "Probabilité estimée qu'un ticket passe, exprimée en %. Un Simple Placé à 70 a environ 7 chances sur 10 d'aboutir." },
@@ -51,7 +51,7 @@ const GLOSSARY: Array<{ term: string; definition: string; category: string }> = 
   { category: "Turf général", term: "Gains (€)", definition: "Total des gains en course remportés par un cheval au cours de sa carrière. Indicateur de niveau de compétition." },
   { category: "Turf général", term: "Bankroll", definition: "Capital total alloué aux paris. La gestion de bankroll (Kelly, mises fixes) détermine la survie à long terme du parieur." },
   { category: "Bankroll", term: "ROI (Return on Investment)", definition: "Rentabilité en % sur un historique de paris. ROI = (gains − mises) / mises × 100. Un ROI positif de 5% sur 100 paris est excellent en turf." },
-  { category: "Bankroll", term: "Drawdown", definition: "Perte maximale consécutive depuis un pic de bankroll. Kayzen ajuste les mises en cas de drawdown élevé pour protéger le capital." },
+  { category: "Bankroll", term: "Drawdown", definition: "Perte maximale consécutive depuis un pic de bankroll. PronoTurf ajuste les mises en cas de drawdown élevé pour protéger le capital." },
   { category: "Bankroll", term: "Kelly fractionné", definition: "Variante du Kelly Criterion utilisant 50% de la mise recommandée. Réduit la variance tout en conservant l'avantage mathématique." },
   { category: "Bankroll", term: "Valeur espérée (EV)", definition: "Espérance de gain par unité misée. EV = (prob. victoire × gain net) − (prob. défaite × mise). EV > 0 = pari rentable à long terme." },
 ];
@@ -75,7 +75,7 @@ export default function LexiquePage() {
             <BookOpen size={26} className="text-accent-text" />
           </div>
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-muted">Kayzen Pronostic</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-muted">PronoTurf</p>
             <h1 className="font-display text-3xl font-bold text-fg">Lexique turf</h1>
             <p className="mt-1 text-sm text-muted">Tous les termes indispensables pour comprendre nos analyses et pronostics.</p>
           </div>

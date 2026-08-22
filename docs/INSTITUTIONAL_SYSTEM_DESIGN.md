@@ -26,7 +26,7 @@ flowchart LR
   DB --> Features["Feature Store\nfeatures temporelles sans fuite"]
   Features --> Models["AI Engine\nRF, XGBoost, LightGBM, MLP/LSTM, GNN"]
   Models --> Calib["Calibration\nPlatt, isotonic, shrinkage, temporal CV"]
-  Calib --> Predictions["Prediction Service\nKZ Score, Top 3, Top 5, confidence"]
+  Calib --> Predictions["Prediction Service\nPronoScore, Top 3, Top 5, confidence"]
   DB --> Value["Value Bet Engine\nfair odds, edge, risk filters"]
   Predictions --> API["FastAPI / MCP API"]
   Value --> API
@@ -119,14 +119,14 @@ Regles strictes :
 - les cotes doivent etre horodatees et jointes au timestamp reel d'observation ;
 - chaque prediction sauvegarde `data_cutoff_at`.
 
-## 6. KZ Score
+## 6. PronoScore
 
-Le KZ Score est un score proprietaire de decision, pas seulement une probabilite.
+Le PronoScore est un score proprietaire de decision, pas seulement une probabilite.
 
 Formule cible :
 
 ```text
-KZ Score =
+PronoScore =
   35% calibrated_win_rank
 + 20% top3_probability
 + 15% market_edge
@@ -138,9 +138,9 @@ KZ Score =
 
 Sorties :
 
-- `KZ 85-100` : signal fort, mais non garanti.
-- `KZ 70-84` : opportunite surveillable.
-- `KZ 50-69` : faible avantage.
+- `PronoScore 85-100` : signal fort, mais non garanti.
+- `PronoScore 70-84` : opportunite surveillable.
+- `PronoScore 50-69` : faible avantage.
 - `< 50` : eviter ou information insuffisante.
 
 ## 7. Value Bet Engine
@@ -229,7 +229,7 @@ Version publique B2B :
 |---|---|---|
 | `/api/races?date=YYYY-MM-DD` | GET | courses du jour/demain/historique |
 | `/api/races/{raceId}` | GET | detail course |
-| `/api/predictions?raceId=` | GET | probabilites, KZ Score, explications |
+| `/api/predictions?raceId=` | GET | probabilites, PronoScore, explications |
 | `/api/value-bets?date=` | GET | opportunites filtrees |
 | `/api/simulate` | POST | simulation stake/bankroll |
 | `/api/model-card` | GET | version modele, calibration, limites |

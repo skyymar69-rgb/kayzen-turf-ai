@@ -639,7 +639,7 @@ function platScore(
   const distProfileSig = distanceProfileSignalPlat(profile, horse.music);
 
   const signals: PredictionSignal[] = [
-    sig("KZ brut", horse.kzScore, 0.50),
+    sig("PronoScore brut", horse.kzScore, 0.50),
     sig("Probabilite gagnant", win, 0.45),
     sig("Probabilite Top 3", top3, 0.38),
     sig("Probabilite Top 5", top5, 0.18),
@@ -649,7 +649,7 @@ function platScore(
     sig("Value positive", Math.max(0, edge), 0.12),
     sig("Favorite gap", favoriteGap, 0.10),
     sig("Risque favori fragile", -favoriteFailureRisk, 0.34),
-    sig("Rang KZ inverse", rank.kz, -1.15),
+    sig("Rang PronoScore inverse", rank.kz, -1.15),
     sig("Rang gagnant inverse", rank.win, -0.92),
     sig("Rang Top 3 inverse", rank.top3, -1.06),
     sig("Rang cote inverse", rank.odds, -0.42),
@@ -741,7 +741,7 @@ function trotScore(
   );
 
   const signals: PredictionSignal[] = [
-    sig("KZ brut", horse.kzScore, 0.35),
+    sig("PronoScore brut", horse.kzScore, 0.35),
     sig("Probabilite gagnant", win, 0.38),
     sig("Probabilite Top 3", top3, 0.32),
     sig("Probabilite Top 5", top5, 0.14),
@@ -750,7 +750,7 @@ function trotScore(
     sig("Value positive trot", Math.max(0, edge), 0.16),
     sig("Favorite gap", favoriteGap, 0.10),
     sig("Risque favori fragile trot", -favoriteFailureRisk, 0.28),
-    sig("Rang KZ inverse", rank.kz, -0.90),
+    sig("Rang PronoScore inverse", rank.kz, -0.90),
     sig("Rang gagnant inverse", rank.win, -0.78),
     sig("Rang Top 3 inverse", rank.top3, -0.88),
     sig("Rang cote inverse", rank.odds, -0.38),
@@ -845,7 +845,7 @@ function obstacleScore(
   );
 
   const signals: PredictionSignal[] = [
-    sig("KZ brut", horse.kzScore, 0.30),
+    sig("PronoScore brut", horse.kzScore, 0.30),
     sig("Probabilite gagnant", win, 0.35),
     sig("Probabilite Top 3", top3, 0.30),
     sig("Probabilite Top 5", top5, 0.12),
@@ -854,7 +854,7 @@ function obstacleScore(
     sig("Value positive obstacle", Math.max(0, edge), 0.18),
     sig("Favorite gap", favoriteGap, 0.10),
     sig("Risque favori obstacle", -favoriteFailureRisk, 0.42),
-    sig("Rang KZ inverse", rank.kz, -0.75),
+    sig("Rang PronoScore inverse", rank.kz, -0.75),
     sig("Rang gagnant inverse", rank.win, -0.65),
     sig("Rang Top 3 inverse", rank.top3, -0.80),
     sig("Rang cote inverse", rank.odds, -0.35),

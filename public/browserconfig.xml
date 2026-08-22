@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tuile Windows / Edge épinglé. Référencé par <meta name="msapplication-config">
+     dans src/app/layout.tsx ; l'image est générée par npm run brand:icons. -->
+<browserconfig>
+  <msapplication>
+    <tile>
+      <square150x150logo src="/mstile-150x150.png"/>
+      <TileColor>#0c2318</TileColor>
+    </tile>
+  </msapplication>
+</browserconfig>

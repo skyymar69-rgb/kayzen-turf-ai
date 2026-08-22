@@ -34,6 +34,15 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@react-pdf/renderer"],
   // N'annonce pas la technologie sous-jacente dans les en-têtes de réponse.
   poweredByHeader: false,
+  /**
+   * `/kz-score` était indexé et lié depuis le pied de page, le sitemap et la
+   * page 404. Le renommage de la marque déplace la page sur `/prono-score` :
+   * sans redirection permanente, les liens entrants et l'antériorité de l'URL
+   * seraient perdus, et le sitemap déclarerait une page absente.
+   */
+  async redirects() {
+    return [{ source: "/kz-score", destination: "/prono-score", permanent: true }];
+  },
   async headers() {
     return [
       {

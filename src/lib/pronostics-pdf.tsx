@@ -1,4 +1,5 @@
-import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
+import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
+import { MARQUE_DATA_URI, MARQUE_RATIO } from "@/lib/brand-mark";
 import { buildBetRecommendations, probableArrival, raceToContext } from "@/lib/bet-recommendations";
 import type { RaceAnalysis } from "@/lib/types";
 
@@ -32,8 +33,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 24, backgroundColor: C.dark,
   },
   hdrLeft:  { flexDirection: "row", alignItems: "center", gap: 7 },
-  hdrBadge: { width: 18, height: 18, borderRadius: 4, backgroundColor: C.cta, alignItems: "center", justifyContent: "center" },
-  hdrBadgeTxt: { fontFamily: "Helvetica-Bold", fontSize: 7, color: C.dark },
+  hdrMarque: { height: 14, width: 14 * MARQUE_RATIO },
   hdrTitle: { fontFamily: "Helvetica-Bold", fontSize: 9, color: C.white },
   hdrSub:   { fontSize: 6.5, color: "#9ca3af" },
   hdrRight: { fontSize: 6.5, color: "#9ca3af" },
@@ -181,9 +181,9 @@ export function PronosticsPDF({ races, date }: { races: RaceAnalysis[]; date: st
 
   return (
     <Document
-      title={`Kayzen — Pronostics PMU ${date}`}
-      author="Kayzen Turf AI"
-      creator="Kayzen Turf AI"
+      title={`PronoTurf — Pronostics PMU ${date}`}
+      author="PronoTurf"
+      creator="PronoTurf"
       producer="@react-pdf/renderer"
     >
       <Page size="A4" style={s.page}>
@@ -191,8 +191,11 @@ export function PronosticsPDF({ races, date }: { races: RaceAnalysis[]; date: st
         {/* Fixed header */}
         <View style={s.hdr} fixed>
           <View style={s.hdrLeft}>
-            <View style={s.hdrBadge}><Text style={s.hdrBadgeTxt}>KZ</Text></View>
-            <Text style={s.hdrTitle}>Kayzen</Text>
+            {/* `Image` vient de @react-pdf/renderer, pas du DOM : la règle alt-text
+                ne s'y applique pas, et le composant n'accepte pas de prop `alt`. */}
+            {/* eslint-disable-next-line jsx-a11y/alt-text */}
+            <Image src={MARQUE_DATA_URI} style={s.hdrMarque} />
+            <Text style={s.hdrTitle}>PronoTurf</Text>
             <Text style={s.hdrSub}>  PRONOSTICS PMU — {date}</Text>
           </View>
           <Text style={s.hdrRight} render={({ pageNumber, totalPages }) => `p. ${pageNumber}/${totalPages}`} />
@@ -251,7 +254,7 @@ export function PronosticsPDF({ races, date }: { races: RaceAnalysis[]; date: st
         {/* Fixed footer */}
         <View style={s.ftr} fixed>
           <Text style={s.ftrTxt}>
-            Kayzen Turf AI — Outil d’aide à la décision uniquement. Les jeux d’argent comportent des risques.
+            PronoTurf — Outil d’aide à la décision uniquement. Les jeux d’argent comportent des risques.
           </Text>
           <Text style={s.ftrTxt}>{date}</Text>
         </View>

@@ -26,7 +26,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/tarifs`,                lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${base}/techniques-prediction`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${base}/lexique`,               lastModified: now, changeFrequency: "monthly", priority: 0.7 },
-    { url: `${base}/kz-score`,              lastModified: now, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${base}/prono-score`,              lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${base}/jeu-responsable`,       lastModified: now, changeFrequency: "yearly",  priority: 0.4 },
     { url: `${base}/mentions-legales`,      lastModified: now, changeFrequency: "yearly",  priority: 0.3 },
     { url: `${base}/cgu`,                   lastModified: now, changeFrequency: "yearly",  priority: 0.3 },

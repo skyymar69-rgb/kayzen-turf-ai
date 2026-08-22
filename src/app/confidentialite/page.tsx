@@ -6,7 +6,7 @@ import { COMPANY } from "@/lib/site-config";
 export const metadata: Metadata = {
   title: "Politique de confidentialité",
   description:
-    "Traitements de données personnelles opérés par Kayzen Turf AI : bases légales, durées de conservation, sous-traitants et exercice des droits RGPD.",
+    "Traitements de données personnelles opérés par PronoTurf : bases légales, durées de conservation, sous-traitants et exercice des droits RGPD.",
   alternates: { canonical: "/confidentialite" },
 };
 

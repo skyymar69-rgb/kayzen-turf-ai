@@ -2,7 +2,7 @@
 
 **Version :** 1.0.0  
 **Date :** 07 mai 2026  
-**Auteur :** Kayzen Turf AI — Équipe Modélisation  
+**Auteur :** PronoTurf — Équipe Modélisation  
 **Statut :** Spécification technique — En attente d'implémentation  
 **Priorité :** Critique  
 
@@ -12,7 +12,7 @@
 
 L'algorithme de prédiction actuel (`prediction-math.ts`) est **discipline-aveugle** : il applique un jeu de poids identique aux courses de Plat, de Trot et d'Obstacle. Cette absence de spécialisation est la limite structurelle la plus importante du modèle. Les trois disciplines sont des sports fondamentalement différents, avec des facteurs déterminants distincts, des distributions de probabilités distinctes, et des dynamiques de marché distinctes.
 
-Ce PR définit la refonte complète vers **trois algorithmes indépendants**, chacun nourri par l'ensemble exhaustif des facteurs pertinents à sa discipline. L'objectif est de positionner Kayzen Turf AI comme **le meilleur outil de prédiction mondial de courses hippiques**.
+Ce PR définit la refonte complète vers **trois algorithmes indépendants**, chacun nourri par l'ensemble exhaustif des facteurs pertinents à sa discipline. L'objectif est de positionner PronoTurf comme **le meilleur outil de prédiction mondial de courses hippiques**.
 
 ---
 
@@ -33,11 +33,11 @@ explainPredictionScore(horse, horses, context)
 
 | Famille | Signaux | Poids |
 |---------|---------|-------|
-| Score KZ | kzScore brut | 0.54 |
+| PronoScore | kzScore brut | 0.54 |
 | Probabilités | Win, Top3, Top5, régularité place/win | 0.07–0.42 |
 | Marché | Edge capé, value positive, favorite gap | 0.10–0.19 |
 | Risque | Risque favori fragile, tocard Top3 | 0.24–0.34 |
-| Rangs inverses | Rang KZ, Win, Top3, Cote | −0.42 à −1.15 |
+| Rangs inverses | Rang PronoScore, Win, Top3, Cote | −0.42 à −1.15 |
 | Confiance | Niveau confiance source | 0.07 |
 | Musique | Score forme, victoire récente, places, échecs, rebond | 1.35–10.5 |
 | Gains | Gains normalisés | 5.4 |
@@ -286,7 +286,7 @@ Le Plat est la discipline de **vitesse et de tactique**. L'allure, le terrain, l
 | P47 | **Taille du champ** — < 8 partants : favoris surperforment ; > 14 : outsiders ont plus de chance | Champ | `fieldSizeAdjustment(fieldSize, discipline)` | Modéré |
 | P48 | **Kilométrage saison plat** — > 18 courses depuis janvier = fatigue légère | Fatigue | `seasonMileageSignal(horse.startCount, discipline)` | Modéré |
 | P49 | **Score composite going × distance × jockey × trainer** — combinaison des 4 facteurs clés | Composite | `platCompositeSignal(going, dist, jockey, trainer)` | Fort |
-| P50 | **Calibration Plat-specific** — poids de signaux recalibrés sur données historiques Plat uniquement (KZ, musique, edge) | Calibration | Separate weight vector `PLAT_WEIGHTS` | Critique |
+| P50 | **Calibration Plat-specific** — poids de signaux recalibrés sur données historiques Plat uniquement (PronoScore, musique, edge) | Calibration | Separate weight vector `PLAT_WEIGHTS` | Critique |
 
 ---
 

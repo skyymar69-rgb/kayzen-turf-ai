@@ -4,7 +4,7 @@ import { COMPANY } from "@/lib/site-config";
 
 export const metadata: Metadata = {
   title: "Mentions légales",
-  description: "Éditeur, directeur de la publication, hébergeur et coordonnées du site Kayzen Turf AI, conformément à la LCEN.",
+  description: "Éditeur, directeur de la publication, hébergeur et coordonnées du site PronoTurf, conformément à la LCEN.",
   alternates: { canonical: "/mentions-legales" },
 };
 
@@ -30,14 +30,14 @@ export default function MentionsLegalesPage() {
         {
           title: "Propriete intellectuelle",
           body: [
-            "Le code source du projet est open source selon la licence du dépôt. Les marques, textes, interfaces, bases de données, modèles, scores et éléments distinctifs Kayzen restent protégés par le droit applicable lorsqu'ils ne sont pas expressément placés sous licence libre.",
-            "Toute réutilisation commerciale de la marque, du nom ou des éléments graphiques Kayzen nécessite une autorisation écrite préalable.",
+            "Le code source du projet est open source selon la licence du dépôt. Les marques, textes, interfaces, bases de données, modèles, scores et éléments distinctifs PronoTurf restent protégés par le droit applicable lorsqu'ils ne sont pas expressément placés sous licence libre.",
+            "Toute réutilisation commerciale de la marque, du nom ou des éléments graphiques PronoTurf nécessite une autorisation écrite préalable.",
           ],
         },
         {
           title: "Jeu responsable",
           body: [
-            "Kayzen Pronostic Turf PMU est un outil d'aide à la décision. Aucun contenu ne constitue une promesse de gain, une garantie de performance ou une incitation au jeu excessif.",
+            "PronoTurf est un outil d'aide à la décision. Aucun contenu ne constitue une promesse de gain, une garantie de performance ou une incitation au jeu excessif.",
             "Les jeux d’argent comportent des risques : endettement, isolement, dépendance. Les utilisateurs doivent rester responsables de leurs décisions et de leur budget.",
           ],
         },

@@ -873,7 +873,7 @@ export function Dashboard({ races }: DashboardProps) {
                       <th className="px-5 py-3" scope="col">Cheval</th>
                       <th className="px-5 py-3" scope="col">{selectedRace?.discipline === "Trot" ? "Driver" : selectedRace?.discipline === "Obstacle" ? "Jockey" : "Jockey"}</th>
                       <th className="px-5 py-3 text-right" scope="col">Cote</th>
-                      <th className="px-5 py-3 text-right" scope="col">Score KZ</th>
+                      <th className="px-5 py-3 text-right" scope="col">PronoScore</th>
                       <th className="px-5 py-3 text-right" scope="col">Top 3</th>
                     </tr>
                   </thead>
@@ -942,7 +942,7 @@ export function Dashboard({ races }: DashboardProps) {
           </section>
         )}
 
-        {/* ── BARRE PROGRESSION + DISTRIBUTION KZ (#53 #90) ────── */}
+        {/* ── BARRE PROGRESSION + DISTRIBUTION PRONOSCORE (#53 #90) ────── */}
         {dayRaces.length > 0 && (() => {
           const kzScores  = dayRaces.flatMap((r) => r.horses.map((h) => h.kzScore)).filter((s) => Number.isFinite(s));
           const buckets   = [0, 20, 40, 60, 80, 99];
@@ -952,10 +952,10 @@ export function Dashboard({ races }: DashboardProps) {
           const valueBetRaces = dayRaces.filter((r) => r.horses.some((h) => h.valueIndex > 10));
           return (
             <section className="mt-4 grid gap-4 lg:grid-cols-2" aria-label="Distribution et value bets">
-              {/* Distribution KZ */}
+              {/* Distribution PronoScore */}
               <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Distribution · {kzScores.length} chevaux</p>
-                <h2 className="mt-0.5 font-display text-lg font-bold text-fg">Score KZ du jour</h2>
+                <h2 className="mt-0.5 font-display text-lg font-bold text-fg">PronoScore du jour</h2>
                 <div className="mt-4 flex items-end gap-2">
                   {counts.map((count, i) => (
                     <div key={labels[i]} className="flex flex-1 flex-col items-center gap-1">

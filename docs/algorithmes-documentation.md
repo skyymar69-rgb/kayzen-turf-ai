@@ -1,14 +1,14 @@
-# Documentation Technique — Algorithmes de Prédiction Kayzen Turf AI
+# Documentation Technique — Algorithmes de Prédiction PronoTurf
 
 **Document :** Référence Technique Complète  
 **Version :** 1.0.0  
 **Date :** 07 mai 2026  
-**Confidentialité :** Usage interne — Équipe Kayzen  
+**Confidentialité :** Usage interne — Équipe PronoTurf  
 **Objet :** Architecture des algorithmes, fonctionnement détaillé, analyse des prédictions J−1
 
 ---
 
-> *"Kayzen Turf AI vise à être le meilleur outil de prédiction mondial de courses hippiques. Ce document est le socle de cette ambition : comprendre parfaitement nos algorithmes, leurs forces, leurs failles, et la feuille de route pour y remédier."*
+> *"PronoTurf vise à être le meilleur outil de prédiction mondial de courses hippiques. Ce document est le socle de cette ambition : comprendre parfaitement nos algorithmes, leurs forces, leurs failles, et la feuille de route pour y remédier."*
 
 ---
 
@@ -176,7 +176,7 @@ Ces statistiques servent à contextualiser chaque cheval par rapport à son cham
 
 | # | Signal | Calcul | Poids | Rôle |
 |---|--------|--------|-------|------|
-| S01 | **KZ brut** | `horse.kzScore` | **+0.54** | Score principal de qualité cheval |
+| S01 | **PronoScore brut** | `horse.kzScore` | **+0.54** | Score principal de qualité cheval |
 | S02 | **Probabilité gagnant** | `clamp(winProbability, 0, 80)` | **+0.42** | Proba de victoire estimée |
 | S03 | **Probabilité Top 3** | `clamp(top3Probability, 0, 99)` | **+0.38** | Proba de placement |
 | S04 | **Probabilité Top 5** | `clamp(top5Probability, 0, 99)` | **+0.18** | Zone de sécurité |
@@ -186,7 +186,7 @@ Ces statistiques servent à contextualiser chaque cheval par rapport à son cham
 | S08 | **Value positive** | `max(0, marketEdge)` | **+0.12** | Uniquement l'edge positif |
 | S09 | **Favorite gap** | `clamp(favoriteOdds − odds, −20, 20)` | **+0.10** | Écart avec le favori |
 | S10 | **Risque favori fragile** | Formule composite (voir §4.2) | **−0.34** | Pénalise les faux favoris |
-| S11 | **Rang KZ inverse** | `rankBy(kzScore, "desc")` | **−1.15** | Pénalité rank (1er = +0 pénalité) |
+| S11 | **Rang PronoScore inverse** | `rankBy(kzScore, "desc")` | **−1.15** | Pénalité rank (1er = +0 pénalité) |
 | S12 | **Rang gagnant inverse** | `rankBy(winProba, "desc")` | **−0.92** | Pénalité rank win |
 | S13 | **Rang Top 3 inverse** | `rankBy(top3Proba, "desc")` | **−1.06** | Pénalité rank top3 |
 | S14 | **Rang cote inverse** | `rankBy(odds, "asc")` | **−0.42** | Pénalité rank cote |
@@ -268,7 +268,7 @@ clamp → [0, 45]
 
 ### 4.6 Stabilité des Rangs (rankStability)
 
-Le cheval est classé sur 4 dimensions : KZ, WinProba, Top3Proba, Cote.
+Le cheval est classé sur 4 dimensions : PronoScore, WinProba, Top3Proba, Cote.
 
 ```
 ranks = [rankKZ, rankWin, rankTop3, rankOdds]
@@ -278,7 +278,7 @@ stability = clamp(10 − variance, 0, 10)
 ```
 
 **Exemple :** Cheval classé 1er sur les 4 critères → stabilité = 10 (maximum).  
-Cheval classé 1er en KZ mais 8ème en cote → stabilité faible → incertitude.
+Cheval classé 1er en PronoScore mais 8ème en cote → stabilité faible → incertitude.
 
 ---
 
@@ -376,7 +376,7 @@ Les poids actuels restent la base, avec les modifications suivantes :
 
 | Signal | Poids actuel | Poids cible Plat |
 |--------|-------------|-----------------|
-| KZ brut | 0.54 | 0.50 |
+| PronoScore brut | 0.54 | 0.50 |
 | Win probability | 0.42 | 0.45 |
 | Going match *(nouveau)* | — | 0.65 |
 | Distance fit *(nouveau)* | — | 0.55 |
@@ -503,7 +503,7 @@ distance > 1750m :
 
 | Signal | Poids actuel | Poids cible Trot |
 |--------|-------------|-----------------|
-| KZ brut | 0.54 | 0.35 |
+| PronoScore brut | 0.54 | 0.35 |
 | Win probability | 0.42 | 0.38 |
 | Réduction km (signal enrichi) | 2.6 | **8.5** |
 | RK progression 3 courses *(nouveau)* | — | 5.0 |
@@ -606,7 +606,7 @@ Going actuel = TL + cheval confirmé lourd :
 
 | Signal | Poids actuel | Poids cible Obstacle |
 |--------|-------------|---------------------|
-| KZ brut | 0.54 | 0.30 |
+| PronoScore brut | 0.54 | 0.30 |
 | Win probability | 0.42 | 0.35 |
 | Musique obstacle (complétions propres) | 10.5 | 9.0 |
 | Chutes récentes pénalité *(nouveau)* | — | −10.0 |
@@ -643,7 +643,7 @@ Going actuel = TL + cheval confirmé lourd :
 
 #### 9.2.1 Champ et données d'entrée
 
-| # | Cheval | Cote | Win% | Top3% | KZ | Market Edge | Confiance |
+| # | Cheval | Cote | Win% | Top3% | PronoScore | Market Edge | Confiance |
 |---|--------|------|------|-------|----|-------------|-----------|
 | **4** | Helios Prime | 6.5 | 18% | 46% | 76 | +17.0% | Forte |
 | **8** | Nuit de Seine | 9.2 | 14% | 35% | 70 | +28.8% | Forte |
@@ -652,7 +652,7 @@ Going actuel = TL + cheval confirmé lourd :
 | **6** | Silver Method | **3.5** | **25%** | **55%** | 83 | +12.5% | Moyenne |
 
 **Favori :** Silver Method #6 (cote 3.5, win 25%)  
-**Meilleur KZ :** Atlas Green #2 (kz 86)  
+**Meilleur PronoScore :** Atlas Green #2 (kz 86)  
 **Meilleures values :** Nuit de Seine +28.8%, Orage Secret +26.0%
 
 #### 9.2.2 Prédiction du modèle actuel
@@ -663,10 +663,10 @@ Going actuel = TL + cheval confirmé lourd :
 
 | Rang prédit | Cheval | Score | Commentaire |
 |-------------|--------|-------|-------------|
-| 🥇 1 | **Silver Method #6** | ~82 | Meilleure win%, meilleur top3%, KZ 83 |
-| 🥈 2 | **Atlas Green #2** | ~79 | KZ dominant (86), top3 50% |
-| 🥉 3 | **Helios Prime #4** | ~71 | KZ 76, edge +17%, bon équilibre |
-| 4 | Nuit de Seine #8 | ~62 | KZ faible (70), win 14% → sous-estimé |
+| 🥇 1 | **Silver Method #6** | ~82 | Meilleure win%, meilleur top3%, PronoScore 83 |
+| 🥈 2 | **Atlas Green #2** | ~79 | PronoScore dominant (86), top3 50% |
+| 🥉 3 | **Helios Prime #4** | ~71 | PronoScore 76, edge +17%, bon équilibre |
+| 4 | Nuit de Seine #8 | ~62 | PronoScore faible (70), win 14% → sous-estimé |
 | 5 | Orage Secret #11 | ~48 | Cote 18, faible win 7% |
 
 #### 9.2.3 Résultat Officiel
@@ -763,7 +763,7 @@ Leçon 5 : Les 2 signaux value (Nuit de Seine +28.8%, Orage Secret +26%) étaien
 *Basé sur les données disponibles et les patterns observés*
 
 #### Plat
-- **Force :** Signaux KZ + musique + probabilités bien calibrés
+- **Force :** Signaux PronoScore + musique + probabilités bien calibrés
 - **Faiblesse :** Going non utilisé, jockey/trainer ignorés, numéro partant absent
 - **Estimation hit rate actuel :** ~28% winner, ~52% top3
 - **Estimation après refonte :** ~36% winner, ~62% top3
@@ -820,9 +820,9 @@ Obstacle: winner hit ~30%, top3 ~56%, ROI simulé +12%
 Global  : winner hit ~33%, top3 ~59%, ROI simulé +9%
 ```
 
-Ces objectifs font de **Kayzen Turf AI le système de prédiction le plus précis et le plus complet disponible publiquement** sur les courses hippiques françaises.
+Ces objectifs font de **PronoTurf le système de prédiction le plus précis et le plus complet disponible publiquement** sur les courses hippiques françaises.
 
 ---
 
-*Document généré par Kayzen Turf AI — Équipe Modélisation — 07 mai 2026*  
+*Document généré par PronoTurf — Équipe Modélisation — 07 mai 2026*  
 *Version suivante prévue après implémentation Sprint 1 — Semaine du 12 mai 2026*

@@ -3,7 +3,7 @@ import { LegalPage, editorSection } from "@/components/legal-page";
 
 export const metadata: Metadata = {
   title: "Conditions générales de vente",
-  description: "Abonnements, prix, paiement, durée, résiliation et droit de rétractation applicables aux offres payantes Kayzen Turf AI.",
+  description: "Abonnements, prix, paiement, durée, résiliation et droit de rétractation applicables aux offres payantes PronoTurf.",
   alternates: { canonical: "/cgv" },
 };
 
@@ -17,7 +17,7 @@ export default function CgvPage() {
         {
           title: "Produits et services",
           body: [
-            "Kayzen pourra commercialiser des abonnements d'accès aux pronostics premium, alertes, tableaux de bord, API et services B2B. Les caractéristiques essentielles seront présentées avant paiement.",
+            "PronoTurf pourra commercialiser des abonnements d'accès aux pronostics premium, alertes, tableaux de bord, API et services B2B. Les caractéristiques essentielles seront présentées avant paiement.",
           ],
         },
         {

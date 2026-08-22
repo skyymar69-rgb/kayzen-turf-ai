@@ -47,13 +47,13 @@ const schemaDemande = z.object({
 });
 
 /**
- * Référence lisible communiquée au demandeur : `KZ-<date>-<aléa>`.
+ * Référence lisible communiquée au demandeur : `PT-<date>-<aléa>`.
  * `crypto.randomUUID` est disponible nativement sur le runtime Node de Next.
  */
 function nouvelleReference(): string {
   const jour = new Date().toISOString().slice(0, 10).replace(/-/g, "");
   const alea = crypto.randomUUID().split("-")[0]!.toUpperCase();
-  return `KZ-${jour}-${alea}`;
+  return `PT-${jour}-${alea}`;
 }
 
 export async function POST(request: Request) {

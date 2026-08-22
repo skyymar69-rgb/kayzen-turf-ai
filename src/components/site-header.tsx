@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -99,15 +100,25 @@ export function SiteHeader() {
         <Link
           href="/"
           className="flex shrink-0 items-center gap-3 py-3.5 transition-opacity hover:opacity-80"
-          aria-label="Kayzen Turf AI — accueil"
+          aria-label="PronoTurf — accueil"
         >
-          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-cta font-display text-sm font-bold text-cta-text transition-transform duration-200 hover:scale-105">
-            KZ
-          </span>
+          {/* `alt=""` : le lien porte déjà son intitulé accessible, répéter la
+              marque ferait lire deux fois la même chose au lecteur d'écran.
+              `priority` parce que la marque est visible d'emblée sur toutes les
+              pages — la laisser en chargement différé la ferait apparaître après
+              le premier rendu. */}
+          <Image
+            src="/brand/pronoturf-mark.png"
+            alt=""
+            width={62}
+            height={36}
+            priority
+            className="h-9 w-auto shrink-0 transition-transform duration-200 hover:scale-105"
+          />
           {/* amélioration #15 — logo texte masqué quand scrolled sur mobile */}
           <span className={`hidden flex-col sm:flex transition-opacity duration-200 ${scrolled ? "opacity-80" : ""}`}>
-            <span className="font-display text-base font-bold leading-tight tracking-tight text-white">Kayzen</span>
-            <span className="text-[11px] font-medium uppercase tracking-widest text-white/70">Pronostic Turf PMU</span>
+            <span className="font-display text-base font-bold leading-tight tracking-tight text-white">PronoTurf</span>
+            <span className="text-[11px] font-medium uppercase tracking-widest text-white/70">Prédictions · Analyses · Gains</span>
           </span>
         </Link>
 

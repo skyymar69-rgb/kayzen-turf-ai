@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { CookiePreferencesButton } from "@/components/cookie-banner";
 import { COMPANY } from "@/lib/site-config";
@@ -8,7 +9,7 @@ const PRODUCT_LINKS = [
   { href: "/tarifs",                label: "Tarifs & offres" },
   { href: "/techniques-prediction", label: "Notre IA" },
   { href: "/lexique",               label: "Lexique turf" },
-  { href: "/kz-score",             label: "Le KZ Score" },
+  { href: "/prono-score",             label: "Le PronoScore" },
 ];
 
 const LEGAL_LINKS = [
@@ -31,10 +32,10 @@ export function SiteFooter() {
           {/* Brand block */}
           <div>
             <div className="flex items-center gap-3">
-              <span className="grid size-9 place-items-center rounded-lg bg-cta font-display text-sm font-bold text-cta-text">KZ</span>
+              <Image src="/brand/pronoturf-mark.png" alt="" width={69} height={40} className="h-10 w-auto shrink-0" />
               <div>
-                <p className="font-display text-base font-bold leading-tight text-white">Kayzen</p>
-                <p className="text-[11px] font-medium uppercase tracking-widest text-white/75">Pronostic Turf PMU</p>
+                <p className="font-display text-base font-bold leading-tight text-white">PronoTurf</p>
+                <p className="text-[11px] font-medium uppercase tracking-widest text-white/75">Prédictions · Analyses · Gains</p>
               </div>
             </div>
             <p className="mt-4 max-w-sm text-sm leading-6 text-white/80">

@@ -174,7 +174,7 @@ export const modelCard: ModelCard = {
     "Contexte course: distance, piste, terrain, taille du peloton",
     "Historique course et categorie",
     "Signal marché: cote, cote juste, edge",
-    "Correlation prediction/resultat: ecart gagnant-place, rang KZ, rang cote, stabilite des rangs",
+    "Correlation prediction/resultat: ecart gagnant-place, rang PronoScore, rang cote, stabilite des rangs",
     "Tocard surveille: cote outsider, edge positif, reservoir Top 5 et probabilite Top 3",
     "Favori fragile: cote courte, Top 3 insuffisant, edge negatif et volatilite course",
     "Garde-fous bankroll: drawdown et plafond de mise",

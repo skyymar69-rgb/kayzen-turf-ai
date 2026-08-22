@@ -5,7 +5,7 @@ import { SITE_URL } from "@/lib/site";
 export { SITE_URL };
 
 export const COMPANY = {
-  brand: "Kayzen Pronostic Turf PMU",
+  brand: "PronoTurf",
   editor: "KAYZEN LYON",
   legalForm: "SASU",
   siren: "999 418 346 000 14",

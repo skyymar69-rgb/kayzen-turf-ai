@@ -3,7 +3,7 @@ import { LegalPage, editorSection } from "@/components/legal-page";
 
 export const metadata: Metadata = {
   title: "Déclaration d'accessibilité",
-  description: "Niveau de conformité RGAA 4.1.2 et WCAG 2.1 AA du site Kayzen Turf AI, dérogations connues et moyen de signaler un défaut d'accessibilité.",
+  description: "Niveau de conformité RGAA 4.1.2 et WCAG 2.1 AA du site PronoTurf, dérogations connues et moyen de signaler un défaut d'accessibilité.",
   alternates: { canonical: "/accessibilite" },
 };
 

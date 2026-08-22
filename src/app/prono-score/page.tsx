@@ -3,9 +3,9 @@ import { ArrowLeft, BarChart3, Brain, Gauge, Sparkles, TrendingUp, Zap } from "l
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Comment fonctionne le KZ Score",
-  description: "Explication complète du KZ Score : méthode de calcul, composantes (probabilité gagnant, value index, confiance), interprétation et limites.",
-  alternates: { canonical: "/kz-score" },
+  title: "Comment fonctionne le PronoScore",
+  description: "Explication complète du PronoScore : méthode de calcul, composantes (probabilité gagnant, value index, confiance), interprétation et limites.",
+  alternates: { canonical: "/prono-score" },
 };
 
 const COMPONENTS = [
@@ -72,7 +72,7 @@ export default function KzScorePage() {
           </div>
           <div>
             <p className="text-xs font-bold uppercase tracking-widest text-muted">Méthodologie</p>
-            <h1 className="font-display text-3xl font-bold text-fg">Comment fonctionne le KZ Score ?</h1>
+            <h1 className="font-display text-3xl font-bold text-fg">Comment fonctionne le PronoScore ?</h1>
             <p className="mt-1 text-sm text-muted">Score composite 0–99 calculé par simulation probabiliste sur l’ensemble des partants.</p>
           </div>
         </div>
@@ -81,15 +81,15 @@ export default function KzScorePage() {
 
           {/* Définition */}
           <section className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
-            <h2 className="font-display text-xl font-bold text-fg mb-3">Qu’est-ce que le KZ Score ?</h2>
+            <h2 className="font-display text-xl font-bold text-fg mb-3">Qu’est-ce que le PronoScore ?</h2>
             <p className="text-sm leading-7 text-muted">
-              Le <strong className="text-fg">KZ Score</strong> est un indicateur composite de 0 à 99 synthétisant la force prédictive d’un cheval pour une course donnée.
+              Le <strong className="text-fg">PronoScore</strong> est un indicateur composite de 0 à 99 synthétisant la force prédictive d’un cheval pour une course donnée.
               Il n’est pas une probabilité brute — c’est une <em>note de confiance algorithmique</em> pondérant plusieurs signaux indépendants.
-              Un cheval avec un KZ de 87 n’a pas 87% de chances de gagner : il cumule simplement des signaux particulièrement convergents.
+              Un cheval avec un PronoScore de 87 n’a pas 87% de chances de gagner : il cumule simplement des signaux particulièrement convergents.
             </p>
             <p className="mt-3 text-sm leading-7 text-muted">
               Le score est recalculé pour chaque course en tenant compte du contexte complet : taille du champ, discipline, distance, hippodrome, météo et historique des partants.
-              Deux courses identiques avec les mêmes chevaux sur des hippodromes différents donneront des KZ différents.
+              Deux courses identiques avec les mêmes chevaux sur des hippodromes différents donneront des PronoScore différents.
             </p>
           </section>
 
@@ -135,11 +135,11 @@ export default function KzScorePage() {
             <h2 className="font-display text-xl font-bold text-fg mb-3">Limites et mises en garde</h2>
             <ul className="space-y-2 text-sm leading-6 text-muted">
               {[
-                "Le KZ Score ne modélise pas les événements imprévus : chute, incident de course, perte de fer, boîterie.",
+                "Le PronoScore ne modélise pas les événements imprévus : chute, incident de course, perte de fer, boîterie.",
                 "Les courses à faible nombre de partants (≤ 5) ont une variance de score plus élevée — interpréter avec prudence.",
-                "Un KZ élevé ne compense pas une cote très basse : si la cote juste confirme le marché, l'edge reste nul.",
+                "un PronoScore élevé ne compense pas une cote très basse : si la cote juste confirme le marché, l'edge reste nul.",
                 "Le modèle est calibré sur des données PMU françaises — les courses internationales (AQPS, Arabes) peuvent dégrader la précision.",
-                "Ne jamais miser uniquement sur le KZ Score. Croiser avec l'edge marché, la forme récente et le contexte de course.",
+                "Ne jamais miser uniquement sur le PronoScore. Croiser avec l'edge marché, la forme récente et le contexte de course.",
               ].map((item) => (
                 <li key={item} className="flex items-start gap-2">
                   <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-warn" />

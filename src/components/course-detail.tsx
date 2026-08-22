@@ -188,7 +188,7 @@ export function CourseDetail({ race }: CourseDetailProps) {
               <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
                 <ArrowUpDown size={13} className="shrink-0 text-muted" />
                 <span className="text-xs text-muted">Trier :</span>
-                {([["arrival", "Arrivée IA"], ["kz", "KZ Score"], ["odds", "Cote"], ["top3", "Top 3"]] as [SortKey, string][]).map(([key, label]) => (
+                {([["arrival", "Arrivée IA"], ["kz", "PronoScore"], ["odds", "Cote"], ["top3", "Top 3"]] as [SortKey, string][]).map(([key, label]) => (
                   <button
                     key={key}
                     aria-pressed={sortBy === key}
@@ -309,7 +309,7 @@ export function CourseDetail({ race }: CourseDetailProps) {
               <div className="grid gap-3 px-5 pb-5 sm:grid-cols-2">
                 {[
                   { q: "Conf. X/99 sur un ticket ?", a: "Probabilité estimée que le ticket passe, en %. Un Simple Placé à 70 a environ 7 chances sur 10 d'aboutir, un Trio à 10 environ 1 sur 10. Estimation issue du modèle, pas une promesse de gain." },
-                  { q: "Pourquoi le #1 peut avoir un KZ plus bas que le #2 ?", a: "Le classement d'arrivée pénalise les favoris fragiles et valorise la stabilité. Un cheval peut avoir un KZ brut plus faible mais une meilleure probabilité gagnant nette." },
+                  { q: "Pourquoi le #1 peut avoir un PronoScore plus bas que le #2 ?", a: "Le classement d'arrivée pénalise les favoris fragiles et valorise la stabilité. Un cheval peut avoir un PronoScore brut plus faible mais une meilleure probabilité gagnant nette." },
                   { q: "Heatmap vs ordre d'arrivée ?", a: "La heatmap trie par prob. Top 3 décroissante. L'ordre d'arrivée utilise la prob. gagnant stricte — un cheval régulièrement placé peut avoir une prob. Top 3 élevée mais être classé 2e ou 3e." },
                   { q: "Confiance vs Value vs Spéculatif ?", a: "Confiance : chevaux les mieux classés, risque faible. Value : sous-évalués par le marché, potentiel élevé. Spéculatif : outsiders avec signal surprise Top 3, risque fort." },
                 ].map(({ q, a }) => (
@@ -475,7 +475,7 @@ function PartantsTable({
               </div>
               <div className="text-right">
                 <p className="font-mono text-sm font-bold text-accent-text">{fmtScore(horse.kzScore)}</p>
-                <p className="text-[10px] text-muted">KZ</p>
+                <p className="text-[10px] text-muted">Score</p>
               </div>
             </div>
             <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
@@ -493,7 +493,7 @@ function PartantsTable({
       {/* Desktop table */}
       <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[1280px] border-collapse text-left">
-          <caption className="sr-only">Partants avec numéro, cheval, jockey, gains, cotes et score KZ</caption>
+          <caption className="sr-only">Partants avec numéro, cheval, jockey, gains, cotes et score PronoScore</caption>
           <thead>
             <tr className="border-b border-border bg-surface-inv text-xs font-bold uppercase tracking-widest text-white">
               {[
@@ -503,7 +503,7 @@ function PartantsTable({
                 discipline === "Trot" ? "Driver" : "Jockey",
                 "Entraîneur",
                 ...(discipline === "Trot" ? ["R/K"] : []),
-                "Gains", "Dernières performances", "Cote", "C.Juste", "KZ",
+                "Gains", "Dernières performances", "Cote", "C.Juste", "Score",
               ].map((h) => (
                 <th key={h} className="border-r border-white/10 px-3 py-4 font-semibold last:border-r-0" scope="col">{h}</th>
               ))}
@@ -700,9 +700,9 @@ function TabPlaceholder({
             <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-muted">Profil radar — {arrival[0]?.horse?.split(" ")[0] ?? "Favori"}</p>
             <HorseRadarChart horse={arrival[0]} />
           </div>
-          {/* Bubble chart cote × KZ (#93) */}
+          {/* Bubble chart cote × PronoScore (#93) */}
           <div>
-            <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-muted">Nuage — Cote vs KZ Score</p>
+            <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-muted">Nuage — Cote vs PronoScore</p>
             <OddsKzBubble horses={arrival} />
           </div>
         </div>
@@ -757,7 +757,7 @@ function TabPlaceholder({
               <th className="px-4 py-3" scope="col">P(Gagnant)</th>
               <th className="px-4 py-3" scope="col">P(Top 3)</th>
               <th className="px-4 py-3" scope="col">P(Top 5)</th>
-              <th className="px-4 py-3" scope="col">KZ Score</th>
+              <th className="px-4 py-3" scope="col">PronoScore</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -1097,7 +1097,7 @@ function ShareButton({ programCode, name }: { programCode: string; name: string 
   const { etat, copier } = useClipboard();
 
   async function handleShare() {
-    const text = `${programCode} — ${name} | Pronostics Kayzen Turf AI`;
+    const text = `${programCode} — ${name} | Pronostics PronoTurf`;
     const url = window.location.href;
 
     if (typeof navigator.share === "function") {
@@ -1419,7 +1419,7 @@ function SignalDominant({ horse }: { horse: HorsePrediction }) {
 /* ─── KzBreakdown ────────────────────────────────────────────────── */
 function KzBreakdown({ horse }: { horse: HorsePrediction }) {
   const rows = [
-    { label: "KZ Score",    value: horse.kzScore,                                                                     max: 99  },
+    { label: "PronoScore",    value: horse.kzScore,                                                                     max: 99  },
     { label: "P(Gagnant)",  value: horse.winProbability,                                                              max: 100 },
     { label: "P(Top 3)",    value: horse.top3Probability,                                                             max: 100 },
     { label: "Value Index", value: Math.max(0, horse.valueIndex),                                                     max: 30  },
@@ -1427,7 +1427,7 @@ function KzBreakdown({ horse }: { horse: HorsePrediction }) {
   ];
   return (
     <div className="mb-4 rounded-xl border border-border bg-surface-sub p-3">
-      <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-muted">Décomposition KZ</p>
+      <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-muted">Décomposition du PronoScore</p>
       <div className="grid gap-2">
         {rows.map((r) => (
           <div key={r.label} className="grid grid-cols-[72px_1fr_36px] items-center gap-2">
@@ -1452,7 +1452,7 @@ function HorseComparator({ arrival, selectedHorseId }: { arrival: HorsePredictio
   const horseA = arrival.find((h) => h.id === selectedHorseId);
   const horseB = arrival.find((h) => h.id === compareId);
   const rows: Array<{ label: string; getVal: (h: HorsePrediction) => string }> = [
-    { label: "KZ Score",   getVal: (h) => String(Math.round(h.kzScore)) },
+    { label: "PronoScore",   getVal: (h) => String(Math.round(h.kzScore)) },
     { label: "P(Gagnant)", getVal: (h) => `${Math.round(h.winProbability)}%` },
     { label: "P(Top 3)",   getVal: (h) => `${Math.round(h.top3Probability)}%` },
     { label: "Cote",       getVal: (h) => h.odds > 0 ? String(h.odds) : "—" },
@@ -1503,7 +1503,7 @@ function HorseRadarChart({ horse }: { horse?: HorsePrediction | null }) {
   if (!horse) return null;
   const CX = 80, CY = 80, R = 60;
   const axes = [
-    { label: "KZ",     val: horse.kzScore / 99 },
+    { label: "Score",  val: horse.kzScore / 99 },
     { label: "P(Win)", val: horse.winProbability / 100 },
     { label: "Top3",   val: horse.top3Probability / 100 },
     { label: "Value",  val: Math.min(Math.max(horse.valueIndex, 0) / 30, 1) },
@@ -1542,7 +1542,7 @@ function OddsKzBubble({ horses }: { horses: HorsePrediction[] }) {
   const maxOdds = Math.max(...valid.map((h) => h.odds), 1);
   const maxKz   = Math.max(...valid.map((h) => h.kzScore), 1);
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" aria-label="Bubble chart cote vs KZ Score">
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" aria-label="Bubble chart cote vs PronoScore">
       <line x1={PX} y1={PY} x2={PX} y2={H - PY} stroke="var(--color-border,#e2e8f0)" strokeWidth="1" />
       <line x1={PX} y1={H - PY} x2={W - 10} y2={H - PY} stroke="var(--color-border,#e2e8f0)" strokeWidth="1" />
       <text x={PX - 4} y={PY + 4} fontSize="8" fill="var(--color-muted,#6b7280)" textAnchor="end">KZ↑</text>

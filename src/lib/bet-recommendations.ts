@@ -219,7 +219,7 @@ function rationaleFor(type: string, horses: HorsePrediction[], pool: HorsePredic
   const longshot = watchedLongshot(pool, context);
   const discipline = context.discipline ?? "Plat";
 
-  if (type === "SIMPLE_PLACE") return `Base place sur le meilleur compromis KZ Score / Top 3 (${discipline}): ${lead.horse}.`;
+  if (type === "SIMPLE_PLACE") return `Base place sur le meilleur compromis PronoScore / Top 3 (${discipline}): ${lead.horse}.`;
   if (type === "DEUX_SUR_QUATRE") return "Couverture sur les bases les plus regulieres du classement probable.";
   if (type.includes("ORDRE") || type === "TIERCE") return `Combinaisons ordre calculees depuis le champ IA ${discipline} priorise.`;
   if ((type === "QUARTE_PLUS" || type === "QUINTE_PLUS") && longshot) return `Selection elargie avec tocard surveille #${longshot.number}, a jouer prudemment avec flexi si disponible.`;

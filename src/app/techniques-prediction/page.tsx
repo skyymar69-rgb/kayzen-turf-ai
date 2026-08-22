@@ -3,7 +3,7 @@ import { Brain, GitBranch, LineChart, Network, ShieldCheck, Sparkles } from "luc
 
 export const metadata: Metadata = {
   title: "Techniques de prédiction",
-  description: "Les méthodes derrière les pronostics Kayzen : modèles tabulaires, deep learning, graphes relationnels, calibration et garde-fous anti-fuite de données.",
+  description: "Les méthodes derrière les pronostics PronoTurf : modèles tabulaires, deep learning, graphes relationnels, calibration et garde-fous anti-fuite de données.",
   alternates: { canonical: "/techniques-prediction" },
 };
 
@@ -26,7 +26,7 @@ const techniques = [
   {
     icon: GitBranch,
     title: "Ensemble learning",
-    body: "Fusion des scores de plusieurs modèles, calibration probabiliste et pénalités de risque. Le KZ Score combine probabilité gagnant, Top 3, Top 5, value index et niveau de confiance.",
+    body: "Fusion des scores de plusieurs modèles, calibration probabiliste et pénalités de risque. Le PronoScore combine probabilité gagnant, Top 3, Top 5, value index et niveau de confiance.",
   },
   {
     icon: Sparkles,
@@ -44,7 +44,7 @@ export default function TechniquesPredictionPage() {
   return (
     <main className="min-h-screen bg-[#f3f5f4] px-3 py-12 text-[#26312e] sm:px-5 lg:px-8" id="contenu-principal">
       <section className="mx-auto max-w-[1240px]">
-        <p className="text-sm font-bold uppercase text-emerald-700">Kayzen Pronostic Turf PMU</p>
+        <p className="text-sm font-bold uppercase text-emerald-700">PronoTurf</p>
         <h1 className="mt-2 text-3xl font-bold tracking-normal sm:text-5xl">Techniques de prediction utilisees</h1>
         <p className="mt-4 max-w-4xl text-base leading-7 text-[#52615d]">
           La plateforme combine des méthodes statistiques, machine learning et data engineering pour produire des pronostics probabilistes.
@@ -69,7 +69,7 @@ export default function TechniquesPredictionPage() {
             <li><strong>1. Collecte</strong> : courses, partants, performances, cotes, piste, météo, résultats.</li>
             <li><strong>2. Normalisation</strong> : nettoyage, matching chevaux/jockeys/entraîneurs, controle doublons.</li>
             <li><strong>3. Feature engineering</strong> : forme, regularite, aptitude distance, gains, specialite, value implicite.</li>
-            <li><strong>4. Prediction</strong> : probabilités gagnant, Top 3, Top 5, KZ Score et niveau de confiance.</li>
+            <li><strong>4. Prediction</strong> : probabilités gagnant, Top 3, Top 5, PronoScore et niveau de confiance.</li>
             <li><strong>5. Recommandation</strong> : tickets proposés uniquement selon les paris ouverts sur la course.</li>
             <li><strong>6. Feedback loop</strong> : analyse après course, erreurs, recalibrage et surveillance du ROI.</li>
           </ol>

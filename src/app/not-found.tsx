@@ -27,9 +27,9 @@ const PISTES = [
     body: "Ordre probable, base IA et value bets, course par course.",
   },
   {
-    href: "/kz-score",
+    href: "/prono-score",
     icon: Compass,
-    title: "Le KZ Score",
+    title: "Le PronoScore",
     body: "Comment le score est calculé, et ce qu'il ne dit pas.",
   },
   {

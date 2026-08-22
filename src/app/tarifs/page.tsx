@@ -3,7 +3,7 @@ import { ArrowRight, BarChart3, Brain, Check, Shield, Sparkles, Zap } from "luci
 
 export const metadata = {
   title: "Tarifs & Offres",
-  description: "Découvrez les offres Kayzen Turf AI : accès gratuit, Starter, Premium et Pro. Analyses IA, value bets et tickets optimisés pour chaque profil de parieur.",
+  description: "Découvrez les offres PronoTurf : accès gratuit, Starter, Premium et Pro. Analyses IA, value bets et tickets optimisés pour chaque profil de parieur.",
   alternates: { canonical: "/tarifs" },
 };
 
@@ -19,7 +19,7 @@ const PLANS = [
     features: [
       "1 course analysée par jour",
       "Ordre probable des partants",
-      "Score KZ et base IA",
+      "PronoScore et base IA",
       "Lecture marché simplifiée",
       "Jeu responsable & pédagogie",
     ],
@@ -120,7 +120,7 @@ export default function TarifsPage() {
             Monétiser la clarté,<br className="hidden sm:block" /> pas une promesse de gain
           </h1>
           <p className="mt-4 mx-auto max-w-2xl text-base leading-7 text-muted">
-            Kayzen Turf AI est un outil d’aide à la décision. Nous vendons de l’analyse et de la transparence,
+            PronoTurf est un outil d’aide à la décision. Nous vendons de l’analyse et de la transparence,
             pas des certitudes. Chaque offre correspond à un niveau d’engagement dans votre pratique du turf.
           </p>
         </section>
@@ -242,7 +242,7 @@ export default function TarifsPage() {
               <h2 className="font-semibold text-fg">Jeu responsable</h2>
               <p className="mt-2 text-sm leading-6 text-fg">
                 Les jeux d’argent comportent des risques : endettement, isolement, dépendance.
-                Aucun pronostic, aussi précis soit-il, ne garantit un gain. Kayzen Turf AI est un outil
+                Aucun pronostic, aussi précis soit-il, ne garantit un gain. PronoTurf est un outil
                 d’aide à la décision et non un système de gains assurés. Si le jeu devient un problème,
                 contactez{" "}
                 <a href="https://www.joueurs-info-service.fr" rel="noopener noreferrer" target="_blank" className="font-semibold text-warn underline underline-offset-4">

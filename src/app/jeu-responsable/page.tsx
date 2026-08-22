@@ -39,7 +39,7 @@ export default function JeuResponsablePage() {
             </div>
             <div>
               <h1 className="font-display text-2xl font-bold text-fg">Jeu responsable</h1>
-              <p className="text-sm text-muted">Kayzen Pronostic s’engage pour un jeu sain et maîtrisé.</p>
+              <p className="text-sm text-muted">PronoTurf s’engage pour un jeu sain et maîtrisé.</p>
             </div>
           </div>
         </div>
@@ -53,7 +53,7 @@ export default function JeuResponsablePage() {
             </div>
             <div className="space-y-3 text-sm leading-6 text-muted">
               <p>Les paris hippiques sont une activité de loisir qui comporte des risques financiers réels. Aucun système de pronostic — y compris le nôtre — ne peut garantir des gains.</p>
-              <p>Nos analyses sont des <strong className="text-fg">outils d’aide à la décision</strong>, pas des certitudes. Le modèle KZ Score est une probabilité statistique, pas une prédiction certaine.</p>
+              <p>Nos analyses sont des <strong className="text-fg">outils d’aide à la décision</strong>, pas des certitudes. Le modèle PronoScore est une probabilité statistique, pas une prédiction certaine.</p>
               <p>Misez uniquement des sommes que vous pouvez vous permettre de perdre. Ne cherchez jamais à récupérer vos pertes en augmentant vos mises.</p>
             </div>
           </section>
@@ -119,7 +119,7 @@ export default function JeuResponsablePage() {
         </div>
 
         <p className="mt-8 text-center text-xs text-muted">
-          Kayzen Pronostic — Éditeur soumis à la réglementation ANJ.{" "}
+          PronoTurf — Éditeur soumis à la réglementation ANJ.{" "}
           <Link href="/mentions-legales" className="text-accent-text hover:text-accent">Mentions légales</Link>
         </p>
 

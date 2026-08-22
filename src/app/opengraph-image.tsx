@@ -1,11 +1,12 @@
 import { ImageResponse } from "next/og";
+import { MARQUE_DATA_URI, MARQUE_RATIO } from "@/lib/brand-mark";
 
 /**
  * Aucune image de partage n'existait : un lien collé sur WhatsApp, X ou LinkedIn
  * s'affichait en carte texte nue. Next sert ce rendu pour `og:image` et
  * `twitter:image` sur toutes les pages qui n'en déclarent pas de plus précise.
  */
-export const alt = "Kayzen Turf AI — pronostics PMU assistés par IA";
+export const alt = "PronoTurf — pronostics PMU assistés par IA";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -25,23 +26,11 @@ export default async function OpengraphImage() {
           fontFamily: "sans-serif",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: 56,
-              height: 56,
-              borderRadius: 14,
-              background: "#1eb854",
-              color: "#0c1a10",
-              fontSize: 32,
-              fontWeight: 700,
-            }}
-          >
-            K
-          </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+          {/* Satori ne résout pas les chemins du site : la marque arrive en data
+              URI, générée avec les icônes par `npm run brand:icons`. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={MARQUE_DATA_URI} alt="" width={112} height={Math.round(112 / MARQUE_RATIO)} />
           <div
             style={{
               fontSize: 26,
@@ -51,7 +40,7 @@ export default async function OpengraphImage() {
               color: "#7fd9a2",
             }}
           >
-            Kayzen Turf AI
+            PronoTurf
           </div>
         </div>
 

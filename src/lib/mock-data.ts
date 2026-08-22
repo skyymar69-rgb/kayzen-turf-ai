@@ -3,7 +3,7 @@ import type { HorsePrediction, RaceAnalysis } from "@/lib/types";
 
 export const raceAnalysis: RaceAnalysis = {
   id: "R1C3-2026-05-03",
-  name: "Prix Kayzen Data",
+  name: "Prix PronoTurf Data",
   raceDate: "2026-05-03",
   relativeDay: "today",
   reunionNumber: 1,

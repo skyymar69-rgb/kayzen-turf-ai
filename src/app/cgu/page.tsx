@@ -3,7 +3,7 @@ import { LegalPage, editorSection } from "@/components/legal-page";
 
 export const metadata: Metadata = {
   title: "Conditions générales d'utilisation",
-  description: "Règles d'accès et d'usage du site Kayzen Turf AI : objet du service, absence de garantie de gain, responsabilités et propriété intellectuelle.",
+  description: "Règles d'accès et d'usage du site PronoTurf : objet du service, absence de garantie de gain, responsabilités et propriété intellectuelle.",
   alternates: { canonical: "/cgu" },
 };
 
@@ -11,7 +11,7 @@ export default function CguPage() {
   return (
     <LegalPage
       title="Conditions generales d'utilisation"
-      intro="Les présentes CGU encadrent l'accès au site Kayzen Pronostic Turf PMU, aux pronostics, analyses, scores et outils d'aide à la décision."
+      intro="Les présentes CGU encadrent l'accès au site PronoTurf, aux pronostics, analyses, scores et outils d'aide à la décision."
       sections={[
         editorSection,
         {
@@ -42,7 +42,7 @@ export default function CguPage() {
         {
           title: "Responsabilité",
           body: [
-            "Kayzen met en œuvre des moyens raisonnables pour assurer la disponibilité et la qualité du service, sans garantir l’absence d’erreur ni la continuité permanente.",
+            "PronoTurf met en œuvre des moyens raisonnables pour assurer la disponibilité et la qualité du service, sans garantir l’absence d’erreur ni la continuité permanente.",
           ],
         },
       ]}

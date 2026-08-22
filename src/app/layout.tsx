@@ -14,8 +14,8 @@ export const metadata: Metadata = {
   // canonicals et les images Open Graph des pages filles restaient absents.
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Kayzen Turf AI — Pronostics PMU assistés par IA",
-    template: "%s — Kayzen Turf AI",
+    default: "PronoTurf — Pronostics PMU assistés par IA",
+    template: "%s — PronoTurf",
   },
   description:
     "Analysez les courses PMU avec l'intelligence artificielle : probabilités, value bets, tickets optimisés et suivi de performance. Hier, aujourd'hui, demain.",
@@ -26,15 +26,15 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "fr_FR",
-    siteName: "Kayzen Turf AI",
+    siteName: "PronoTurf",
     url: "/",
-    title: "Kayzen Turf AI — Pronostics PMU assistés par IA",
+    title: "PronoTurf — Pronostics PMU assistés par IA",
     description:
       "Analysez les courses PMU avec l'intelligence artificielle : probabilités, value bets, tickets optimisés et suivi de performance.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Kayzen Turf AI — Pronostics PMU assistés par IA",
+    title: "PronoTurf — Pronostics PMU assistés par IA",
     description:
       "Analysez les courses PMU avec l'intelligence artificielle : probabilités, value bets, tickets optimisés et suivi de performance.",
   },
@@ -71,7 +71,7 @@ const jsonLd = {
       "@type": "WebSite",
       "@id": `${SITE_URL}/#website`,
       url: `${SITE_URL}/`,
-      name: "Kayzen Turf AI",
+      name: "PronoTurf",
       description: "Plateforme d'aide à la décision pour pronostics hippiques PMU assistée par IA.",
       inLanguage: "fr-FR",
       potentialAction: {
@@ -83,8 +83,11 @@ const jsonLd = {
     {
       "@type": "Organization",
       "@id": `${SITE_URL}/#organization`,
-      name: "Kayzen",
-      url: "https://kayzen-lyon.fr",
+      name: "PronoTurf",
+      // `url` pointait sur le site de l'éditeur : l'entité décrite n'était donc
+      // pas celle que le `@id` désigne, et Google ne pouvait pas rattacher le
+      // logo au site. L'éditeur reste identifié dans les mentions légales.
+      url: `${SITE_URL}/`,
       logo: {
         "@type": "ImageObject",
         url: `${SITE_URL}/logo.png`,
@@ -145,7 +148,15 @@ export default function RootLayout({
             à partir de src/app/manifest.ts. */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Kayzen Turf" />
+        <meta name="apple-mobile-web-app-title" content="PronoTurf" />
+        {/* Next dérive <link rel="icon"> et l'apple-touch-icon 180 px de
+            src/app/{favicon.ico,icon.png,apple-icon.png}. Restent les tailles
+            qu'aucune convention de fichier ne couvre : les deux formats d'iPad,
+            et la tuile Windows. */}
+        <link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon-152x152.png" />
+        <link rel="apple-touch-icon" sizes="167x167" href="/apple-touch-icon-167x167.png" />
+        <meta name="msapplication-TileColor" content="#0c2318" />
+        <meta name="msapplication-config" content="/browserconfig.xml" />
         {/* Données structurées, échappées contre la sortie de balise. */}
         <JsonLd data={jsonLd} />
       </head>
