@@ -272,32 +272,58 @@ function bestCandidate(races) {
     .sort((a, b) => b.metrics.objective - a.metrics.objective)[0];
 }
 
+// Neon est interrogé en HTTP : chaque appel `sql` coûte un aller-retour réseau.
+// Une écriture par course faisait croître cette étape linéairement avec l'historique
+// (12 000 courses ≈ 25 min de latence pure) jusqu'à dépasser le timeout du job.
+// Les écritures partent désormais par lots, ce qui rend le coût réseau constant.
+const FEEDBACK_CHUNK_SIZE = 250;
+const ENTRY_UPDATE_CHUNK_SIZE = 500;
+
 async function saveFeedback(sql, races, candidate) {
-  for (const race of races) {
+  const rows = races.map((race) => {
     const feedback = evaluateRace(race, candidate.weights);
     const verdict = feedback.winnerHit && feedback.top5Hits >= 3 ? "Bon signal" : feedback.top5Hits >= 2 ? "Partiel" : "Erreur modèle";
-    const lessons = lessonsFor(race, feedback);
-    await sql`
-      insert into race_feedback (
-        race_id, segment, predicted_top5, actual_top5, winner_hit, top3_hits,
-        top5_hits, average_position_error, verdict, lessons
-      )
-      values (
-        ${race.id}, ${segmentFor(race)}, ${feedback.predictedTop5}, ${feedback.actualTop5},
-        ${feedback.winnerHit}, ${feedback.top3Hits}, ${feedback.top5Hits},
-        ${feedback.averagePositionError}, ${verdict}, ${JSON.stringify(lessons)}
-      )
-      on conflict (race_id, segment) do update set
-        predicted_top5 = excluded.predicted_top5,
-        actual_top5 = excluded.actual_top5,
-        winner_hit = excluded.winner_hit,
-        top3_hits = excluded.top3_hits,
-        top5_hits = excluded.top5_hits,
-        average_position_error = excluded.average_position_error,
-        verdict = excluded.verdict,
-        lessons = excluded.lessons,
-        created_at = now()
-    `;
+    return [
+      race.id,
+      segmentFor(race),
+      feedback.predictedTop5,
+      feedback.actualTop5,
+      feedback.winnerHit,
+      feedback.top3Hits,
+      feedback.top5Hits,
+      feedback.averagePositionError,
+      verdict,
+      JSON.stringify(lessonsFor(race, feedback)),
+    ];
+  });
+
+  for (let start = 0; start < rows.length; start += FEEDBACK_CHUNK_SIZE) {
+    const chunk = rows.slice(start, start + FEEDBACK_CHUNK_SIZE);
+    const params = [];
+    const tuples = chunk.map((row) => {
+      const base = params.length;
+      params.push(...row);
+      return `($${base + 1}, $${base + 2}, $${base + 3}::int[], $${base + 4}::int[], $${base + 5}::boolean, $${base + 6}::int, $${base + 7}::int, $${base + 8}::numeric, $${base + 9}, $${base + 10}::jsonb)`;
+    });
+
+    await sql.query(
+      `insert into race_feedback (
+         race_id, segment, predicted_top5, actual_top5, winner_hit, top3_hits,
+         top5_hits, average_position_error, verdict, lessons
+       )
+       values ${tuples.join(", ")}
+       on conflict (race_id, segment) do update set
+         predicted_top5 = excluded.predicted_top5,
+         actual_top5 = excluded.actual_top5,
+         winner_hit = excluded.winner_hit,
+         top3_hits = excluded.top3_hits,
+         top5_hits = excluded.top5_hits,
+         average_position_error = excluded.average_position_error,
+         verdict = excluded.verdict,
+         lessons = excluded.lessons,
+         created_at = now()`,
+      params,
+    );
   }
 }
 
@@ -357,15 +383,27 @@ async function applyCalibration(sql, segment, candidate) {
 
   const scopedRows = rows.filter((row) => segmentFor({ betTypes: parseJson(row.bet_types) }) === segment);
 
-  for (const row of scopedRows) {
-    const kzScore = scoreEntry(row, candidate.weights, row);
-    await sql`
-      update entries
-      set
-        kz_score = ${kzScore},
-        value_index = least(greatest(market_edge, -40), ${candidate.weights.edgeCap})
-      where id = ${row.entry_id}
-    `;
+  // Ce sont ces écritures qui portent les pronostics du jour : elles doivent
+  // aboutir même quand l'historique appris est volumineux.
+  for (let start = 0; start < scopedRows.length; start += ENTRY_UPDATE_CHUNK_SIZE) {
+    const chunk = scopedRows.slice(start, start + ENTRY_UPDATE_CHUNK_SIZE);
+    const params = [];
+    const tuples = chunk.map((row) => {
+      const base = params.length;
+      params.push(row.entry_id, scoreEntry(row, candidate.weights, row));
+      return `($${base + 1}, $${base + 2}::numeric)`;
+    });
+    params.push(candidate.weights.edgeCap);
+
+    await sql.query(
+      `update entries e
+       set
+         kz_score = v.kz_score,
+         value_index = least(greatest(e.market_edge, -40), $${params.length}::numeric)
+       from (values ${tuples.join(", ")}) as v(entry_id, kz_score)
+       where e.id = v.entry_id`,
+      params,
+    );
   }
 
   return scopedRows.length;

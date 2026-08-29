@@ -68,19 +68,43 @@ function relativeDayFromPmu(pmuDate) {
   return null;
 }
 
-async function fetchJson(url) {
-  const response = await fetch(url, {
-    headers: {
-      Accept: "application/json",
-      "User-Agent": USER_AGENT,
-    },
-  });
+// L'API PMU coupe régulièrement la connexion (ECONNRESET) : sans reprise, un seul
+// incident réseau tuait l'import complet de la journée.
+const FETCH_ATTEMPTS = 4;
+const RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
 
-  if (!response.ok) {
-    throw new Error(`PMU request failed ${response.status} for ${url}`);
+async function fetchJson(url) {
+  let lastError;
+
+  for (let attempt = 1; attempt <= FETCH_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await fetch(url, {
+        headers: {
+          Accept: "application/json",
+          "User-Agent": USER_AGENT,
+        },
+      });
+
+      if (response.ok) return await response.json();
+
+      const httpError = new Error(`PMU request failed ${response.status} for ${url}`);
+      if (!RETRYABLE_STATUS.has(response.status)) {
+        httpError.permanent = true;
+        throw httpError;
+      }
+      lastError = httpError;
+    } catch (error) {
+      if (error?.permanent) throw error;
+      lastError = error;
+    }
+
+    if (attempt < FETCH_ATTEMPTS) {
+      console.warn(`[pmu] tentative ${attempt}/${FETCH_ATTEMPTS} échouée sur ${url} — nouvel essai`);
+      await delay(attempt * 2000);
+    }
   }
 
-  return response.json();
+  throw lastError;
 }
 
 function delay(ms) {
