@@ -274,18 +274,74 @@ function bestCandidate(races) {
 
 // Neon est interrogé en HTTP : chaque appel `sql` coûte un aller-retour réseau.
 // Une écriture par course faisait croître cette étape linéairement avec l'historique
-// (12 000 courses ≈ 25 min de latence pure) jusqu'à dépasser le timeout du job.
-// Les écritures partent désormais par lots, ce qui rend le coût réseau constant.
+// (12 000 courses ≈ 30 min de latence pure) jusqu'à dépasser le délai de l'étape.
+// Les écritures partent désormais par lots, et seules les lignes réellement
+// modifiées sont réécrites : le coût d'un passage ne dépend plus de la taille de
+// l'historique mais du nombre de courses arrivées depuis la veille.
 const FEEDBACK_CHUNK_SIZE = 250;
 const ENTRY_UPDATE_CHUNK_SIZE = 500;
 
-async function saveFeedback(sql, races, candidate) {
-  const rows = races.map((race) => {
+// Garde-fou de temps. GitHub Actions coupe l'étape à 30 min sans laisser de trace
+// exploitable : le script s'arrête proprement avant, en annonçant ce qu'il reste à
+// rattraper au passage suivant.
+const TIME_BUDGET_MS = Number(process.env.LEARN_TIME_BUDGET_MS ?? 18 * 60 * 1000);
+const startedAt = Date.now();
+
+function log(message) {
+  console.log(`[learn +${String(Math.round((Date.now() - startedAt) / 1000)).padStart(4, " ")}s] ${message}`);
+}
+
+function timeLeftMs() {
+  return TIME_BUDGET_MS - (Date.now() - startedAt);
+}
+
+// Une course arrivée ne bouge plus. Réécrire les 12 000 lignes de feedback à chaque
+// passage consommait tout le budget et remplissait la base de tuples morts.
+// L'empreinte ci-dessous dit si la ligne stockée est déjà la bonne.
+async function loadStoredFeedback(sql) {
+  const rows = await sql`
+    select
+      race_id,
+      segment,
+      predicted_top5,
+      actual_top5,
+      average_position_error::text as average_position_error
+    from race_feedback
+  `;
+
+  const stored = new Map();
+  for (const row of rows) {
+    stored.set(
+      `${row.race_id}|${row.segment}`,
+      feedbackFingerprint(row.predicted_top5, row.actual_top5, row.average_position_error),
+    );
+  }
+  return stored;
+}
+
+function feedbackFingerprint(predictedTop5, actualTop5, averagePositionError) {
+  const numbers = (value) => (Array.isArray(value) ? value : []).map(Number).join(",");
+  const error = averagePositionError === null || averagePositionError === undefined ? "" : String(Number(averagePositionError));
+  return `${numbers(predictedTop5)}|${numbers(actualTop5)}|${error}`;
+}
+
+async function saveFeedback(sql, races, candidate, stored) {
+  const rows = [];
+  let unchanged = 0;
+
+  for (const race of races) {
     const feedback = evaluateRace(race, candidate.weights);
+    const segment = segmentFor(race);
+    const fingerprint = feedbackFingerprint(feedback.predictedTop5, feedback.actualTop5, feedback.averagePositionError);
+    if (stored.get(`${race.id}|${segment}`) === fingerprint) {
+      unchanged += 1;
+      continue;
+    }
+
     const verdict = feedback.winnerHit && feedback.top5Hits >= 3 ? "Bon signal" : feedback.top5Hits >= 2 ? "Partiel" : "Erreur modèle";
-    return [
+    rows.push([
       race.id,
-      segmentFor(race),
+      segment,
       feedback.predictedTop5,
       feedback.actualTop5,
       feedback.winnerHit,
@@ -294,10 +350,13 @@ async function saveFeedback(sql, races, candidate) {
       feedback.averagePositionError,
       verdict,
       JSON.stringify(lessonsFor(race, feedback)),
-    ];
-  });
+    ]);
+  }
 
+  let written = 0;
   for (let start = 0; start < rows.length; start += FEEDBACK_CHUNK_SIZE) {
+    if (timeLeftMs() <= 0) break;
+
     const chunk = rows.slice(start, start + FEEDBACK_CHUNK_SIZE);
     const params = [];
     const tuples = chunk.map((row) => {
@@ -324,7 +383,10 @@ async function saveFeedback(sql, races, candidate) {
          created_at = now()`,
       params,
     );
+    written += chunk.length;
   }
+
+  return { pending: rows.length - written, unchanged, written };
 }
 
 function lessonsFor(race, feedback) {
@@ -361,8 +423,10 @@ async function saveCalibration(sql, segment, candidate, learnedFromRaces) {
   `;
 }
 
-async function applyCalibration(sql, segment, candidate) {
-  const rows = await sql`
+// Les partants encore sans arrivée : ce sont eux que le site affiche. La requête est
+// sortie de la boucle des segments, où elle était rejouée à l'identique trois fois.
+async function loadPendingEntries(sql) {
+  return sql`
     select
       r.id as race_id,
       r.market_volatility::float as market_volatility,
@@ -380,8 +444,10 @@ async function applyCalibration(sql, segment, candidate) {
       where res.race_id = r.id
     )
   `;
+}
 
-  const scopedRows = rows.filter((row) => segmentFor({ betTypes: parseJson(row.bet_types) }) === segment);
+async function applyCalibration(sql, segment, candidate, pendingEntries) {
+  const scopedRows = pendingEntries.filter((row) => segmentFor({ betTypes: parseJson(row.bet_types) }) === segment);
 
   // Ce sont ces écritures qui portent les pronostics du jour : elles doivent
   // aboutir même quand l'historique appris est volumineux.
@@ -435,26 +501,51 @@ async function main() {
   const { apply, segment: onlySegment } = parseArgs();
   const sql = neon(process.env.DATABASE_URL);
   await ensureLearningSchema(sql);
-  const completedRaces = await loadCompletedRaces(sql);
-  const groups = groupBySegment(completedRaces);
-  const report = [];
 
-  for (const [segment, races] of groups.entries()) {
+  const completedRaces = await loadCompletedRaces(sql);
+  log(`${completedRaces.length} courses terminées chargées`);
+
+  const plan = [];
+  for (const [segment, races] of groupBySegment(completedRaces).entries()) {
     if (onlySegment && onlySegment !== segment) continue;
     if (races.length === 0) continue;
-    const candidate = bestCandidate(races);
-    await saveFeedback(sql, races, candidate);
-    await saveCalibration(sql, segment, candidate, races.length);
-    const updatedEntries = apply ? await applyCalibration(sql, segment, candidate) : 0;
-    report.push({
-      segment,
-      candidate: candidate.name,
-      learnedFromRaces: races.length,
-      updatedEntries,
-      ...candidate.metrics,
-      weights: candidate.weights,
-    });
+    plan.push({ candidate: bestCandidate(races), races, segment });
   }
+
+  // Passe 1 — les pronostics du jour d'abord. `entries.kz_score` est la seule
+  // écriture que le site relit : quand le journal d'apprentissage passait avant,
+  // un dépassement de délai laissait la journée entière sans rescoring.
+  const pendingEntries = apply ? await loadPendingEntries(sql) : [];
+  for (const item of plan) {
+    item.updatedEntries = apply ? await applyCalibration(sql, item.segment, item.candidate, pendingEntries) : 0;
+    await saveCalibration(sql, item.segment, item.candidate, item.races.length);
+    log(`${item.segment} : calibration « ${item.candidate.name} », ${item.updatedEntries} partants rescorés`);
+  }
+
+  // Passe 2 — le journal d'apprentissage, purement analytique et rattrapable.
+  const stored = await loadStoredFeedback(sql);
+  for (const item of plan) {
+    const feedback = await saveFeedback(sql, item.races, item.candidate, stored);
+    item.feedbackWritten = feedback.written;
+    item.feedbackPending = feedback.pending;
+    log(`${item.segment} : feedback ${feedback.written} écrit(s), ${feedback.unchanged} inchangé(s), ${feedback.pending} à rattraper`);
+  }
+
+  const stalled = plan.reduce((sum, item) => sum + item.feedbackPending, 0);
+  if (stalled > 0) {
+    console.warn(`[learn] budget de ${Math.round(TIME_BUDGET_MS / 60000)} min atteint : ${stalled} courses seront rattrapées au prochain passage.`);
+  }
+
+  const report = plan.map((item) => ({
+    segment: item.segment,
+    candidate: item.candidate.name,
+    learnedFromRaces: item.races.length,
+    updatedEntries: item.updatedEntries,
+    feedbackWritten: item.feedbackWritten,
+    feedbackPending: item.feedbackPending,
+    ...item.candidate.metrics,
+    weights: item.candidate.weights,
+  }));
 
   console.table(
     report.map((item) => {
