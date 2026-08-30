@@ -121,6 +121,27 @@ async function main() {
       continue;
     }
 
+    // Les non-partants déclarés après l'import restaient en base et continuaient
+    // d'être affichés. Le dégât n'est pas cosmétique : `devig` normalise sur
+    // l'ensemble du peloton, donc un cheval fantôme retire de la probabilité à
+    // tous les vrais partants — et pouvait figurer dans le Top 3 annoncé.
+    const running = new Set(
+      participants.filter((p) => !p.statut || p.statut === "PARTANT").map((p) => Number(p.numPmu)),
+    );
+    // Un peloton vide signale une réponse dégradée de l'API, pas une course sans
+    // partants : on ne supprime jamais sur cette base.
+    if (running.size > 0 && !dryRun) {
+      const scratched = await sql`
+        delete from entries
+        where race_id = ${target.raceId}
+          and not (number = any(${[...running]}::int[]))
+        returning number
+      `;
+      if (scratched.length > 0) {
+        log(`${target.raceId} — ${scratched.length} non-partant(s) retiré(s) : n° ${scratched.map((r) => r.number).join(", ")}`);
+      }
+    }
+
     const rows = [];
     for (const participant of participants) {
       if (participant.statut && participant.statut !== "PARTANT") continue;

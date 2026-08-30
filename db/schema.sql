@@ -195,6 +195,13 @@ create index if not exists model_calibrations_active_idx on model_calibrations (
 drop index if exists value_bets_race_id_idx;
 drop index if exists race_feedback_race_id_idx;
 
+-- Garde-fou : sans limite, une requête partie en vrille immobilise une connexion
+-- indéfiniment — ce qui compte sur une base serverless où les connexions sont la
+-- ressource rare. 300 s laisse largement passer la plus lourde des requêtes de
+-- lecture du site (4 s mesurées). Les purges de `compact-storage.mjs`, seules
+-- opérations légitimement longues, relèvent la limite pour leur propre session.
+alter role current_user set statement_timeout = '300s';
+
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Demandes d'exercice des droits RGPD (art. 15 à 21 du règlement 2016/679).
 --

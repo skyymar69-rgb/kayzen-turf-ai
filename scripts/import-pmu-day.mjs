@@ -343,21 +343,13 @@ async function importDate(sql, pmuDate, maxRaces) {
   const reunions = payload?.programme?.reunions ?? [];
   const isoDate = isoDateFromPmu(pmuDate);
   const relativeDay = relativeDayFromPmu(pmuDate);
-  const predictionRunRows = await sql`
-    insert into prediction_runs (model_version, data_cutoff_at, model_card)
-    values (
-      ${"kayzen-baseline-v0.1"},
-      now(),
-      ${JSON.stringify({
-        source: "PMU programme",
-        pmuDate,
-        objective: ["win_probability", "top3_probability", "top5_probability", "kz_score"],
-        note: "Baseline deterministic model used until trained ML models are promoted.",
-      })}
-    )
-    returning id
-  `;
-  const predictionRunId = predictionRunRows[0].id;
+  // Les tables `prediction_runs`, `predictions` et `value_bets` ne sont lues par
+  // aucune requête de l'application : 89 Mo écrits trois fois par jour pour rien,
+  // sur une base qui a déjà saturé son plafond une fois. L'historique horodaté
+  // dont on a réellement besoin pour rejouer un pronostic passé, c'est
+  // `odds_snapshots` — la page dérivant tout des cotes, un relevé de cote daté
+  // suffit à reconstituer ce qui était affiché. Les lignes déjà écrites sont
+  // conservées, seules les écritures cessent.
   const allowlist = allowedCountryCodes();
   let importedRaces = 0;
   let skippedRaces = 0;
@@ -519,40 +511,7 @@ async function importDate(sql, pmuDate, maxRaces) {
           `;
         }
 
-        await sql`
-          insert into predictions (
-            prediction_run_id, race_id, horse_id, win_probability, top3_probability,
-            top5_probability, kz_score, confidence, explanation
-          )
-          values (
-            ${predictionRunId}, ${raceId}, ${id}, ${prediction.winProbability},
-            ${prediction.top3Probability}, ${prediction.top5Probability}, ${prediction.kzScore},
-            ${prediction.confidence}, ${JSON.stringify(prediction.factors)}
-          )
-        `;
-
-        if (prediction.valueIndex > 10) {
-          await sql`
-            insert into value_bets (race_id, horse_id, market_odds, fair_odds, edge, confidence)
-            values (${raceId}, ${id}, ${prediction.odds}, ${prediction.fairOdds}, ${prediction.valueIndex}, ${prediction.confidence})
-            on conflict (race_id, horse_id) do update set
-              market_odds = excluded.market_odds,
-              fair_odds = excluded.fair_odds,
-              edge = excluded.edge,
-              confidence = excluded.confidence
-          `;
-        }
       }
-
-      // Une course réimportée reçoit un nouveau prediction_run : les prédictions
-      // du passage précédent sont périmées, remplacées par celles qu'on vient
-      // d'écrire. Les conserver empilait 9 copies quasi identiques par partant
-      // (70 % de la table `predictions`) pour aucune valeur analytique.
-      await sql`
-        delete from predictions
-        where race_id = ${raceId}
-          and prediction_run_id is distinct from ${predictionRunId}
-      `;
 
       // Arrivée : le PMU publie d'abord une arrivée provisoire (podium + 4e pour
       // les rapports Quarté), puis l'arrivée définitive complète. Sans le
@@ -611,22 +570,11 @@ async function main() {
     if (total >= maxRaces) break;
   }
 
-  // Chaque passage crée un prediction_run ; celui du passage précédent n'a plus
-  // aucune prédiction rattachée depuis le remplacement par course ci-dessus.
-  const orphanRuns = await sql`
-    delete from prediction_runs
-    where not exists (
-      select 1 from predictions where predictions.prediction_run_id = prediction_runs.id
-    )
-    returning id
-  `;
-
   const [{ size }] = await sql`
     select pg_size_pretty(pg_database_size(current_database())) as size
   `;
 
-  console.log(`[pmu] imported ${total} races`);
-  console.log(`[pmu] purged ${orphanRuns.length} orphan prediction runs — database size ${size}`);
+  console.log(`[pmu] imported ${total} races — database size ${size}`);
 }
 
 main().catch((error) => {

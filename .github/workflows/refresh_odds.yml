@@ -15,12 +15,15 @@ on:
       window:
         description: "Fenêtre en minutes avant le départ"
         required: false
-        default: "90"
+        default: "45"
         type: string
   schedule:
-    # Toutes les heures de 07:00 à 21:00 UTC, soit 09:00-23:00 à Paris en été :
-    # la plage couvre les réunions de la mi-journée jusqu'aux nocturnes.
-    - cron: "5 7-21 * * *"
+    # Toutes les 30 minutes de 07:00 à 21:00 UTC, soit 09:00-23:00 à Paris en
+    # été : la plage couvre les réunions de la mi-journée jusqu'aux nocturnes.
+    # Le dépôt est public, les minutes Actions sont gratuites — la seule raison
+    # de ne pas resserrer davantage serait de ménager l'API PMU, qu'on
+    # n'interroge que pour les courses au départ dans les 45 minutes.
+    - cron: "5,35 7-21 * * *"
 
 # Un passage en retard ne doit pas s'empiler sur le suivant : la donnée fraîche
 # prime toujours sur la donnée en attente.
@@ -49,4 +52,4 @@ jobs:
 
       - name: Refresh odds for imminent races
         timeout-minutes: 10
-        run: npm run data:refresh:odds -- --window "${{ inputs.window || '90' }}"
+        run: npm run data:refresh:odds -- --window "${{ inputs.window || '45' }}"
