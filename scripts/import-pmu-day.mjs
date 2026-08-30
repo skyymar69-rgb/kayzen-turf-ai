@@ -434,6 +434,12 @@ async function importDate(sql, pmuDate, maxRaces) {
       const participantsPayload = await fetchJson(`${PMU_BASE}/${pmuDate}/R${reunion.numOfficiel}/C${course.numOrdre}/participants`);
       const participants = participantsPayload?.participants ?? [];
 
+      // Après l'arrivée, l'API renvoie dans `reductionKilometrique` le chrono
+      // réalisé pendant la course, et non plus le record du cheval. Écraser la
+      // valeur d'avant-course reviendrait à stocker le résultat sous couvert de
+      // pronostic : `speed_figure` est donc gelée dès que la course est partie.
+      const raceFinished = (course.ordreArrivee?.flat?.() ?? []).length > 0;
+
       for (const participant of participants) {
         if (participant.statut && participant.statut !== "PARTANT") continue;
 
@@ -453,6 +459,7 @@ async function importDate(sql, pmuDate, maxRaces) {
           insert into entries (
             id, race_id, horse_id, number, age, sex, music, earnings,
             handicap_distance, reduction_km, equipment, silks_url,
+            weight, draw, shoeing, speed_figure,
             jockey_id, trainer_id, odds, fair_odds,
             market_edge, win_probability, top3_probability, top5_probability,
             kz_score, value_index, confidence, factors
@@ -463,6 +470,8 @@ async function importDate(sql, pmuDate, maxRaces) {
             ${Number(participant?.gainsParticipant?.gainsCarriere ?? 0) / 100},
             ${participant.handicapDistance ?? null}, ${participant.reductionKilometrique ?? participant.record ?? null},
             ${participant.oeilleres ?? participant.deferre ?? null}, ${participant.urlCasaque ?? null},
+            ${participant.handicapPoids ?? null}, ${participant.placeCorde ?? null},
+            ${participant.deferre ?? null}, ${raceFinished ? null : participant.reductionKilometrique ?? null},
             ${jockeyId}, ${trainerId},
             ${prediction.odds}, ${prediction.fairOdds}, ${prediction.marketEdge},
             ${prediction.winProbability}, ${prediction.top3Probability}, ${prediction.top5Probability},
@@ -476,6 +485,11 @@ async function importDate(sql, pmuDate, maxRaces) {
             earnings = excluded.earnings,
             handicap_distance = excluded.handicap_distance,
             reduction_km = excluded.reduction_km,
+            weight = excluded.weight,
+            draw = excluded.draw,
+            shoeing = excluded.shoeing,
+            -- Une fois la course partie, on conserve la valeur d'avant-course.
+            speed_figure = coalesce(excluded.speed_figure, entries.speed_figure),
             equipment = excluded.equipment,
             silks_url = excluded.silks_url,
             odds = excluded.odds,

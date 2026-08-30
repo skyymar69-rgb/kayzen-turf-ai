@@ -95,6 +95,27 @@ alter table entries add column if not exists reduction_km text;
 alter table entries add column if not exists equipment text;
 alter table entries add column if not exists silks_url text;
 
+-- Variables disponibles dans l'API PMU avant le départ, qui n'étaient pas
+-- capturées. Aucune n'alimente encore le modèle : elles sont stockées pour être
+-- évaluées par scripts/evaluate-features.mjs une fois l'historique constitué.
+--
+--   weight       poids porté (handicapPoids), en décigrammes — 580 = 58,0 kg.
+--                Variable centrale du Plat et de l'Obstacle, absente jusqu'ici.
+--   draw         place à la corde (placeCorde).
+--   shoeing      déferrage (deferre) — signal majeur du Trot. Il arrivait bien
+--                de l'API mais `equipment` le remplaçait par les œillères, qui
+--                sont toujours renseignées : il n'était donc jamais stocké.
+--   speed_figure réduction kilométrique RELEVÉE AVANT LA COURSE, puis gelée.
+--                Le champ `reduction_km` existant est inutilisable pour prédire :
+--                après l'arrivée, l'API y renvoie le chrono réalisé dans la
+--                course. Le meilleur `reduction_km` d'une course gagne dans
+--                78,4 % des cas — ce n'est pas une performance de modèle, c'est
+--                la lecture du résultat.
+alter table entries add column if not exists weight numeric;
+alter table entries add column if not exists draw integer;
+alter table entries add column if not exists shoeing text;
+alter table entries add column if not exists speed_figure numeric;
+
 create table if not exists odds_snapshots (
   id uuid primary key default gen_random_uuid(),
   race_id text not null references races(id) on delete cascade,
