@@ -184,10 +184,16 @@ create index if not exists odds_snapshots_race_horse_observed_idx on odds_snapsh
 create index if not exists prediction_runs_generated_at_idx on prediction_runs (generated_at desc);
 create index if not exists predictions_race_id_idx on predictions (race_id);
 create index if not exists predictions_run_idx on predictions (prediction_run_id);
-create index if not exists value_bets_race_id_idx on value_bets (race_id);
 create unique index if not exists value_bets_race_horse_unique_idx on value_bets (race_id, horse_id);
 create index if not exists model_calibrations_active_idx on model_calibrations (segment, active, created_at desc);
-create index if not exists race_feedback_race_id_idx on race_feedback (race_id);
+
+-- Deux index strictement redondants : chacun duplique le préfixe d'une contrainte
+-- unique déjà présente, et pg_stat_user_indexes les donne à zéro lecture depuis
+-- la création de la base. `compact-storage.mjs` supprimait déjà le premier — mais
+-- ce fichier le recréait au passage suivant, trois fois par jour. On coupe la
+-- boucle ici, à la source.
+drop index if exists value_bets_race_id_idx;
+drop index if exists race_feedback_race_id_idx;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Demandes d'exercice des droits RGPD (art. 15 à 21 du règlement 2016/679).

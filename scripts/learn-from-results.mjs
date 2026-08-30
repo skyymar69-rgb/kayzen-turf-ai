@@ -96,7 +96,10 @@ async function ensureLearningSchema(sql) {
     )
   `);
   await sql.query("create index if not exists model_calibrations_active_idx on model_calibrations (segment, active, created_at desc)");
-  await sql.query("create index if not exists race_feedback_race_id_idx on race_feedback (race_id)");
+  // Pas d'index sur race_feedback (race_id) : la contrainte unique
+  // (race_id, segment) le couvre déjà par son préfixe. Le créer ici le
+  // ressuscitait après chaque nettoyage.
+  await sql.query("drop index if exists race_feedback_race_id_idx");
 }
 
 async function loadCompletedRaces(sql) {
@@ -494,6 +497,107 @@ function groupBySegment(races) {
   return groups;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// PROMOTION SOUS CONDITION
+//
+// Les poids étaient choisis sur l'intégralité de l'historique, puis notés sur ce
+// même historique : un score élevé n'y prouvait rien d'autre que la capacité à
+// décrire le passé. Mesuré : en ajoutant au marché la sur-performance des
+// jockeys et entraîneurs, on gagne 2,1 points là où on règle et on en perd 0,6
+// sur des courses jamais vues. La boucle ne pouvait pas détecter ce cas.
+//
+// Désormais les dernières semaines sont mises de côté, le candidat est choisi
+// sans elles, et il ne remplace la calibration en place que s'il fait mieux
+// sur ces courses-là.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const HOLDOUT_DAYS = Number(process.env.LEARN_HOLDOUT_DAYS ?? 56);
+const MIN_HOLDOUT_RACES = 150;
+
+function splitForValidation(races) {
+  const dates = races.map((race) => race.race_date).sort();
+  if (dates.length === 0) return { holdout: [], train: races };
+
+  const latest = new Date(`${dates.at(-1)}T00:00:00Z`);
+  const cutoffDate = new Date(latest.getTime() - HOLDOUT_DAYS * 86400000).toISOString().slice(0, 10);
+
+  return {
+    cutoffDate,
+    holdout: races.filter((race) => race.race_date > cutoffDate),
+    train: races.filter((race) => race.race_date <= cutoffDate),
+  };
+}
+
+async function loadActiveCalibrations(sql) {
+  const rows = await sql`
+    select segment, weights
+    from model_calibrations
+    where active
+  `;
+  const active = new Map();
+  for (const row of rows) {
+    const weights = typeof row.weights === "string" ? JSON.parse(row.weights) : row.weights;
+    if (weights) active.set(row.segment, weights);
+  }
+  return active;
+}
+
+/** Objectif du banc, calculé sur un lot de courses données. */
+function objectiveOn(races, weights) {
+  return evaluateCandidate(races, { name: "évaluation", weights }).metrics.objective;
+}
+
+/**
+ * Retient les poids à appliquer pour un segment.
+ * Le challenger est choisi sans les courses de contrôle ; il ne passe que s'il
+ * y fait au moins aussi bien que la calibration déjà en place.
+ */
+function selectCalibration(races, activeWeights) {
+  const { cutoffDate, holdout, train } = splitForValidation(races);
+
+  if (holdout.length < MIN_HOLDOUT_RACES || train.length < MIN_HOLDOUT_RACES) {
+    const candidate = bestCandidate(races);
+    return { candidate, decision: "promu", reason: "trop peu de courses pour réserver un lot de contrôle" };
+  }
+
+  const challenger = bestCandidate(train);
+  const challengerScore = objectiveOn(holdout, challenger.weights);
+
+  if (!activeWeights) {
+    return {
+      candidate: { ...challenger, metrics: evaluateCandidate(races, challenger).metrics },
+      decision: "promu",
+      holdoutRaces: holdout.length,
+      challengerScore,
+      reason: "aucune calibration active",
+    };
+  }
+
+  const activeScore = objectiveOn(holdout, activeWeights);
+  if (challengerScore >= activeScore) {
+    return {
+      candidate: { ...challenger, metrics: evaluateCandidate(races, challenger).metrics },
+      decision: "promu",
+      holdoutRaces: holdout.length,
+      challengerScore,
+      activeScore,
+      cutoffDate,
+    };
+  }
+
+  // Le challenger perd sur les courses qu'il n'a pas vues : on garde l'existant.
+  const kept = { name: activeWeights.name ?? "calibration en place", weights: activeWeights };
+  return {
+    candidate: { ...kept, metrics: evaluateCandidate(races, kept).metrics },
+    decision: "rejeté",
+    holdoutRaces: holdout.length,
+    challengerScore,
+    activeScore,
+    challengerName: challenger.name,
+    cutoffDate,
+  };
+}
+
 async function main() {
   await loadLocalEnv();
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required");
@@ -505,11 +609,18 @@ async function main() {
   const completedRaces = await loadCompletedRaces(sql);
   log(`${completedRaces.length} courses terminées chargées`);
 
+  const activeCalibrations = await loadActiveCalibrations(sql);
   const plan = [];
   for (const [segment, races] of groupBySegment(completedRaces).entries()) {
     if (onlySegment && onlySegment !== segment) continue;
     if (races.length === 0) continue;
-    plan.push({ candidate: bestCandidate(races), races, segment });
+    const selection = selectCalibration(races, activeCalibrations.get(segment));
+    plan.push({ ...selection, races, segment });
+    log(
+      selection.decision === "rejeté"
+        ? `${segment} : « ${selection.challengerName} » rejeté sur ${selection.holdoutRaces} courses de contrôle (${selection.challengerScore} contre ${selection.activeScore}) — calibration en place conservée`
+        : `${segment} : « ${selection.candidate.name} » promu${selection.holdoutRaces ? ` après contrôle sur ${selection.holdoutRaces} courses jamais vues` : ` (${selection.reason})`}`,
+    );
   }
 
   // Passe 1 — les pronostics du jour d'abord. `entries.kz_score` est la seule
@@ -518,8 +629,12 @@ async function main() {
   const pendingEntries = apply ? await loadPendingEntries(sql) : [];
   for (const item of plan) {
     item.updatedEntries = apply ? await applyCalibration(sql, item.segment, item.candidate, pendingEntries) : 0;
-    await saveCalibration(sql, item.segment, item.candidate, item.races.length);
-    log(`${item.segment} : calibration « ${item.candidate.name} », ${item.updatedEntries} partants rescorés`);
+    // Une calibration rejetée reste la calibration active : inutile de réécrire
+    // une ligne identique trois fois par jour.
+    if (item.decision === "promu") {
+      await saveCalibration(sql, item.segment, item.candidate, item.races.length);
+    }
+    log(`${item.segment} : ${item.updatedEntries} partants rescorés avec « ${item.candidate.name} »`);
   }
 
   // Passe 2 — le journal d'apprentissage, purement analytique et rattrapable.
@@ -539,6 +654,10 @@ async function main() {
   const report = plan.map((item) => ({
     segment: item.segment,
     candidate: item.candidate.name,
+    decision: item.decision,
+    holdoutRaces: item.holdoutRaces ?? 0,
+    challengerScore: item.challengerScore ?? null,
+    activeScore: item.activeScore ?? null,
     learnedFromRaces: item.races.length,
     updatedEntries: item.updatedEntries,
     feedbackWritten: item.feedbackWritten,
