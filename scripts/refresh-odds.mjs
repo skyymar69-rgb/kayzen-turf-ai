@@ -121,6 +121,27 @@ async function main() {
       continue;
     }
 
+    // Répartition des enjeux par type de pari. Le pool placé est une lecture
+    // directe du Top 3 par le marché, là où nous le déduisons d'un modèle.
+    const pools = new Map();
+    try {
+      const payload = await fetchJson(
+        `${PMU_BASE}/${target.pmuDate}/R${target.reunionNumber}/C${target.courseNumber}/citations`,
+      );
+      const share = (type) => {
+        const bloc = (payload?.listeCitations ?? []).find((b) => b.typePari === type);
+        return new Map((bloc?.participants ?? []).map((p) => [Number(p.numPmu), p.citations?.[0]?.ratio ?? null]));
+      };
+      const win = share("SIMPLE_GAGNANT");
+      const place = share("SIMPLE_PLACE");
+      const quinte = share("QUINTE_PLUS");
+      for (const numPmu of win.keys()) {
+        pools.set(numPmu, { place: place.get(numPmu), quinte: quinte.get(numPmu), win: win.get(numPmu) });
+      }
+    } catch {
+      // Les pools n'existent qu'une fois les paris ouverts : leur absence est normale.
+    }
+
     // Les non-partants déclarés après l'import restaient en base et continuaient
     // d'être affichés. Le dégât n'est pas cosmétique : `devig` normalise sur
     // l'ensemble du peloton, donc un cheval fantôme retire de la probabilité à
@@ -160,6 +181,36 @@ async function main() {
       const odds = getOdds(participant);
       if (!(odds > 1)) continue;
       rows.push([entryId, odds]);
+    }
+
+    const poolRows = [];
+    for (const participant of participants) {
+      if (participant.statut && participant.statut !== "PARTANT") continue;
+      const share = pools.get(Number(participant.numPmu));
+      if (!share || !Number.isFinite(share.win)) continue;
+      poolRows.push([
+        `${target.raceId}-P${participant.numPmu}`,
+        share.win,
+        Number.isFinite(share.place) ? share.place : null,
+        Number.isFinite(share.quinte) ? share.quinte : null,
+      ]);
+    }
+
+    if (poolRows.length > 0 && !dryRun) {
+      const pp = [];
+      const pt = poolRows.map((row) => {
+        const base = pp.length;
+        pp.push(...row);
+        return `($${base + 1}, $${base + 2}::numeric, $${base + 3}::numeric, $${base + 4}::numeric)`;
+      });
+      await sql.query(
+        `update entries e
+           set pool_win = v.win, pool_place = v.place, pool_quinte = v.quinte
+           from (values ${pt.join(", ")}) as v(entry_id, win, place, quinte)
+          where e.id = v.entry_id
+            and (e.pool_win is distinct from v.win or e.pool_place is distinct from v.place)`,
+        pp,
+      );
     }
 
     if (figures.length > 0 && !dryRun) {

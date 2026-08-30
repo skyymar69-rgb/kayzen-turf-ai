@@ -116,6 +116,23 @@ alter table entries add column if not exists draw integer;
 alter table entries add column if not exists shoeing text;
 alter table entries add column if not exists speed_figure numeric;
 
+-- Répartition réelle des enjeux, relevée sur l'endpoint `citations` de l'API PMU
+-- (part du pool misée sur chaque cheval, en %). Le pool gagnant recopie ce que
+-- la cote dit déjà. Les deux autres portent une information que nous n'avons pas :
+--
+--   pool_place  part du pool PLACÉ. C'est une estimation du Top 3 OBSERVÉE, là
+--               où nous la DÉDUISONS aujourd'hui des probabilités de victoire par
+--               Plackett-Luce — modèle mesuré comme trop optimiste sur les places
+--               (plafond simulé 2,88 contre 2,52 réellement atteints par le marché).
+--   pool_quinte part du pool QUINTÉ sur la première position.
+--
+-- Écart moyen |placé − gagnant| mesuré sur 85 partants : 1,10 point, jusqu'à 5,92.
+-- Ce n'est pas du bruit. Les pools ne se remplissent que le jour de la course :
+-- ils sont relevés par le rafraîchissement, donc toujours avant le départ.
+alter table entries add column if not exists pool_win numeric;
+alter table entries add column if not exists pool_place numeric;
+alter table entries add column if not exists pool_quinte numeric;
+
 create table if not exists odds_snapshots (
   id uuid primary key default gen_random_uuid(),
   race_id text not null references races(id) on delete cascade,
