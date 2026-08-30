@@ -143,11 +143,43 @@ async function main() {
     }
 
     const rows = [];
+    const figures = [];
     for (const participant of participants) {
       if (participant.statut && participant.statut !== "PARTANT") continue;
+      const entryId = `${target.raceId}-P${participant.numPmu}`;
+
+      // La réduction kilométrique n'est publiée que tardivement, souvent après
+      // le dernier import complet. Ce passage tourne à moins de 45 minutes du
+      // départ : c'est le meilleur moment pour la relever, et la course n'ayant
+      // pas encore eu lieu, la valeur ne peut pas être le chrono de l'épreuve.
+      const figure = Number(participant.reductionKilometrique);
+      if (Number.isFinite(figure) && figure > 40000 && figure < 200000) {
+        figures.push([entryId, figure]);
+      }
+
       const odds = getOdds(participant);
       if (!(odds > 1)) continue;
-      rows.push([`${target.raceId}-P${participant.numPmu}`, odds]);
+      rows.push([entryId, odds]);
+    }
+
+    if (figures.length > 0 && !dryRun) {
+      const fp = [];
+      const ft = figures.map((row) => {
+        const base = fp.length;
+        fp.push(row[0], row[1]);
+        return `($${base + 1}, $${base + 2}::numeric)`;
+      });
+      // `is null` : une fois relevée, la valeur d'avant-course ne bouge plus.
+      const written = await sql.query(
+        `update entries e
+           set speed_figure = v.figure
+           from (values ${ft.join(", ")}) as v(entry_id, figure)
+          where e.id = v.entry_id
+            and e.speed_figure is null
+          returning e.id`,
+        fp,
+      );
+      if (written.length > 0) log(`${target.raceId} — ${written.length} réductions kilométriques relevées`);
     }
 
     if (rows.length === 0) {
