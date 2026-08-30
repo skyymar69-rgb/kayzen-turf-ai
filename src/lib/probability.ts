@@ -40,6 +40,18 @@ import type { HorsePrediction } from "@/lib/types";
  * conserve l'expression du modèle (donc la détection de value) sans coût de
  * précision mesurable. À remonter dès qu'une variable aura démontré un gain sur
  * le banc de mesure — et pas avant.
+ *
+ * Mesure du 30/08/2026 (scripts/evaluate-weight-by-field.mjs, 7 552 courses) :
+ * le modèle dégrade le log loss dans TOUTES les tranches de peloton, de 5-8
+ * partants à 18 et plus. Il n'existe donc aucun segment où le relever se
+ * justifierait, et la piste « poids variable selon la taille du peloton » est
+ * close. Le coût du réglage actuel est mesuré : 0,11 cheval par Quinté
+ * (2,41 contre 2,52 pour le marché seul, sur 56 Quintés).
+ *
+ * Passer à 0 rendrait la prédiction strictement meilleure, mais annulerait
+ * `valueRatio` — donc la détection de value et le tocard signalé, qui n'ont
+ * elles-mêmes aucune base mesurée. C'est un arbitrage produit, pas technique :
+ * il n'est pas tranché ici.
  */
 export const MODEL_WEIGHT = 0.1;
 
