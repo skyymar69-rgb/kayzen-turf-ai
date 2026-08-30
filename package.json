@@ -15,7 +15,11 @@
     "db:compact": "node scripts/compact-storage.mjs",
     "model:learn": "node scripts/learn-from-results.mjs --apply",
     "data:prune:scope": "node scripts/prune-race-scope.mjs",
-    "data:import:pmu": "node scripts/import-pmu-day.mjs"
+    "data:import:pmu": "node scripts/import-pmu-day.mjs",
+    "data:refresh:odds": "node scripts/refresh-odds.mjs",
+    "db:health": "node scripts/db-health.mjs",
+    "model:evaluate": "node scripts/evaluate-model.mjs",
+    "model:freshness": "node scripts/evaluate-freshness.mjs"
   },
   "dependencies": {
     "@fontsource/inter": "^5.2.8",

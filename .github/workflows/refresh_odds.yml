@@ -1,0 +1,52 @@
+name: Refresh PMU odds
+
+# Le marché est notre prédicteur, mais il ne devient bon qu'à l'approche du
+# départ : 37,6 % de gagnants trouvés avec la cote de départ contre 31,0 % avec
+# une cote de 6 à 12 h (banc scripts/evaluate-freshness.mjs).
+#
+# L'import complet ne passe que trois fois par jour et publiait deux tiers des
+# courses avec des cotes de plus de deux heures. Ce workflow ne fait que
+# rafraîchir les cotes des courses au départ dans les 90 minutes — quelques
+# secondes de calcul, aucune écriture de programme.
+
+on:
+  workflow_dispatch:
+    inputs:
+      window:
+        description: "Fenêtre en minutes avant le départ"
+        required: false
+        default: "90"
+        type: string
+  schedule:
+    # Toutes les heures de 07:00 à 21:00 UTC, soit 09:00-23:00 à Paris en été :
+    # la plage couvre les réunions de la mi-journée jusqu'aux nocturnes.
+    - cron: "5 7-21 * * *"
+
+# Un passage en retard ne doit pas s'empiler sur le suivant : la donnée fraîche
+# prime toujours sur la donnée en attente.
+concurrency:
+  group: refresh-odds
+  cancel-in-progress: true
+
+jobs:
+  refresh-odds:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Refresh odds for imminent races
+        timeout-minutes: 10
+        run: npm run data:refresh:odds -- --window "${{ inputs.window || '90' }}"
