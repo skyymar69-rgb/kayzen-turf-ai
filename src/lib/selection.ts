@@ -4,7 +4,7 @@ import type { HorsePrediction } from "@/lib/types";
 /**
  * SÉLECTION — le seul classement de la page course.
  *
- * Six chevaux au maximum, ordonnés par probabilité décroissante. Le Top 3 est
+ * Huit chevaux au maximum, ordonnés par probabilité décroissante. Le Top 3 est
  * constitué des trois premiers de cette liste, sans autre calcul : c'est ce qui
  * garantit qu'aucun bloc de la page ne peut afficher un Top 3 différent.
  *
@@ -22,12 +22,12 @@ export type SelectedHorse = {
   role: SelectionRole;
   /** Le modèle lui donne nettement plus de chances que le marché. */
   isValue: boolean;
-  /** Présent au titre du tocard repêché, hors des 5 meilleures probabilités. */
+  /** Présent au titre du tocard repêché, hors des 7 meilleures probabilités. */
   isPromotedTocard: boolean;
 };
 
 export type RaceSelection = {
-  /** Six chevaux maximum, triés par probabilité décroissante. */
+  /** Huit chevaux maximum, triés par probabilité décroissante. */
   horses: SelectedHorse[];
   /** Les trois premiers de `horses` — jamais recalculés ailleurs. */
   top3: SelectedHorse[];
@@ -37,7 +37,25 @@ export type RaceSelection = {
   tocard: SelectedHorse | null;
 };
 
-export const SELECTION_SIZE = 6;
+/**
+ * Taille de la sélection publiée.
+ *
+ * Portée de 6 à 8 le 30/08/2026, sur mesure et non par intuition. Confrontation
+ * des 56 Quintés du 1er juillet au 30 août à leur arrivée réelle, part des
+ * courses où au moins 4 des 5 arrivants figurent dans la sélection :
+ *
+ *     5 chevaux    3,6 %
+ *     6 chevaux   21,4 %
+ *     7 chevaux   32,1 %
+ *     8 chevaux   53,6 %
+ *
+ * Le Top 3 reste inchangé — c'est toujours lui qu'on met en avant. Les chevaux
+ * supplémentaires ne servent qu'à couvrir les tickets larges, là où le Quinté
+ * se joue. Élargir n'améliore pas le classement : cela reconnaît la variance de
+ * l'épreuve, qu'aucun modèle ne supprimera (même avec des probabilités
+ * parfaites, 4 sur 5 ne sort que dans 24,9 % des courses).
+ */
+export const SELECTION_SIZE = 8;
 
 const ROLE_LABELS: Record<SelectionRole, string> = {
   base: "Base",
@@ -70,8 +88,8 @@ function isTocardCandidate(horse: CalibratedHorse): boolean {
  * Construit la sélection.
  *
  * Le Top 3 reste strictement probabiliste — aucun tocard n'y est imposé.
- * En revanche, si aucun tocard ne figure parmi les cinq meilleures
- * probabilités, le meilleur tocard de la course prend la sixième place : la
+ * En revanche, si aucun tocard ne figure parmi les sept meilleures
+ * probabilités, le meilleur tocard de la course prend la dernière place : la
  * promesse « un tocard signalé » est ainsi tenue sans jamais fausser le Top 3.
  */
 export function buildSelection(input: HorsePrediction[]): RaceSelection {
@@ -94,7 +112,7 @@ export function buildSelection(input: HorsePrediction[]): RaceSelection {
   let promotedTocard: CalibratedHorse | null = null;
 
   if (ranked.length > SELECTION_SIZE && !picked.some(isTocardCandidate)) {
-    // Meilleur tocard hors des cinq premiers, par probabilité puis par value.
+    // Meilleur tocard hors des sept premiers, par probabilité puis par value.
     const candidate = ranked
       .slice(SELECTION_SIZE - 1)
       .filter(isTocardCandidate)

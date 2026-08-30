@@ -1437,7 +1437,13 @@ function KzBreakdown({ horse }: { horse: HorsePrediction }) {
                 style={{ width: `${safeWidth((r.value / r.max) * 100, 2)}%` }} />
             </div>
             <span className="text-right font-mono text-[10px] font-bold text-fg">
-              {r.label === "Confiance" ? horse.confidence.slice(0, 3) : Math.round(r.value)}
+              {/* Un cheval sans cote a un kzScore NULL en base, donc NaN ici :
+                  il s'affichait littéralement « NaN » à l'écran. */}
+              {r.label === "Confiance"
+                ? horse.confidence.slice(0, 3)
+                : Number.isFinite(r.value)
+                  ? Math.round(r.value)
+                  : "—"}
             </span>
           </div>
         ))}
@@ -1452,7 +1458,9 @@ function HorseComparator({ arrival, selectedHorseId }: { arrival: HorsePredictio
   const horseA = arrival.find((h) => h.id === selectedHorseId);
   const horseB = arrival.find((h) => h.id === compareId);
   const rows: Array<{ label: string; getVal: (h: HorsePrediction) => string }> = [
-    { label: "PronoScore",   getVal: (h) => String(Math.round(h.kzScore)) },
+    // Même précaution que dans la décomposition : un cheval sans cote n'a pas
+    // de score, et « NaN » n'est pas une valeur à montrer à un visiteur.
+    { label: "PronoScore",   getVal: (h) => (Number.isFinite(h.kzScore) ? String(Math.round(h.kzScore)) : "—") },
     { label: "P(Gagnant)", getVal: (h) => `${Math.round(h.winProbability)}%` },
     { label: "P(Top 3)",   getVal: (h) => `${Math.round(h.top3Probability)}%` },
     { label: "Cote",       getVal: (h) => h.odds > 0 ? String(h.odds) : "—" },

@@ -1,12 +1,12 @@
 import { Flame, ShieldCheck, Sparkles, TrendingUp } from "lucide-react";
 
-import { buildSelection, roleLabel, type SelectedHorse, type SelectionRole } from "@/lib/selection";
+import { SELECTION_SIZE, buildSelection, roleLabel, type SelectedHorse, type SelectionRole } from "@/lib/selection";
 import type { HorsePrediction } from "@/lib/types";
 
 /**
  * LA SÉLECTION — unique classement de la page course.
  *
- * Six chevaux, ordonnés par probabilité. Le Top 3 est constitué des trois
+ * Huit chevaux, ordonnés par probabilité. Le Top 3 est constitué des trois
  * premiers de cette même liste : aucun autre bloc de la page ne doit reclasser
  * le peloton, sous peine de réintroduire les contradictions d'affichage.
  */
@@ -54,9 +54,9 @@ export function RaceSelectionPanel({
 
   return (
     <section className="mt-4 overflow-hidden rounded-2xl border-2 border-accent/30 bg-surface shadow-sm">
-      {/* En-tête : les 6 chevaux à jouer, Top 3 détaché du reste.
+      {/* En-tête : les chevaux à jouer, Top 3 détaché du reste.
           C'est la seule chose à lire pour décider — tout le reste de la page
-          n'est là que pour justifier ces six numéros. */}
+          n'est là que pour justifier ces numéros. */}
       <header className="border-b border-border bg-accent-lo px-5 py-4 sm:px-6">
         <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
           <div>
@@ -91,7 +91,7 @@ export function RaceSelectionPanel({
         </div>
       </header>
 
-      {/* Les 6 chevaux, un seul classement */}
+      {/* La sélection entière, un seul classement */}
       <ol className="divide-y divide-border">
         {selection.horses.map((entry) => (
           <SelectionRow key={entry.horse.id} entry={entry} />
@@ -104,7 +104,7 @@ export function RaceSelectionPanel({
             <span className="font-bold text-accent-text">Tocard signalé</span> — #{tocard.horse.number}{" "}
             {tocard.horse.horse} à {tocard.horse.odds}, que le modèle estime{" "}
             {tocard.horse.valueRatio?.toFixed(2)}× plus probable que ne le dit le marché.
-            {tocard.isPromotedTocard && " Retenu en 6ᵉ place à ce titre, hors des cinq meilleures probabilités."}
+            {tocard.isPromotedTocard && ` Retenu en ${SELECTION_SIZE}ᵉ place à ce titre, hors des ${SELECTION_SIZE - 1} meilleures probabilités.`}
           </p>
         ) : (
           <p className="text-xs text-muted">
