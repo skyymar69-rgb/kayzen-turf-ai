@@ -9,7 +9,18 @@ export async function GET(request: Request) {
   const limite = limiterDebit(`predictions:${adresseAppelant(request)}`, LIMITE_APPELS, FENETRE_MS);
   if (!limite.autorise) return reponseTropDeRequetes(limite);
 
-  const predictions = await getPredictions();
+  // Une panne de la source (`ErreurSourceDonnees`) répond 503 sans cache
+  // plutôt qu'un 500 générique.
+  let predictions;
+  try {
+    predictions = await getPredictions();
+  } catch (cause) {
+    console.error("GET /api/predictions : lecture des pronostics impossible", cause instanceof Error ? cause.message : cause);
+    return NextResponse.json(
+      { error: "Données momentanément indisponibles." },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
+  }
 
   return NextResponse.json(
     { generatedAt: new Date().toISOString(), data: predictions },

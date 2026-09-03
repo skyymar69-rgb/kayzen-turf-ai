@@ -31,8 +31,9 @@
  *   node scripts/backfill-history.mjs --from 01/01/2024 --to 31/12/2024
  *   node scripts/backfill-history.mjs --from 01/01/2013 --to 31/12/2026 --skip-existing
  *
- * Reprenable : avec --skip-existing, une journée déjà présente dans `races` est
- * ignorée. Le script est donc relançable après interruption.
+ * Reprenable : avec --skip-existing, une journée déjà présente dans `races`
+ * AVEC ses résultats est ignorée. Le script est donc relançable après
+ * interruption. Le code de sortie vaut 1 si au moins une journée a échoué.
  */
 
 import { spawn } from "node:child_process";
@@ -74,6 +75,9 @@ const toPmu = (d) =>
 const toIso = (d) => d.toISOString().slice(0, 10);
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/** Au-delà, l'import d'une journée est considéré comme bloqué et le processus est tué. */
+const IMPORT_DAY_TIMEOUT_MS = 45 * 60 * 1000;
+
 /** Rejoue l'import officiel pour une journée. Renvoie le nombre de courses importées. */
 function importDay(pmuDate) {
   return new Promise((resolve) => {
@@ -86,11 +90,22 @@ function importDay(pmuDate) {
     child.stdout.on("data", (c) => { out += c; });
     child.stderr.on("data", (c) => { out += c; });
 
+    // Une journée qui pend (API PMU muette, connexion perdue) ne doit pas
+    // bloquer le rattrapage complet : on tue l'enfant et on la compte en échec.
+    const killer = setTimeout(() => {
+      out += `\n[historique] ${pmuDate} : délai de ${IMPORT_DAY_TIMEOUT_MS / 60000} min dépassé, import interrompu`;
+      child.kill("SIGKILL");
+    }, IMPORT_DAY_TIMEOUT_MS);
+
     child.on("close", (code) => {
+      clearTimeout(killer);
       const m = out.match(/imported (\d+) races/);
-      resolve({ code, races: m ? Number(m[1]) : 0, out });
+      resolve({ code: code ?? 1, races: m ? Number(m[1]) : 0, out });
     });
-    child.on("error", () => resolve({ code: 1, races: 0, out: "spawn failed" }));
+    child.on("error", () => {
+      clearTimeout(killer);
+      resolve({ code: 1, races: 0, out: "spawn failed" });
+    });
   });
 }
 
@@ -121,9 +136,16 @@ async function main() {
 
   let existing = new Set();
   if (skipExisting) {
-    const rows = await sql`select distinct race_date::text as d from races`;
+    // Une journée n'est « déjà en base » que si elle a ses arrivées : un
+    // programme importé la veille sans résultats doit être rejoué, sinon il
+    // reste sans arrivée pour toujours et le modèle n'apprend rien dessus.
+    const rows = await sql`
+      select distinct r.race_date::text as d
+      from races r
+      where exists (select 1 from results res where res.race_id = r.id)
+    `;
     existing = new Set(rows.map((r) => r.d));
-    console.log(`[historique] ${existing.size} journées déjà en base seront ignorées`);
+    console.log(`[historique] ${existing.size} journées déjà en base avec résultats seront ignorées`);
   }
 
   const totalDays = Math.round((end - start) / 86400000) + 1;
@@ -152,6 +174,10 @@ async function main() {
     `${skipped > 0 ? `, ${skipped} déjà présentes` : ""}` +
     `${failed > 0 ? `, ${failed} en échec` : ""}`,
   );
+
+  // Un rattrapage partiel doit se voir dans le code de sortie, pas seulement
+  // dans les logs : sinon un `&&` ou un job CI le prend pour un succès.
+  if (failed > 0) process.exitCode = 1;
 }
 
 main().catch((error) => {

@@ -1,0 +1,47 @@
+name: Compact storage
+
+# Compaction hebdomadaire de la base Neon (scripts/compact-storage.mjs) :
+# retire les relevés de cote sans mouvement et les prédictions périmées, puis
+# réécrit les tables (VACUUM FULL) pour rendre les pages au stockage. Aucune
+# course, aucun partant, aucun résultat, aucune observation de marché distincte
+# n'est supprimé — voir docs/DATA_RETENTION_POLICY.md.
+#
+# Dimanche 02:00 UTC : aucune réunion en cours, et l'import du matin (04:30 UTC)
+# n'a pas encore commencé.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 2 * * 0"
+
+# Le job n'écrit rien dans le dépôt : lecture seule suffit.
+permissions:
+  contents: read
+
+# Même groupe que import_pmu.yml : la compaction retire temporairement un index
+# et tient un VACUUM FULL, l'import ne doit jamais tourner en même temps.
+concurrency:
+  group: pmu-database
+
+jobs:
+  compact-storage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Compact Neon storage
+        timeout-minutes: 50
+        run: npm run db:compact -- --apply

@@ -19,8 +19,11 @@ import {
   Zap,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { DisciplinePill, TierBadge, titleCase } from "@/components/badges";
 import { useFavorites } from "@/hooks/use-favorites";
+import { usePdfJour } from "@/hooks/use-pdf-jour";
 import { probableArrival, raceToContext } from "@/lib/bet-recommendations";
+import { formatMeters } from "@/lib/format";
 import { minutesActuellesParis, minutesDepuisHeure } from "@/lib/paris-time";
 import type { BetOffer, RaceAnalysis } from "@/lib/types";
 
@@ -52,6 +55,9 @@ const BET_BADGE: Record<string, string> = {
 const DISCIPLINES = ["Tous", "Plat", "Trot", "Obstacle"] as const;
 type DisciplineFilter = (typeof DISCIPLINES)[number];
 
+/** Signaux dérivés d'une course, calculés une fois par rendu du programme. */
+type RaceSignals = { signal: string; highlights: ReturnType<typeof raceHighlights> };
+
 export function Dashboard({ races }: DashboardProps) {
   const currentMinute = useCurrentMinute();
   const { favs, toggle: toggleFav } = useFavorites();
@@ -80,6 +86,29 @@ export function Dashboard({ races }: DashboardProps) {
       : base;
   }, [meetings, disciplineFilter, meetingSort]);
   const timelineRace = useMemo(() => selectTimelineRace(dayRaces, currentMinute), [currentMinute, dayRaces]);
+  /* `dayRaces` est trié par réunion puis numéro de course ; la ligne du temps
+     se lit par heure de départ. Trié une fois, réutilisé pour la plage
+     affichée en en-tête — qui reprenait jusqu'ici le premier et le dernier
+     élément de l'ordre par réunion, soit rarement la première et la dernière
+     course de la journée. */
+  const timelineRaces = useMemo(
+    () => [...dayRaces].sort((a, b) => minutesFromStartTime(a.startTime) - minutesFromStartTime(b.startTime)),
+    [dayRaces],
+  );
+  /* `raceOpportunity` recalcule un `probableArrival` complet (Plackett-Luce sur
+     tout le peloton) et `raceHighlights` parcourt les offres : appelés jusqu'à
+     six fois par course et par rendu, entre la liste du hero, le tableau, les
+     cartes mobiles, la vue condensée et les tuiles du Top 3. Calculés une fois
+     par course, tant que le programme du jour ne change pas. */
+  const raceSignals = useMemo(() => {
+    const map = new Map<string, RaceSignals>();
+    for (const race of dayRaces) {
+      map.set(race.id, { signal: raceOpportunity(race), highlights: raceHighlights(race.betTypes) });
+    }
+    return map;
+  }, [dayRaces]);
+  const signalsFor = (race: RaceAnalysis): RaceSignals =>
+    raceSignals.get(race.id) ?? { signal: raceOpportunity(race), highlights: raceHighlights(race.betTypes) };
 
   const selectedMeeting =
     filteredMeetings.find((m) => m.key === selectedMeetingKey) ??
@@ -101,7 +130,7 @@ export function Dashboard({ races }: DashboardProps) {
   const topArrival      = selectedRace ? probableArrival(selectedRace.horses, raceToContext(selectedRace)).slice(0, 5) : [];
   const dayInsights     = buildDayInsights(dayRaces);
   const dayRunnerCount  = dayRaces.reduce((t, r) => t + r.horses.length, 0);
-  const dayFeatureCount = dayRaces.filter((r) => raceHighlights(r.betTypes).length > 0).length;
+  const dayFeatureCount = dayRaces.filter((r) => signalsFor(r).highlights.length > 0).length;
 
   function selectDay(day: RaceAnalysis["relativeDay"]) {
     if (day === "other") return;
@@ -116,6 +145,9 @@ export function Dashboard({ races }: DashboardProps) {
     const v = value;
     debounceRef.current = setTimeout(() => setQuery(v), 200);
   }
+  // Un délai encore en attente au démontage appelait `setQuery` sur un
+  // composant disparu : avertissement React, et fuite du minuteur.
+  useEffect(() => () => clearTimeout(debounceRef.current), []);
   function clearQuery() {
     setQuery("");
     if (searchInputRef.current) searchInputRef.current.value = "";
@@ -301,8 +333,7 @@ export function Dashboard({ races }: DashboardProps) {
                       {visibleRaces.map((race) => {
                         const active  = race.id === selectedRace?.id;
                         const status  = raceStatus(race, currentMinute);
-                        const signal  = raceOpportunity(race);
-                        const highlights = raceHighlights(race.betTypes);
+                        const { signal, highlights } = signalsFor(race);
                         return (
                           <Link
                             key={race.id}
@@ -371,12 +402,18 @@ export function Dashboard({ races }: DashboardProps) {
           <section aria-label="Timeline des courses" className="mb-4 overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
             <div className="flex items-center justify-between border-b border-border px-5 py-3">
               <p className="text-xs font-bold uppercase tracking-widest text-muted">Timeline · {dayRaces.length} courses</p>
-              <p className="text-xs text-muted">{dayRaces[0]?.startTime ?? "—"} → {dayRaces[dayRaces.length - 1]?.startTime ?? "—"}</p>
+              <p className="text-xs text-muted">{timelineRaces[0]?.startTime ?? "—"} → {timelineRaces[timelineRaces.length - 1]?.startTime ?? "—"}</p>
             </div>
             <div className="flex overflow-x-auto kz-scroll px-4 py-3 gap-2">
-              {[...dayRaces].sort((a, b) => a.startTime.localeCompare(b.startTime)).map((race) => {
+              {timelineRaces.map((race) => {
                 const status  = raceStatus(race, currentMinute);
-                const isPast  = status === "Arrivée disponible" || (!status.includes("imminent") && !status.includes("Départ à") && !status.includes("disponible") && minutesFromStartTime(race.startTime) < currentMinute);
+                // Déduire « déjà courue » du libellé de statut (« Départ à… »,
+                // « imminent ») revenait à parser sa propre phrase : la
+                // condition était fausse pour toutes les courses du jour, qui
+                // portent toutes « Départ à » ou « Départ imminent ». On compare
+                // l'heure de départ à la minute courante, comme `raceStatus`.
+                const isPast  = race.relativeDay === "yesterday"
+                  || (race.relativeDay === "today" && minutesFromStartTime(race.startTime) < currentMinute);
                 const isNow   = status.includes("imminent");
                 const isValue = race.horses.some((h) => h.valueIndex > 10);
                 const discCls = race.discipline === "Trot" ? "bg-sky-500" : race.discipline === "Obstacle" ? "bg-orange-500" : "bg-violet-500";
@@ -427,7 +464,7 @@ export function Dashboard({ races }: DashboardProps) {
                   <h2 className="font-display text-lg font-bold text-fg group-hover:text-accent-text leading-tight">
                     {star.name.charAt(0).toUpperCase() + star.name.slice(1).toLowerCase()}
                   </h2>
-                  <p className="text-xs text-muted">{star.racecourse.charAt(0).toUpperCase() + star.racecourse.slice(1).toLowerCase()} · {star.distance} · {star.discipline}</p>
+                  <p className="text-xs text-muted">{star.racecourse.charAt(0).toUpperCase() + star.racecourse.slice(1).toLowerCase()} · {formatMeters(star.distance)} · {star.discipline}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
                   {top3.map((h, i) => (
@@ -506,7 +543,7 @@ export function Dashboard({ races }: DashboardProps) {
                       <p className="mt-0.5 text-xs text-muted">{titleCase(race.racecourse)}</p>
                     </div>
                     <div className="mt-auto grid grid-cols-3 gap-2">
-                      <MiniMetric label="Signal"    value={raceOpportunity(race)} />
+                      <MiniMetric label="Signal"    value={signalsFor(race).signal} />
                       <MiniMetric label="Consensus" value={`${race.modelConsensus}%`} />
                       <MiniMetric label="Risque"    value={formatRisk(race.riskLevel)} />
                     </div>
@@ -672,7 +709,7 @@ export function Dashboard({ races }: DashboardProps) {
             <div className="grid gap-px bg-border p-0 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {visibleRaces.map((race) => {
                 const active = race.id === selectedRace.id;
-                const signal = raceOpportunity(race);
+                const { signal } = signalsFor(race);
                 return (
                   <Link
                     key={race.id}
@@ -711,7 +748,7 @@ export function Dashboard({ races }: DashboardProps) {
               <tbody className="divide-y divide-border">
                 {visibleRaces.map((race) => {
                   const active    = race.id === selectedRace.id;
-                  const highlights = raceHighlights(race.betTypes);
+                  const { signal, highlights } = signalsFor(race);
                   const status    = raceStatus(race, currentMinute);
                   return (
                     <tr
@@ -746,14 +783,14 @@ export function Dashboard({ races }: DashboardProps) {
                         <DisciplinePill discipline={race.discipline} />
                       </td>
                       <td className="px-5 py-3.5 text-sm font-semibold text-accent-text">
-                        {raceOpportunity(race)}
+                        {signal}
                       </td>
                       <td className="px-5 py-3.5">
                         <div className="flex flex-wrap gap-1">
-                          {raceHighlights(race.betTypes).length === 0
+                          {highlights.length === 0
                             ? <span className="text-xs text-muted">Classique</span>
                             : null}
-                          {raceHighlights(race.betTypes).map((h) => (
+                          {highlights.map((h) => (
                             <span key={h.label} className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${h.className}`}>{h.label}</span>
                           ))}
                         </div>
@@ -794,6 +831,7 @@ export function Dashboard({ races }: DashboardProps) {
           <div className="grid gap-3 p-4 md:hidden">
             {visibleRaces.map((race) => {
               const active = race.id === selectedRace.id;
+              const { signal, highlights } = signalsFor(race);
               return (
                 <article
                   key={race.id}
@@ -804,12 +842,12 @@ export function Dashboard({ races }: DashboardProps) {
                     <div>
                       <p className="font-mono text-xs font-bold text-muted">{race.programCode}</p>
                       <h3 className="mt-1 font-semibold text-fg">{titleCase(race.name)}</h3>
-                      <p className="mt-0.5 text-xs font-semibold text-accent-text">{raceOpportunity(race)}</p>
+                      <p className="mt-0.5 text-xs font-semibold text-accent-text">{signal}</p>
                     </div>
                     <DisciplinePill discipline={race.discipline} />
                   </div>
                   <div className="mt-3 flex flex-wrap gap-1">
-                    {raceHighlights(race.betTypes).map((h) => (
+                    {highlights.map((h) => (
                       <span key={h.label} className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${h.className}`}>{h.label}</span>
                     ))}
                   </div>
@@ -866,7 +904,7 @@ export function Dashboard({ races }: DashboardProps) {
               {/* Table desktop */}
               <div className="hidden overflow-x-auto sm:block">
                 <table className="w-full border-collapse text-left">
-                  <caption className="sr-only">Top 5 partants KAYZEN</caption>
+                  <caption className="sr-only">Top 5 partants PronoTurf</caption>
                   <thead>
                     <tr className="border-b border-border bg-surface-sub text-xs font-bold uppercase tracking-widest text-muted">
                       <th className="px-5 py-3" scope="col">N°</th>
@@ -930,7 +968,7 @@ export function Dashboard({ races }: DashboardProps) {
                 <SmMetric label="Qualité course" value={`${selectedRace.raceQualityScore}/100`} />
                 <SmMetric label="Risque"         value={formatRisk(selectedRace.riskLevel)} />
                 <SmMetric label="Discipline"     value={selectedRace.specialty} />
-                <SmMetric label="Scénario"       value={raceOpportunity(selectedRace)} />
+                <SmMetric label="Scénario"       value={signalsFor(selectedRace).signal} />
                 <SmMetric label="Stratégie"      value={strategyForRace(selectedRace)} />
               </div>
               <div className="border-t border-border px-5 pb-5">
@@ -945,7 +983,10 @@ export function Dashboard({ races }: DashboardProps) {
         {/* ── BARRE PROGRESSION + DISTRIBUTION PRONOSCORE (#53 #90) ────── */}
         {dayRaces.length > 0 && (() => {
           const kzScores  = dayRaces.flatMap((r) => r.horses.map((h) => h.kzScore)).filter((s) => Number.isFinite(s));
-          const buckets   = [0, 20, 40, 60, 80, 99];
+          // Borne haute ouverte : avec 99 en dernière borne et un test strict
+          // `< 99`, un PronoScore de 99 — le maximum — ne tombait dans aucune
+          // tranche et disparaissait de l'histogramme.
+          const buckets   = [0, 20, 40, 60, 80, Infinity];
           const labels    = ["0-20", "20-40", "40-60", "60-80", "80+"];
           const counts    = labels.map((_, i) => kzScores.filter((s) => s >= buckets[i] && s < buckets[i + 1]).length);
           const maxCount  = Math.max(...counts, 1);
@@ -970,13 +1011,7 @@ export function Dashboard({ races }: DashboardProps) {
                     </div>
                   ))}
                 </div>
-                <div className="mt-3 h-2 overflow-hidden rounded-full bg-border">
-                  <div
-                    className="h-full rounded-full bg-accent transition-all"
-                    style={{ width: `${Math.round((dayRaces.length / Math.max(dayRaces.length, 1)) * 100)}%` }}
-                  />
-                </div>
-                <p className="mt-1.5 text-xs text-muted"><strong className="text-fg">{dayRaces.length}</strong> courses analysées · <strong className="text-fg">{dayRaces.reduce((t, r) => t + r.horses.length, 0)}</strong> partants</p>
+                <p className="mt-3 text-xs text-muted"><strong className="text-fg">{dayRaces.length}</strong> courses analysées · <strong className="text-fg">{dayRaces.reduce((t, r) => t + r.horses.length, 0)}</strong> partants</p>
               </div>
               {/* Timeline value bets */}
               <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
@@ -1054,40 +1089,28 @@ export function Dashboard({ races }: DashboardProps) {
 
 /* ─── PDF Download Button ────────────────────────────────────────── */
 
+/**
+ * Même hook que le bouton de l'en-tête : cette copie gardait l'ancre hors du
+ * document, la révocation immédiate du blob et un `alert()` bloquant.
+ */
 function PdfDownloadButton({ date }: { date: string }) {
-  const [loading, setLoading] = useState(false);
-
-  async function handleDownload() {
-    if (loading) return;
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/pdf/pronostics?date=${date}`);
-      if (!res.ok) throw new Error("Génération échouée");
-      const blob = await res.blob();
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement("a");
-      a.href     = url;
-      a.download = `kayzen-pronostics-${date}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      alert("Impossible de générer le PDF. Réessayez.");
-    } finally {
-      setLoading(false);
-    }
-  }
+  const { etat, telecharger } = usePdfJour();
+  const chargement = etat === "chargement";
 
   return (
     <button
-      disabled={loading}
-      onClick={handleDownload}
+      disabled={chargement}
+      onClick={() => telecharger(date)}
       type="button"
       className="inline-flex items-center gap-2 rounded-xl border border-accent/40 bg-accent-lo px-4 py-2.5 text-sm font-semibold text-accent-text transition hover:bg-accent hover:text-white disabled:opacity-60"
     >
-      {loading
-        ? <><Loader2 size={15} className="animate-spin" /> Génération…</>
-        : <><Download size={15} /> PDF pronostics</>
+      {chargement
+        ? <><Loader2 aria-hidden="true" size={15} className="animate-spin" /> Génération…</>
+        : etat === "echec"
+          ? <><Download aria-hidden="true" size={15} /> Échec — réessayer</>
+          : <><Download aria-hidden="true" size={15} /> PDF pronostics</>
       }
+      {etat === "echec" && <span className="sr-only" role="alert">Le PDF n&apos;a pas pu être généré.</span>}
     </button>
   );
 }
@@ -1128,20 +1151,6 @@ function SmMetric({ label, value }: { label: string; value: string }) {
       <p className="mt-1 text-sm font-bold text-fg">{value}</p>
     </div>
   );
-}
-
-function TierBadge({ tier }: { tier: RaceAnalysis["bettingTier"] }) {
-  if (tier === "Focus") return <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold text-white">Focus</span>;
-  if (tier === "Value") return <span className="rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-bold text-amber-950">Value</span>;
-  return <span className="rounded-full bg-surface-inv px-2 py-0.5 text-[10px] font-bold text-white">Prudence</span>;
-}
-
-function DisciplinePill({ discipline }: { discipline: string }) {
-  const cls =
-    discipline === "Trot"     ? "bg-sky-100 text-sky-800" :
-    discipline === "Obstacle" ? "bg-orange-100 text-orange-800" :
-                                "bg-violet-100 text-violet-800";
-  return <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${cls}`}>{discipline}</span>;
 }
 
 function DifficultyPip({ difficulty, active }: { difficulty: RaceMeeting["difficulty"]; active: boolean }) {
@@ -1292,7 +1301,9 @@ function selectTimelineRace(races: RaceAnalysis[], currentMinute: number) {
   return (
     races.filter((r) => minutesFromStartTime(r.startTime) >= currentMinute)
          .sort((a, b) => minutesFromStartTime(a.startTime) - minutesFromStartTime(b.startTime))[0] ??
-    races.sort((a, b) => minutesFromStartTime(a.startTime) - minutesFromStartTime(b.startTime))[0]
+    // `races.sort` en place réordonnait `dayRaces`, tableau mémoïsé et partagé
+    // avec les réunions : l'ordre par réunion se retrouvait trié par heure.
+    [...races].sort((a, b) => minutesFromStartTime(a.startTime) - minutesFromStartTime(b.startTime))[0]
   );
 }
 function raceStatus(race: RaceAnalysis, currentMinute: number) {
@@ -1354,10 +1365,6 @@ function dateForDay(races: RaceAnalysis[], day: RaceAnalysis["relativeDay"]) {
   const [year, month, d] = paris.split("-").map(Number);
   const shifted = new Date(Date.UTC(year, month - 1, d + offset, 12));
   return new Intl.DateTimeFormat("en-CA", { timeZone: "UTC", year: "numeric", month: "2-digit", day: "2-digit" }).format(shifted);
-}
-function titleCase(v: string) {
-  return v.toLowerCase().split(/(\s|-|')/)
-    .map((p) => (p.length > 1 ? p.charAt(0).toUpperCase() + p.slice(1) : p)).join("");
 }
 function raceHighlights(offers: BetOffer[]) {
   const out: { label: string; className: string }[] = [];

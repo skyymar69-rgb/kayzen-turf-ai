@@ -16,30 +16,45 @@ import { SITE_URL } from "@/lib/site";
  */
 export const revalidate = 3600;
 
+/**
+ * Les pages statiques annonçaient `lastModified: now` à chaque génération :
+ * un robot qui voit une page « modifiée » toutes les heures finit par ne plus
+ * croire la date, y compris pour les pages de courses où elle est vraie. Date
+ * fixe, à mettre à jour lorsque le contenu de ces pages change réellement.
+ */
+const DERNIERE_MODIFICATION_STATIQUE = "2026-09-04";
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = SITE_URL;
   const now = new Date().toISOString();
+  const fixe = DERNIERE_MODIFICATION_STATIQUE;
 
   const statiques: MetadataRoute.Sitemap = [
-    { url: base,                            lastModified: now, changeFrequency: "daily",   priority: 1.0 },
-    { url: `${base}/pronostics`,            lastModified: now, changeFrequency: "daily",   priority: 0.9 },
-    { url: `${base}/tarifs`,                lastModified: now, changeFrequency: "monthly", priority: 0.8 },
-    { url: `${base}/techniques-prediction`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
-    { url: `${base}/lexique`,               lastModified: now, changeFrequency: "monthly", priority: 0.7 },
-    { url: `${base}/prono-score`,              lastModified: now, changeFrequency: "monthly", priority: 0.7 },
-    { url: `${base}/jeu-responsable`,       lastModified: now, changeFrequency: "yearly",  priority: 0.4 },
-    { url: `${base}/mentions-legales`,      lastModified: now, changeFrequency: "yearly",  priority: 0.3 },
-    { url: `${base}/cgu`,                   lastModified: now, changeFrequency: "yearly",  priority: 0.3 },
-    { url: `${base}/cgv`,                   lastModified: now, changeFrequency: "yearly",  priority: 0.3 },
-    { url: `${base}/confidentialite`,       lastModified: now, changeFrequency: "yearly",  priority: 0.3 },
-    { url: `${base}/cookies`,               lastModified: now, changeFrequency: "yearly",  priority: 0.3 },
-    { url: `${base}/accessibilite`,         lastModified: now, changeFrequency: "yearly",  priority: 0.2 },
+    { url: base,                            lastModified: now,  changeFrequency: "daily",   priority: 1.0 },
+    { url: `${base}/pronostics`,            lastModified: now,  changeFrequency: "daily",   priority: 0.9 },
+    { url: `${base}/tarifs`,                lastModified: fixe, changeFrequency: "monthly", priority: 0.8 },
+    { url: `${base}/techniques-prediction`, lastModified: fixe, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${base}/lexique`,               lastModified: fixe, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${base}/prono-score`,           lastModified: fixe, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${base}/jeu-responsable`,       lastModified: fixe, changeFrequency: "yearly",  priority: 0.4 },
+    { url: `${base}/mentions-legales`,      lastModified: fixe, changeFrequency: "yearly",  priority: 0.3 },
+    { url: `${base}/cgu`,                   lastModified: fixe, changeFrequency: "yearly",  priority: 0.3 },
+    { url: `${base}/cgv`,                   lastModified: fixe, changeFrequency: "yearly",  priority: 0.3 },
+    { url: `${base}/confidentialite`,       lastModified: fixe, changeFrequency: "yearly",  priority: 0.3 },
+    { url: `${base}/cookies`,               lastModified: fixe, changeFrequency: "yearly",  priority: 0.3 },
+    { url: `${base}/accessibilite`,         lastModified: fixe, changeFrequency: "yearly",  priority: 0.2 },
   ];
 
   let courses: MetadataRoute.Sitemap = [];
   try {
-    const races = await getRaces();
-    courses = races.map((race) => ({
+    // Hier figurait dans le sitemap : des dizaines d'URLs de courses déjà
+    // courues, que le site lui-même n'affiche plus en avant. Seules les
+    // courses à venir — aujourd'hui et demain — méritent d'être poussées.
+    const [aujourdhui, demain] = await Promise.all([
+      getRaces({ day: "today" }),
+      getRaces({ day: "tomorrow" }),
+    ]);
+    courses = [...aujourdhui, ...demain].map((race) => ({
       url: `${base}/races/${encodeURIComponent(race.id)}`,
       lastModified: now,
       changeFrequency: "hourly" as const,

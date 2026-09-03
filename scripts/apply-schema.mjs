@@ -41,11 +41,16 @@ async function main() {
     .map((statement) => statement.trim())
     .filter(Boolean);
 
-  for (const statement of statements) {
-    await sql.query(statement);
-  }
+  // Une seule transaction HTTP (`sql.transaction` du pilote neon, non
+  // interactive : toutes les instructions partent d'un coup). Auparavant, une
+  // instruction en échec au milieu du fichier laissait la base à mi-chemin —
+  // colonnes ajoutées, index suivants absents — jusqu'au passage suivant.
+  // `sql.query()` renvoie une promesse paresseuse, c'est ce que `transaction`
+  // attend. `db/schema.sql` ne contient ni VACUUM ni CREATE INDEX CONCURRENTLY,
+  // qui refuseraient de s'exécuter dans une transaction.
+  await sql.transaction(statements.map((statement) => sql.query(statement)));
 
-  console.log("Database schema applied");
+  console.log(`Database schema applied (${statements.length} statements, one transaction)`);
 }
 
 main().catch((error) => {

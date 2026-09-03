@@ -3,10 +3,11 @@ import { z } from "zod";
 import { adresseAppelant, limiterDebit, reponseTropDeRequetes } from "@/lib/rate-limit";
 import { schemaIdCourse } from "@/lib/validation";
 
-const MARKET_AGENT_URL = process.env.MARKET_AGENT_URL ?? "http://localhost:8002";
-
 const LIMITE_APPELS = 60;
 const FENETRE_MS = 60_000;
+
+/** Délai maximal accordé au service amont avant de basculer sur le repli. */
+const DELAI_AMONT_MS = 8_000;
 
 const schemaRequete = z.object({
   raceId: schemaIdCourse,
@@ -25,10 +26,31 @@ const schemaRequete = z.object({
  * GET /api/drift?raceId=…&horseIds=h1,h2,h3&decisionTime=2026-05-07T13:30:00Z
  *
  * Relais vers market_agent /signals — signaux steam/drift temps réel.
+ *
+ * Plus de repli `http://localhost:…` : en production, il envoyait chaque appel
+ * vers un port local inexistant et cachait une variable d'environnement
+ * oubliée derrière des signaux neutres. Absente, la variable vaut un 503 avant
+ * même de lire les paramètres ; l'URL doit être en HTTPS, et le jeton
+ * `MARKET_AGENT_TOKEN`, s'il est défini, part en `Authorization`.
  */
 export async function GET(request: Request) {
   const limite = limiterDebit(`drift:${adresseAppelant(request)}`, LIMITE_APPELS, FENETRE_MS);
   if (!limite.autorise) return reponseTropDeRequetes(limite);
+
+  const urlAgent = process.env.MARKET_AGENT_URL;
+  if (!urlAgent) {
+    return NextResponse.json(
+      { error: "Service de signaux marché non configuré." },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+  if (!urlAgent.startsWith("https://")) {
+    console.error("MARKET_AGENT_URL doit commencer par https://");
+    return NextResponse.json(
+      { error: "Service de signaux marché mal configuré." },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
+  }
 
   const { searchParams } = new URL(request.url);
 
@@ -53,11 +75,16 @@ export async function GET(request: Request) {
 
   const { raceId, horseIds, decisionTime } = resultat.data;
 
+  const jeton = process.env.MARKET_AGENT_TOKEN;
+  const entetes: Record<string, string> = { "Content-Type": "application/json" };
+  if (jeton) entetes.Authorization = `Bearer ${jeton}`;
+
   try {
-    const res = await fetch(`${MARKET_AGENT_URL}/signals`, {
+    const res = await fetch(new URL("/signals", urlAgent), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: entetes,
       body: JSON.stringify({ race_id: raceId, horse_ids: horseIds, decision_time: decisionTime }),
+      signal: AbortSignal.timeout(DELAI_AMONT_MS),
       next: { revalidate: 60 },
     });
 
@@ -78,7 +105,9 @@ export async function GET(request: Request) {
       headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" },
     });
   } catch {
-    // Repli : signaux neutres si l'agent est injoignable.
+    // Repli : signaux neutres si l'agent est injoignable ou trop lent. La forme
+    // de la charge est conservée pour le client, mais le statut dit la vérité —
+    // un 200 faisait passer une panne pour un marché sans mouvement.
     const neutral = horseIds.map((id) => ({
       horse_id: id,
       steam_score: 0,
@@ -96,7 +125,7 @@ export async function GET(request: Request) {
         signals: neutral,
         source: "fallback_neutral",
       },
-      { headers: { "Cache-Control": "no-store" } },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
     );
   }
 }

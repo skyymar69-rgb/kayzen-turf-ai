@@ -58,9 +58,12 @@ const GLOSSARY: Array<{ term: string; definition: string; category: string }> = 
 
 const categories = Array.from(new Set(GLOSSARY.map((g) => g.category)));
 
+/** Identifiant DOM d'une catégorie : « Paris PMU » → `cat-paris-pmu` (un id ne peut contenir d'espace). */
+const categorieId = (cat: string) => `cat-${cat.toLowerCase().replace(/\s+/g, "-")}`;
+
 export default function LexiquePage() {
   return (
-    <main className="min-h-screen bg-bg pb-20">
+    <main className="min-h-screen bg-bg pb-20" id="contenu-principal">
       <div className="mx-auto max-w-4xl px-4 pt-6 sm:px-6 lg:px-8">
 
         <Link
@@ -83,8 +86,8 @@ export default function LexiquePage() {
 
         <div className="grid gap-8">
           {categories.map((cat) => (
-            <section key={cat} aria-labelledby={`cat-${cat}`}>
-              <h2 id={`cat-${cat}`} className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted">
+            <section key={cat} aria-labelledby={categorieId(cat)}>
+              <h2 id={categorieId(cat)} className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted">
                 <span className="h-px flex-1 bg-border" />
                 {cat}
                 <span className="h-px flex-1 bg-border" />

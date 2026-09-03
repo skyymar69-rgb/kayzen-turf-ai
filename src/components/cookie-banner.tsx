@@ -10,7 +10,12 @@ const CHANGE_EVENT = "kayzen-cookie-change";
 
 /** Efface le choix enregistré, pour permettre le retrait du consentement (RGPD art. 7.3). */
 export function resetCookieChoice() {
-  window.localStorage.removeItem(STORAGE_KEY);
+  try {
+    window.localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Stockage indisponible (navigation privée stricte, quota, politique
+    // d'entreprise) : rien à effacer, mais la bannière doit rouvrir malgré tout.
+  }
   window.dispatchEvent(new Event(CHANGE_EVENT));
 }
 
@@ -23,10 +28,26 @@ function souscrire(onChange: () => void) {
   };
 }
 
-const lireChoix = () => window.localStorage.getItem(STORAGE_KEY);
 /* Côté serveur, on ne sait rien du choix : on ne rend rien plutôt que d'afficher
    une bannière à ceux qui ont déjà répondu. */
 const choixInconnu = () => "inconnu";
+
+/**
+ * `localStorage.getItem` lève une exception quand le stockage est bloqué
+ * (Safari en navigation privée selon les versions, politique de sécurité,
+ * cookies tiers désactivés dans une iframe). Sans garde, `useSyncExternalStore`
+ * remontait l'erreur jusqu'à la limite d'erreur du layout : toute la page
+ * disparaissait derrière « Une erreur est survenue » à cause d'une bannière.
+ * Sans stockage, aucun choix ne pourrait être mémorisé : on ne montre pas la
+ * bannière plutôt que de la faire réapparaître à chaque page.
+ */
+function lireChoix(): string | null {
+  try {
+    return window.localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return choixInconnu();
+  }
+}
 
 /**
  * Le retrait du consentement doit être aussi simple que son octroi (RGPD art.
@@ -56,7 +77,12 @@ export function CookieBanner() {
   const choix = useSyncExternalStore(souscrire, lireChoix, choixInconnu);
 
   function saveChoice(choice: "accepted" | "refused") {
-    window.localStorage.setItem(STORAGE_KEY, choice);
+    try {
+      window.localStorage.setItem(STORAGE_KEY, choice);
+    } catch {
+      // Stockage indisponible : le choix ne sera pas mémorisé, mais rien ne
+      // doit casser pour autant.
+    }
     window.dispatchEvent(new Event(CHANGE_EVENT));
   }
 

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowRight, BarChart3, Brain, Check, Shield, Sparkles, Zap } from "lucide-react";
+import { ArrowRight, BarChart3, Brain, Check, Mail, Shield, Sparkles, Zap } from "lucide-react";
+import { COMPANY } from "@/lib/site-config";
 
 export const metadata = {
   title: "Tarifs & Offres",
@@ -162,12 +163,24 @@ export default function TarifsPage() {
                 ))}
               </ul>
 
-              <a
-                href={plan.ctaHref}
-                className={`mt-8 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition ${plan.ctaStyle}`}
-              >
-                {plan.cta} <ArrowRight size={14} />
-              </a>
+              {/* Les trois offres payantes pointaient vers `#contact`, une ancre
+                  qui n'existait nulle part : le clic ne faisait rien. Elle mène
+                  désormais à la section de contact en bas de page. */}
+              {plan.ctaHref.startsWith("/") ? (
+                <Link
+                  href={plan.ctaHref}
+                  className={`mt-8 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition ${plan.ctaStyle}`}
+                >
+                  {plan.cta} <ArrowRight size={14} />
+                </Link>
+              ) : (
+                <a
+                  href={plan.ctaHref}
+                  className={`mt-8 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition ${plan.ctaStyle}`}
+                >
+                  {plan.cta} <ArrowRight size={14} />
+                </a>
+              )}
             </article>
           ))}
         </section>
@@ -250,6 +263,30 @@ export default function TarifsPage() {
                 </a>.
               </p>
             </div>
+          </div>
+        </section>
+
+        {/* Contact — cible des boutons Starter / Premium / Pro */}
+        <section
+          aria-labelledby="contact-titre"
+          className="mt-8 scroll-mt-24 rounded-2xl border border-border bg-surface p-6 shadow-sm sm:p-8"
+          id="contact"
+        >
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-muted">Contact</p>
+              <h2 id="contact-titre" className="mt-1 font-display text-2xl font-bold text-fg">Ouvrir une offre payante</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
+                Les offres Starter, Premium et Pro sont ouvertes sur demande : écrivez-nous en précisant
+                l’offre souhaitée, nous revenons vers vous avec les modalités d’accès.
+              </p>
+            </div>
+            <a
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-bold text-white transition hover:bg-accent-hi"
+              href={`mailto:${COMPANY.email}?subject=${encodeURIComponent("PronoTurf — demande d’offre")}`}
+            >
+              <Mail size={15} /> {COMPANY.email}
+            </a>
           </div>
         </section>
 

@@ -1,10 +1,26 @@
 import { classifyRaceTier, enrichHorsePrediction } from "@/lib/betting-engine";
+import { jourParis } from "@/lib/paris-time";
 import type { HorsePrediction, RaceAnalysis } from "@/lib/types";
 
+/**
+ * Dates du jeu de démonstration, calculées à Paris au chargement du module.
+ * Elles étaient figées à mai 2026 : le dépôt filtre sur hier / aujourd'hui /
+ * demain, donc le mode démonstration n'affichait plus aucune course.
+ */
+function decalerJour(iso: string, delta: number): string {
+  const date = new Date(`${iso}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + delta);
+  return date.toISOString().slice(0, 10);
+}
+
+const DEMO_TODAY = jourParis();
+const DEMO_YESTERDAY = decalerJour(DEMO_TODAY, -1);
+const DEMO_TOMORROW = decalerJour(DEMO_TODAY, 1);
+
 export const raceAnalysis: RaceAnalysis = {
-  id: "R1C3-2026-05-03",
+  id: `R1C3-${DEMO_TODAY}`,
   name: "Prix PronoTurf Data",
-  raceDate: "2026-05-03",
+  raceDate: DEMO_TODAY,
   relativeDay: "today",
   reunionNumber: 1,
   courseNumber: 3,
@@ -151,9 +167,9 @@ export const raceCards: RaceAnalysis[] = [
   },
   {
     ...raceAnalysis,
-    id: "R2C5-2026-05-04",
+    id: `R2C5-${DEMO_TOMORROW}`,
     name: "Prix Momentum IA",
-    raceDate: "2026-05-04",
+    raceDate: DEMO_TOMORROW,
     relativeDay: "tomorrow",
     reunionNumber: 2,
     courseNumber: 5,
@@ -183,9 +199,9 @@ export const raceCards: RaceAnalysis[] = [
   },
   {
     ...raceAnalysis,
-    id: "R1C2-2026-05-02",
+    id: `R1C2-${DEMO_YESTERDAY}`,
     name: "Prix Backtest Live",
-    raceDate: "2026-05-02",
+    raceDate: DEMO_YESTERDAY,
     relativeDay: "yesterday",
     reunionNumber: 1,
     courseNumber: 2,

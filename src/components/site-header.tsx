@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Download, Loader2, Menu, X } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { usePdfJour } from "@/hooks/use-pdf-jour";
 
 const NAV_LINKS = [
   { href: "/",                      label: "Programme" },
@@ -16,18 +17,6 @@ const NAV_LINKS = [
 ] as const;
 
 const ID_MENU_MOBILE = "menu-navigation-mobile";
-
-/** Un seul formateur, réutilisé : `Intl.DateTimeFormat` est coûteux à construire. */
-const formateurJourParis = new Intl.DateTimeFormat("en-CA", {
-  timeZone: "Europe/Paris",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-});
-
-function parisToday(): string {
-  return formateurJourParis.format(new Date());
-}
 
 export function SiteHeader() {
   const pathname = usePathname();
@@ -236,56 +225,12 @@ export function SiteHeader() {
 /**
  * Téléchargement du PDF du jour.
  *
- * `HeaderPdfButton` et `MobileHeaderPdfButton` dupliquaient les vingt lignes de
- * `handleDownload` à l'identique : deux copies à corriger pour un seul défaut.
- * Le comportement vit ici, les deux variantes ne diffèrent plus que par
- * l'habillage.
+ * Le comportement (récupération, ancre, révocation différée, état d'échec) vit
+ * dans `usePdfJour`, partagé avec le tableau de bord ; les deux variantes du
+ * bouton ne diffèrent que par l'habillage.
  */
-function usePdfDuJour() {
-  const [etat, setEtat] = useState<"repos" | "chargement" | "echec">("repos");
-
-  const telecharger = useCallback(async () => {
-    setEtat((precedent) => (precedent === "chargement" ? precedent : "chargement"));
-
-    const date = parisToday();
-    let url: string | null = null;
-
-    try {
-      const reponse = await fetch(`/api/pdf/pronostics?date=${date}`);
-      if (!reponse.ok) throw new Error(`Réponse ${reponse.status}`);
-
-      const blob = await reponse.blob();
-      url = URL.createObjectURL(blob);
-
-      const lien = document.createElement("a");
-      lien.href = url;
-      lien.download = `kayzen-pronostics-${date}.pdf`;
-      // Firefox exige que l'ancre soit dans le document pour honorer le clic.
-      document.body.appendChild(lien);
-      lien.click();
-      lien.remove();
-
-      setEtat("repos");
-    } catch (cause) {
-      console.error("Téléchargement du PDF impossible", cause);
-      // `alert()` bloquait le fil principal et sortait de la charte : le
-      // message d'échec s'affiche maintenant dans le bouton lui-même.
-      setEtat("echec");
-    } finally {
-      // Révoquer immédiatement après `click()` pouvait couper le téléchargement
-      // avant que le navigateur n'ait lu le blob. Une seconde suffit.
-      // La copie locale fige la valeur : `url` est réassignable, et le
-      // rétrécissement de type ne franchit pas la frontière de la fermeture.
-      const aRevoquer = url;
-      if (aRevoquer) setTimeout(() => URL.revokeObjectURL(aRevoquer), 1_000);
-    }
-  }, []);
-
-  return { etat, telecharger };
-}
-
 function PdfButton({ variant }: { variant: "desktop" | "mobile" }) {
-  const { etat, telecharger } = usePdfDuJour();
+  const { etat, telecharger } = usePdfJour();
   const chargement = etat === "chargement";
 
   const libelle = chargement
@@ -303,8 +248,10 @@ function PdfButton({ variant }: { variant: "desktop" | "mobile" }) {
     <button
       className={classes}
       disabled={chargement}
-      onClick={telecharger}
-      title={`Télécharger les pronostics du ${parisToday()} en PDF`}
+      onClick={() => telecharger()}
+      // La date n'apparaît plus ici : évaluée au rendu, elle divergeait entre
+      // le HTML statique et l'hydratation dès que le jour changeait.
+      title="Télécharger les pronostics du jour en PDF"
       type="button"
     >
       {chargement

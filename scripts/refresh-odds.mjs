@@ -152,14 +152,26 @@ async function main() {
     // Un peloton vide signale une réponse dégradée de l'API, pas une course sans
     // partants : on ne supprime jamais sur cette base.
     if (running.size > 0 && !dryRun) {
-      const scratched = await sql`
-        delete from entries
-        where race_id = ${target.raceId}
-          and not (number = any(${[...running]}::int[]))
-        returning number
+      // Une réponse tronquée (peloton à moitié renvoyé) n'est pas une vague de
+      // forfaits : si l'API annonce moins de 70 % des partants connus en base,
+      // on ne retire rien et on laisse le passage suivant trancher.
+      const [{ presents }] = await sql`
+        select count(*)::int as presents from entries where race_id = ${target.raceId}
       `;
-      if (scratched.length > 0) {
-        log(`${target.raceId} — ${scratched.length} non-partant(s) retiré(s) : n° ${scratched.map((r) => r.number).join(", ")}`);
+      if (running.size < presents * 0.7) {
+        console.warn(
+          `[cotes] ${target.raceId} — ${running.size} partants annoncés pour ${presents} en base : réponse suspecte, aucun non-partant retiré`,
+        );
+      } else {
+        const scratched = await sql`
+          delete from entries
+          where race_id = ${target.raceId}
+            and not (number = any(${[...running]}::int[]))
+          returning number
+        `;
+        if (scratched.length > 0) {
+          log(`${target.raceId} — ${scratched.length} non-partant(s) retiré(s) : n° ${scratched.map((r) => r.number).join(", ")}`);
+        }
       }
     }
 

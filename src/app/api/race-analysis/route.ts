@@ -16,8 +16,19 @@ export async function GET(request: Request) {
   if (!raceId.ok) return reponseParametreInvalide("raceId", raceId.message);
 
   // Un identifiant inconnu répond 404 : `getRaceById` ne substitue plus la
-  // course de démonstration comme s'il s'agissait d'une vraie.
-  const race = raceId.valeur ? await getRaceById(raceId.valeur) : null;
+  // course de démonstration comme s'il s'agissait d'une vraie. Une panne de la
+  // source (`ErreurSourceDonnees`) est autre chose qu'une absence : 503, sans
+  // cache.
+  let race;
+  try {
+    race = raceId.valeur ? await getRaceById(raceId.valeur) : null;
+  } catch (cause) {
+    console.error("GET /api/race-analysis : lecture de la course impossible", cause instanceof Error ? cause.message : cause);
+    return NextResponse.json(
+      { error: "Données momentanément indisponibles." },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
+  }
 
   if (!race) {
     return NextResponse.json(

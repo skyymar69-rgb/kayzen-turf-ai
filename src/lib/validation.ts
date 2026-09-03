@@ -10,7 +10,36 @@ import { z } from "zod";
  * PDF, où un guillemet suffisait à sortir du `filename="…"`.
  */
 
-/** Date calendaire ISO, réellement existante (rejette 2026-02-31). */
+/** Première journée couverte par l'historique importé. */
+const DATE_MINIMALE = "2024-01-01";
+/** Le programme PMU n'est publié que quelques jours à l'avance. */
+const JOURS_AVANCE_MAX = 7;
+
+/** Jour courant à Paris, au format AAAA-MM-JJ. */
+function aujourdhuiParis(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Paris",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+/** Dernière date acceptée, calculée à chaque analyse : aujourd'hui (Paris) + 7 jours. */
+function dateMaximale(): string {
+  const [annee, mois, jour] = aujourdhuiParis().split("-").map(Number);
+  return new Date(Date.UTC(annee!, mois! - 1, jour! + JOURS_AVANCE_MAX))
+    .toISOString()
+    .slice(0, 10);
+}
+
+/**
+ * Date calendaire ISO, réellement existante (rejette 2026-02-31) et comprise
+ * dans la période couverte : pas avant 2024-01-01, pas au-delà d'une semaine.
+ * Une date lointaine passait jusqu'ici la validation puis déclenchait une
+ * requête SQL parfaitement inutile ; la borne se calcule à l'analyse, pas au
+ * chargement du module, pour rester juste sur une instance longue.
+ */
 export const schemaDate = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Format attendu : AAAA-MM-JJ")
@@ -22,7 +51,13 @@ export const schemaDate = z
       date.getUTCMonth() === mois - 1 &&
       date.getUTCDate() === jour
     );
-  }, "Date inexistante au calendrier");
+  }, "Date inexistante au calendrier")
+  // Les deux bornes sont au même format AAAA-MM-JJ : la comparaison lexicale
+  // suffit.
+  .refine(
+    (valeur) => valeur >= DATE_MINIMALE && valeur <= dateMaximale(),
+    "Date hors de la période couverte",
+  );
 
 /** Jour relatif accepté par le dépôt de courses. */
 export const schemaJourRelatif = z.enum(["yesterday", "today", "tomorrow"]);

@@ -22,7 +22,7 @@ export type SelectedHorse = {
   role: SelectionRole;
   /** Le modèle lui donne nettement plus de chances que le marché. */
   isValue: boolean;
-  /** Présent au titre du tocard repêché, hors des 7 meilleures probabilités. */
+  /** Présent au titre du tocard repêché, hors des meilleures probabilités. */
   isPromotedTocard: boolean;
 };
 
@@ -88,7 +88,7 @@ function isTocardCandidate(horse: CalibratedHorse): boolean {
  * Construit la sélection.
  *
  * Le Top 3 reste strictement probabiliste — aucun tocard n'y est imposé.
- * En revanche, si aucun tocard ne figure parmi les sept meilleures
+ * En revanche, si aucun tocard ne figure parmi les `SELECTION_SIZE` meilleures
  * probabilités, le meilleur tocard de la course prend la dernière place : la
  * promesse « un tocard signalé » est ainsi tenue sans jamais fausser le Top 3.
  */
@@ -112,9 +112,9 @@ export function buildSelection(input: HorsePrediction[]): RaceSelection {
   let promotedTocard: CalibratedHorse | null = null;
 
   if (ranked.length > SELECTION_SIZE && !picked.some(isTocardCandidate)) {
-    // Meilleur tocard hors des sept premiers, par probabilité puis par value.
+    // Meilleur tocard hors de la sélection, par probabilité puis par value.
     const candidate = ranked
-      .slice(SELECTION_SIZE - 1)
+      .slice(SELECTION_SIZE)
       .filter(isTocardCandidate)
       .sort((a, b) => b.winProbability - a.winProbability || b.valueRatio - a.valueRatio)[0];
 

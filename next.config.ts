@@ -5,11 +5,16 @@ const isDev = process.env.NODE_ENV === "development";
 /**
  * Content-Security-Policy.
  *
- * `unsafe-inline` sur script-src est nécessaire tant qu'il n'y a pas de
- * middleware générant un nonce par requête : layout.tsx injecte deux scripts
- * inline (le JSON-LD et le script de thème anti-FOUC, qui doit s'exécuter avant
- * le premier rendu), auxquels s'ajoute le bootstrap d'hydratation de Next.
- * `unsafe-eval` reste réservé au développement (rafraîchissement à chaud).
+ * `unsafe-inline` sur script-src est nécessaire tant qu'il n'y a pas de nonce
+ * par requête : layout.tsx injecte deux scripts inline (le JSON-LD et le
+ * script de thème anti-FOUC, qui doit s'exécuter avant le premier rendu),
+ * auxquels s'ajoute le bootstrap d'hydratation de Next.
+ *
+ * Retirer `unsafe-inline` est prévu et suppose un `proxy.ts` (nom du middleware
+ * dans Next 16) qui génère un nonce par requête, le pose dans l'en-tête CSP de
+ * la réponse et le transmet aux scripts inline via `headers()` ; la CSP ne
+ * peut alors plus être statique ici. `unsafe-eval` reste réservé au
+ * développement (rafraîchissement à chaud).
  *
  * Les casaques proviennent de assets.racingdata.pmu.fr ; les polices sont
  * empaquetées localement via @fontsource, d'où font-src limité à 'self'.

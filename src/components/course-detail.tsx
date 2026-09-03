@@ -19,7 +19,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Countdown } from "@/components/countdown";
 import { RaceSelectionPanel } from "@/components/race-selection";
 import { useClipboard, type EtatCopie } from "@/hooks/use-clipboard";
-import { SELECTION_SIZE } from "@/lib/selection";
+import { formatMeters } from "@/lib/format";
+import { SELECTION_SIZE, buildSelection } from "@/lib/selection";
 import { buildBetRecommendations, buildXTickets, probableArrival, raceToContext, type XTicket } from "@/lib/bet-recommendations";
 import { simulateBet } from "@/lib/betting-engine";
 import { buildPostRaceAnalysis } from "@/lib/post-race-analysis";
@@ -34,6 +35,12 @@ type SortKey = "arrival" | "kz" | "odds" | "top3";
 // les probabilités du modèle — donnée que nous n'avons pas en base. Renommé pour
 // dire ce qu'il montre réellement, plutôt que d'afficher une promesse non tenue.
 const TABS = ["Partants", "Cotes", "Pronostics IA", "Statistiques", "Probabilités", "Arrivées et Rapports"] as const;
+type Tab = (typeof TABS)[number];
+
+/** Identifiant DOM d'un onglet : « Pronostics IA » → `tab-pronostics-ia`. */
+function tabId(tab: Tab) {
+  return `tab-${tab.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+}
 
 const BET_COLORS: Record<string, string> = {
   SIMPLE_GAGNANT:  "bg-cyan-500",
@@ -52,11 +59,16 @@ const BET_COLORS: Record<string, string> = {
 };
 
 export function CourseDetail({ race }: CourseDetailProps) {
-  const [selectedHorseId, setSelectedHorseId] = useState(race.horses[0]?.id ?? "");
+  // Le cheval présélectionné (simulation, facteurs IA, comparateur) était le
+  // premier du tableau tel que livré par la base — l'ordre des numéros, pas le
+  // pronostic. C'est désormais la base de la sélection, le pivot de la page.
+  const [selectedHorseId, setSelectedHorseId] = useState(
+    () => buildSelection(race.horses).base?.horse.id ?? race.horses[0]?.id ?? "",
+  );
   const [stake, setStake]           = useState(25);
   const [ticketBudget, setTicketBudget] = useState(30);
   const [ticketMode, setTicketMode] = useState<TicketMode>("equilibre");
-  const [activeTab, setActiveTab]   = useState<(typeof TABS)[number]>("Partants");
+  const [activeTab, setActiveTab]   = useState<Tab>("Partants");
   const [sortBy, setSortBy]         = useState<SortKey>("arrival");
 
   const selectedHorse       = race.horses.find((h) => h.id === selectedHorseId) ?? race.horses[0];
@@ -118,7 +130,7 @@ export function CourseDetail({ race }: CourseDetailProps) {
                 <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
                   <span className="font-bold text-fg">{race.discipline}</span>
                   <span>·</span><span>{race.specialty}</span>
-                  <span>·</span><span>{formatMeters(race.distance)} m</span>
+                  <span>·</span><span>{formatMeters(race.distance)}</span>
                   <span>·</span><span>{partantsCount} partants</span>
                   {race.going && <><span>·</span><span>{race.going}</span></>}
                 </div>
@@ -162,7 +174,28 @@ export function CourseDetail({ race }: CourseDetailProps) {
             pilote : cliquer un onglet ne changeait rien à l'écran, l'app semblait
             cassée. Elle est désormais collée à son contenu. */}
         <section className="mt-4 overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
-          <nav aria-label="Sections de la course" className="flex overflow-x-auto border-b border-border bg-surface-sub kz-scroll" role="tablist">
+          {/* Motif WAI-ARIA « tabs » : un seul onglet dans l'ordre de tabulation
+              (l'actif), les flèches passent d'un onglet à l'autre, Début/Fin
+              vont aux extrémités. Auparavant, chaque onglet était un arrêt de
+              tabulation et les flèches ne faisaient rien. */}
+          <nav
+            aria-label="Sections de la course"
+            className="flex overflow-x-auto border-b border-border bg-surface-sub kz-scroll"
+            onKeyDown={(e) => {
+              const idx = TABS.indexOf(activeTab);
+              let suivant: number | null = null;
+              if (e.key === "ArrowRight") suivant = (idx + 1) % TABS.length;
+              else if (e.key === "ArrowLeft") suivant = (idx - 1 + TABS.length) % TABS.length;
+              else if (e.key === "Home") suivant = 0;
+              else if (e.key === "End") suivant = TABS.length - 1;
+              if (suivant === null) return;
+              e.preventDefault();
+              const cible = TABS[suivant];
+              setActiveTab(cible);
+              document.getElementById(tabId(cible))?.focus();
+            }}
+            role="tablist"
+          >
             {TABS.map((tab) => (
               <button
                 key={tab}
@@ -171,8 +204,10 @@ export function CourseDetail({ race }: CourseDetailProps) {
                 className={`relative h-12 min-w-[140px] shrink-0 border-r border-border px-4 text-sm font-medium transition xl:min-w-0 xl:flex-1 ${
                   activeTab === tab ? "bg-surface-inv text-white" : "text-fg/70 hover:bg-surface hover:text-fg"
                 }`}
+                id={tabId(tab)}
                 onClick={() => setActiveTab(tab)}
                 role="tab"
+                tabIndex={activeTab === tab ? 0 : -1}
                 type="button"
               >
                 {tab}
@@ -181,7 +216,7 @@ export function CourseDetail({ race }: CourseDetailProps) {
             ))}
           </nav>
 
-          <div id="course-tab-panel" role="tabpanel">
+          <div aria-labelledby={tabId(activeTab)} id="course-tab-panel" role="tabpanel" tabIndex={0}>
           {activeTab === "Partants" ? (
             <>
               {/* Sort controls */}
@@ -511,14 +546,19 @@ function PartantsTable({
           </thead>
           <tbody className="divide-y divide-border">
             {horses.map((horse, idx) => (
+              // Une ligne focusable et cliquable sans rôle interactif : le
+              // lecteur d'écran annonçait une simple ligne de tableau, sans
+              // dire qu'elle se sélectionne ni si elle l'est déjà.
               <tr
                 key={horse.id}
-                aria-label={`Sélectionner ${horse.horse}, numéro ${horse.number}`}
+                aria-label={`${horse.horse}, numéro ${horse.number}`}
+                aria-pressed={selectedHorseId === horse.id}
                 className={`cursor-pointer text-sm transition hover:bg-accent-lo ${
                   selectedHorseId === horse.id ? "bg-accent-lo" : idx % 2 === 0 ? "bg-surface" : "bg-surface-sub"
                 }`}
                 onClick={() => onSelect(horse.id)}
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(horse.id); } }}
+                role="button"
                 tabIndex={0}
               >
                 <th className={`px-3 py-3.5 font-mono font-bold ${selectedHorseId === horse.id ? "text-accent-text" : "text-muted"}`} scope="row">
@@ -743,7 +783,7 @@ function TabPlaceholder({
     );
   }
 
-  /* ── LES PLUS JOUÉS ── */
+  /* ── PROBABILITÉS ── */
   if (activeTab === "Probabilités") {
     return (
       <div className="overflow-x-auto">
@@ -917,7 +957,7 @@ function PredictionMethodology({ arrival, race }: { arrival: HorsePrediction[]; 
             <Result label="Hippodrome"           value={race.racecourse} />
             <Result label="Terrain"              value={race.going || "Non publié par le PMU"} />
             <Result label="Météo"                value={race.weather || "Non renseignée"} />
-            <Result label="Distance / discipline" value={`${formatMeters(race.distance)} m — ${race.specialty}`} />
+            <Result label="Distance / discipline" value={`${formatMeters(race.distance)} — ${race.specialty}`} />
           </div>
         </section>
 
@@ -930,7 +970,9 @@ function PredictionMethodology({ arrival, race }: { arrival: HorsePrediction[]; 
               ["Drift / Steam", "drift_lgbm — en attente DB"],
               ["Connections", "connections_v1 — en attente DB"],
               ["Risque DNF", "risk_v1 — Obstacle uniquement"],
-              ["Data cutoff", new Date().toISOString().slice(0, 10)],
+              // « Data cutoff » affichait la date du jour de la visite, pas
+              // celle des données : sans signification, et source de décalage
+              // d'hydratation à chaque changement de jour.
             ].map(([k, v]) => (
               <div key={k} className="rounded-lg border border-border bg-surface-sub px-3 py-2">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted/60">{k}</p>
@@ -1193,7 +1235,7 @@ function horseOpinion(
 
   const terrain = race.going ? `terrain ${race.going}` : "état de piste non publié";
   const meteo   = race.weather ? `, météo ${race.weather}` : "";
-  const ctx     = `${race.racecourse} · ${formatMeters(race.distance)} m · ${terrain}${meteo}`;
+  const ctx     = `${race.racecourse} · ${formatMeters(race.distance)} · ${terrain}${meteo}`;
 
   // Sélectionner max 3 raisons positives les plus pertinentes
   const top3Reasons = positives.slice(0, 3);
@@ -1253,7 +1295,6 @@ function shortBetLabel(offer: BetOffer) {
 function formatLongDate(date: string) {
   return new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" }).format(new Date(`${date}T12:00:00`));
 }
-function formatMeters(distance: string) { return String(distance).replace(/\D/g, "") || distance; }
 function formatEuros(value?: number | null) { return value ? `${new Intl.NumberFormat("fr-FR").format(Math.round(value))} €` : "—"; }
 function formatSexAge(horse: HorsePrediction) { const s = horse.sex?.slice(0, 1) ?? ""; return `${s}${horse.age ?? ""}` || "—"; }
 function formatEquipment(value?: string | null) { if (!value || value === "SANS_OEILLERES") return "—"; return value.replaceAll("_", " ").toLowerCase(); }
@@ -1455,8 +1496,11 @@ function KzBreakdown({ horse }: { horse: HorsePrediction }) {
 /* ─── HorseComparator (#94) ─────────────────────────────────────── */
 function HorseComparator({ arrival, selectedHorseId }: { arrival: HorsePrediction[]; selectedHorseId: string }) {
   const [compareId, setCompareId] = useState<string>("");
+  // Choisir B puis sélectionner ce même cheval comme A ailleurs sur la page
+  // comparait un cheval avec lui-même : le choix est alors tenu pour vide.
+  const compareEffectif = compareId === selectedHorseId ? "" : compareId;
   const horseA = arrival.find((h) => h.id === selectedHorseId);
-  const horseB = arrival.find((h) => h.id === compareId);
+  const horseB = compareEffectif ? arrival.find((h) => h.id === compareEffectif) : undefined;
   const rows: Array<{ label: string; getVal: (h: HorsePrediction) => string }> = [
     // Même précaution que dans la décomposition : un cheval sans cote n'a pas
     // de score, et « NaN » n'est pas une valeur à montrer à un visiteur.
@@ -1472,7 +1516,7 @@ function HorseComparator({ arrival, selectedHorseId }: { arrival: HorsePredictio
       <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-muted">Comparer deux chevaux</p>
       <select
         className="h-9 w-full rounded-xl border border-border bg-surface-sub px-3 text-sm text-fg outline-none"
-        value={compareId}
+        value={compareEffectif}
         onChange={(e) => setCompareId(e.target.value)}
       >
         <option value="">Choisir un cheval à comparer…</option>
@@ -1511,7 +1555,9 @@ function HorseRadarChart({ horse }: { horse?: HorsePrediction | null }) {
   if (!horse) return null;
   const CX = 80, CY = 80, R = 60;
   const axes = [
-    { label: "Score",  val: horse.kzScore / 99 },
+    // Un cheval sans cote a un kzScore NULL en base : NaN ici faisait
+    // disparaître le polygone entier du radar.
+    { label: "Score",  val: Number.isFinite(horse.kzScore) ? horse.kzScore / 99 : 0 },
     { label: "P(Win)", val: horse.winProbability / 100 },
     { label: "Top3",   val: horse.top3Probability / 100 },
     { label: "Value",  val: Math.min(Math.max(horse.valueIndex, 0) / 30, 1) },

@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 export default function CgvPage() {
   return (
     <LegalPage
-      title="Conditions generales de vente"
+      title="Conditions générales de vente"
       intro="Les présentes CGV structurent le futur modèle SaaS payant : abonnements, services numériques, API et offres B2B."
       sections={[
         editorSection,
@@ -41,7 +41,7 @@ export default function CgvPage() {
         {
           title: "Médiation et réclamations",
           body: [
-            "Toute reclamation peut être adressee a contact@kayzen-lyon.fr. Pour les consommateurs, un mediateur de la consommation devra être designe avant ouverture commerciale effective.",
+            "Toute réclamation peut être adressée à contact@kayzen-lyon.fr. Pour les consommateurs, un médiateur de la consommation devra être désigné avant ouverture commerciale effective.",
           ],
         },
       ]}

@@ -18,17 +18,18 @@ export default function MentionsLegalesPage() {
         {
           title: "Directeur de la publication",
           body: [
-            `Le directeur de la publication est le representant legal de ${COMPANY.editor}, sauf designation contraire ulterieure.`,
+            `Le directeur de la publication est le représentant légal de ${COMPANY.editor}, sauf désignation contraire ultérieure.`,
           ],
         },
         {
-          title: "Hebergement",
+          title: "Hébergement",
           body: [
-            "Le site est hébergé par Vercel Inc., solution cloud de déploiement d'applications web. Les données techniques peuvent être traitées dans l'Union européenne ou dans des pays disposant de garanties appropriees selon les services activés.",
+            "Le site est hébergé par Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, États-Unis — site : https://vercel.com — contact : https://vercel.com/contact (l'hébergeur ne publie pas de numéro de téléphone).",
+            "Les données techniques peuvent être traitées dans l'Union européenne ou dans des pays disposant de garanties appropriées selon les services activés.",
           ],
         },
         {
-          title: "Propriete intellectuelle",
+          title: "Propriété intellectuelle",
           body: [
             "Le code source du projet est open source selon la licence du dépôt. Les marques, textes, interfaces, bases de données, modèles, scores et éléments distinctifs PronoTurf restent protégés par le droit applicable lorsqu'ils ne sont pas expressément placés sous licence libre.",
             "Toute réutilisation commerciale de la marque, du nom ou des éléments graphiques PronoTurf nécessite une autorisation écrite préalable.",

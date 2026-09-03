@@ -3,10 +3,11 @@ import { z } from "zod";
 import { adresseAppelant, limiterDebit, reponseTropDeRequetes } from "@/lib/rate-limit";
 import { schemaDate } from "@/lib/validation";
 
-const PORTFOLIO_SERVICE_URL = process.env.PORTFOLIO_SERVICE_URL ?? "http://localhost:8004";
-
 const LIMITE_APPELS = 30;
 const FENETRE_MS = 60_000;
+
+/** Délai maximal accordé au service amont avant de répondre 503. */
+const DELAI_AMONT_MS = 8_000;
 
 /**
  * `parseFloat` renvoyait NaN sur une entrée non numérique, NaN partait dans
@@ -36,10 +37,29 @@ function aujourdhuiParis(): string {
  *
  * Appelle le service Python `portfolio/daily_runner.py` exposé via FastAPI
  * et retourne le portefeuille optimisé du jour.
+ *
+ * Plus de repli `http://localhost:…` : une variable absente répond 503 avant
+ * toute validation, l'URL doit être en HTTPS, et le jeton
+ * `PORTFOLIO_SERVICE_TOKEN`, s'il est défini, part en `Authorization`.
  */
 export async function GET(request: Request) {
   const limite = limiterDebit(`portfolio:${adresseAppelant(request)}`, LIMITE_APPELS, FENETRE_MS);
   if (!limite.autorise) return reponseTropDeRequetes(limite);
+
+  const urlService = process.env.PORTFOLIO_SERVICE_URL;
+  if (!urlService) {
+    return NextResponse.json(
+      { error: "Service portefeuille non configuré." },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+  if (!urlService.startsWith("https://")) {
+    console.error("PORTFOLIO_SERVICE_URL doit commencer par https://");
+    return NextResponse.json(
+      { error: "Service portefeuille mal configuré." },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
+  }
 
   const { searchParams } = new URL(request.url);
 
@@ -67,8 +87,12 @@ export async function GET(request: Request) {
 
   const { date, bankroll, drawdown, budgetFrac, minEdge, minClv } = resultat.data;
 
+  const jeton = process.env.PORTFOLIO_SERVICE_TOKEN;
+  const entetes: Record<string, string> = { "Content-Type": "application/json" };
+  if (jeton) entetes.Authorization = `Bearer ${jeton}`;
+
   try {
-    const url = new URL("/portfolio", PORTFOLIO_SERVICE_URL);
+    const url = new URL("/portfolio", urlService);
     url.searchParams.set("date", date);
     url.searchParams.set("bankroll", bankroll.toString());
     url.searchParams.set("drawdown", drawdown.toString());
@@ -78,7 +102,8 @@ export async function GET(request: Request) {
 
     const res = await fetch(url.toString(), {
       method: "GET",
-      headers: { "Content-Type": "application/json" },
+      headers: entetes,
+      signal: AbortSignal.timeout(DELAI_AMONT_MS),
       next: { revalidate: 300 },
     });
 

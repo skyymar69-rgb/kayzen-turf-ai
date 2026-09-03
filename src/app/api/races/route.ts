@@ -23,7 +23,19 @@ export async function GET(request: Request) {
   const jour = lireParametreOptionnel(schemaJourRelatif, searchParams.get("day"));
   if (!jour.ok) return reponseParametreInvalide("day", jour.message);
 
-  const races = await getRaces({ date: date.valeur, day: jour.valeur });
+  // Le dépôt lève `ErreurSourceDonnees` quand la base ne répond pas : sans
+  // filet, Next renvoyait un 500 générique et laissait le CDN en mémoriser
+  // l'absence. Un 503 non mis en cache dit la panne et invite à réessayer.
+  let races;
+  try {
+    races = await getRaces({ date: date.valeur, day: jour.valeur });
+  } catch (cause) {
+    console.error("GET /api/races : lecture des courses impossible", cause instanceof Error ? cause.message : cause);
+    return NextResponse.json(
+      { error: "Données momentanément indisponibles." },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
+  }
 
   return NextResponse.json(
     { generatedAt: new Date().toISOString(), data: races },

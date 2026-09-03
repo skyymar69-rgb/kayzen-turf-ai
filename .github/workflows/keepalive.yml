@@ -1,33 +1,36 @@
 name: Keepalive
 
-# Empêche GitHub de désactiver les workflows planifiés pour inactivité
-# (« disabled_inactivity » après 60 jours sans activité sur le repo).
-# Tourne chaque semaine : bien à l'intérieur de la fenêtre de 60 jours.
+# GitHub désactive les workflows planifiés d'un dépôt sans activité depuis
+# 60 jours (« disabled_inactivity »). Le compteur ne repart que sur une
+# activité du dépôt (commit, PR…) : une exécution planifiée seule ne compte pas.
+#
+# L'ancienne parade — un commit vide poussé chaque semaine — exigeait un droit
+# d'écriture sur le dépôt et polluait l'historique. Elle est remplacée par une
+# réactivation explicite de chaque workflow planifié : `gh workflow enable` est
+# sans effet s'il est déjà actif, et le remet en route s'il a été coupé. Ce
+# workflow est lui-même planifié et peut donc être coupé à son tour ; dans ce
+# cas, un `workflow_dispatch` manuel (ou n'importe quel commit) le relance.
 
 on:
   workflow_dispatch:
   schedule:
     - cron: "17 6 * * 1" # tous les lundis à 06:17 UTC
 
+# Aucune écriture dans le dépôt : seul le droit d'agir sur les workflows est requis.
 permissions:
-  contents: write
   actions: write
+  contents: read
 
 jobs:
   keepalive:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Empty commit to reset inactivity timer
+      - name: Re-enable every scheduled workflow if disabled
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit --allow-empty -m "chore: keepalive [skip ci]"
-          git push
-
-      - name: Re-enable the PMU import workflow if disabled
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh workflow enable import_pmu.yml || true
+          for workflow in import_pmu.yml refresh_odds.yml compact_storage.yml keepalive.yml; do
+            gh workflow enable "$workflow" || echo "::warning::impossible de réactiver $workflow"
+          done

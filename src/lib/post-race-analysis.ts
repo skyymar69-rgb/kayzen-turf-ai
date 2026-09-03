@@ -1,5 +1,4 @@
-import { probableArrival } from "@/lib/bet-recommendations";
-import { raceToContext } from "@/lib/bet-recommendations";
+import { probableArrival, raceToContext } from "@/lib/bet-recommendations";
 import { explainPredictionScore, watchedLongshot } from "@/lib/prediction-math";
 import type { HorsePrediction, PostRaceAnalysis, RaceAnalysis } from "@/lib/types";
 
@@ -111,7 +110,10 @@ function lessonsFor(race: RaceAnalysis, actual: HorsePrediction[], predicted: Ho
   const lessons: string[] = [];
   const winner = actual[0];
   const predictedWinner = predicted[0];
-  const favorite = predicted.slice().sort((a, b) => a.odds - b.odds)[0];
+  // Une cote absente (NaN ou 0) ne désigne pas un favori.
+  const favorite = predicted
+    .filter((horse) => Number.isFinite(horse.odds) && horse.odds > 1)
+    .sort((a, b) => a.odds - b.odds)[0];
   const longshot = watchedLongshot(predicted, context);
   const discipline = race.discipline;
 

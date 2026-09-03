@@ -1,3 +1,4 @@
+import { calibrateField } from "@/lib/probability";
 import type { HorsePrediction, RaceAnalysis } from "@/lib/types";
 
 // ─────────────────────────────────────────────────────────────
@@ -43,14 +44,9 @@ export type EnhancedPrediction = {
 type FieldStats = {
   averageOdds: number;
   averageTop3: number;
-  averageWin: number;
   earningsMax: number;
   fieldSize: number;
   favoriteOdds: number;
-  kzMax: number;
-  top3Max: number;
-  winMax: number;
-  averageRk: number;
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -125,27 +121,113 @@ type ObstacleMusicProfile = {
   cleanJumpScore: number;
 };
 
-function musicParserPlat(music?: string | null): PlatMusicProfile {
-  const chars = String(music ?? "")
-    .split("")
-    .filter((c) => /[1-9]/.test(c))
-    .slice(0, 8)
-    .map(Number);
+/**
+ * Une course de la musique : soit une place, soit un incident.
+ * `value` vaut 10 pour un cheval non placé (« 0 » = 10e et au-delà) — c'est la
+ * valeur la plus défavorable de l'échelle, pas une absence de course.
+ */
+type MusicToken = { kind: "pos"; value: number } | { kind: "inc"; code: string };
 
-  if (chars.length === 0) {
+/** Lettres qui suivent un résultat pour indiquer la discipline (a, m, p, h, s, c…). */
+const MUSIC_DISCIPLINE_LETTER = /[a-z]/i;
+
+/**
+ * Découpe une musique PMU en courses, de la plus récente à la plus ancienne.
+ *
+ * Le format réel, tel qu'il arrive de l'API, ressemble à
+ * `Da0a4a0a(25)6a6a(24)0a3a` : chaque course est un résultat (chiffre de 1 à
+ * 9, « 0 » pour non placé, ou une lettre d'incident — D disqualifié, A arrêté,
+ * T tombé, R retiré) suivi d'une lettre de discipline (a attelé, m monté,
+ * p plat, h haies, s steeple, c cross). Les parenthèses encadrent un
+ * changement d'année ; certaines musiques historiques sont stockées en
+ * majuscules sans parenthèses (`7A3A0A198A`), l'année y apparaît alors comme
+ * deux chiffres consécutifs.
+ *
+ * Les anciens parseurs travaillaient caractère par caractère : le « a »
+ * d'attelé comptait comme un abandon, « (25) » comme une 2e puis une 5e place,
+ * et « 0 » disparaissait. Tokeniser d'abord règle les trois.
+ */
+function tokenizeMusic(music?: string | null, maxRaces = 10): MusicToken[] {
+  const raw = String(music ?? "").replace(/\s/g, "");
+  const tokens: MusicToken[] = [];
+  let i = 0;
+
+  while (i < raw.length && tokens.length < maxRaces) {
+    const c = raw[i];
+
+    if (c === "(") {
+      const close = raw.indexOf(")", i);
+      i = close === -1 ? raw.length : close + 1;
+      continue;
+    }
+
+    if (/\d/.test(c)) {
+      const next = raw[i + 1];
+      // Deux chiffres consécutifs : un marqueur d'année sans parenthèses. Une
+      // place ne s'écrit jamais sur deux chiffres (« 0 » couvre 10 et au-delà).
+      if (next !== undefined && /\d/.test(next)) {
+        i += 2;
+        continue;
+      }
+      tokens.push({ kind: "pos", value: c === "0" ? 10 : Number(c) });
+      i += 1;
+    } else if (/[A-Za-z]/.test(c)) {
+      // « Ret » (retiré) occupe trois lettres.
+      if (raw.slice(i, i + 3).toLowerCase() === "ret") {
+        tokens.push({ kind: "inc", code: "R" });
+        i += 3;
+        continue;
+      }
+      tokens.push({ kind: "inc", code: c.toUpperCase() });
+      i += 1;
+    } else {
+      i += 1;
+      continue;
+    }
+
+    // Lettre de discipline optionnelle après un résultat.
+    if (i < raw.length && MUSIC_DISCIPLINE_LETTER.test(raw[i])) i += 1;
+  }
+
+  return tokens;
+}
+
+/** Nombre de courses lisibles dans la musique (incidents compris). */
+function musicRaceCount(music?: string | null): number {
+  return tokenizeMusic(music).length;
+}
+
+/** Valeur d'une course sur l'échelle 1 (victoire) → 10 (non placé ou incident). */
+function musicValue(token: MusicToken): number {
+  return token.kind === "pos" ? token.value : 10;
+}
+
+/** Moyenne pondérée à décroissance exponentielle : les courses récentes pèsent plus. */
+function decayedAverage(values: number[], fallback: number): number {
+  if (values.length === 0) return fallback;
+  const weights = values.map((_, i) => Math.pow(0.75, i));
+  const weightSum = weights.reduce((s, w) => s + w, 0);
+  return values.reduce((s, v, i) => s + v * weights[i], 0) / weightSum;
+}
+
+function musicParserPlat(music?: string | null): PlatMusicProfile {
+  const races = tokenizeMusic(music, 8);
+
+  if (races.length === 0) {
     return { score: 0.05, recentWin: false, recentPlaces: 0, badRecent: 1, rebound: 0 };
   }
 
-  // Exponential decay: recent races weighted more heavily
-  const weights = chars.map((_, i) => Math.pow(0.75, i));
-  const weightSum = weights.reduce((s, w) => s + w, 0);
-  const weightedAvg = chars.reduce((s, v, i) => s + v * weights[i], 0) / weightSum;
+  // Un non-placé ou un incident vaut 10 : il pèse dans la moyenne au lieu de
+  // disparaître, sinon `1p0p0p0p` obtenait la forme maximale.
+  const values = races.map(musicValue);
+  const weightedAvg = decayedAverage(values, 10);
 
-  const recent = chars.slice(0, 3);
+  // Les trois dernières COURSES, pas les trois derniers résultats classés.
+  const recent = values.slice(0, 3);
   const badRecent = recent.filter((v) => v >= 7).length;
   const recentPlaces = recent.filter((v) => v <= 3).length;
   const recentWin = recent.includes(1);
-  const rebound = chars[0] <= 4 && chars.slice(1, 4).some((v) => v >= 7) ? 1 : 0;
+  const rebound = values[0] <= 4 && values.slice(1, 4).some((v) => v >= 7) ? 1 : 0;
 
   return {
     score: clamp((10 - weightedAvg) / 9, 0, 1),
@@ -157,32 +239,27 @@ function musicParserPlat(music?: string | null): PlatMusicProfile {
 }
 
 function musicParserTrot(music?: string | null): TrotMusicProfile {
-  // Handles 0/D (DQ), A/T (abandon/tombé), plus numeric positions
-  const raw = String(music ?? "")
-    .toUpperCase()
-    .split("")
-    .filter((c) => c !== " " && c !== "-" && c !== "(" && c !== ")");
+  // Incidents du trot : D disqualifié (allure), A arrêté, T tombé, R retiré.
+  const races = tokenizeMusic(music);
 
-  const disqualifications = raw.filter((c) => c === "0" || c === "D").length;
-  const abandonments = raw.filter((c) => c === "A" || c === "T").length;
-  const positions = raw.filter((c) => /[1-9]/.test(c)).map(Number);
+  const disqualifications = races.filter((t) => t.kind === "inc" && t.code === "D").length;
+  const abandonments = races.filter((t) => t.kind === "inc" && (t.code === "A" || t.code === "T")).length;
+  // Un « 0 » est un non-placé (10e et au-delà), pas une disqualification.
+  const positions = races.filter((t): t is Extract<MusicToken, { kind: "pos" }> => t.kind === "pos").map((t) => t.value);
 
-  const totalRaces = raw.filter((c) => /[0-9ADT]/.test(c)).length;
+  const totalRaces = races.length;
   const incidents = disqualifications + abandonments;
   const completionRate = totalRaces > 0 ? Math.max(0, totalRaces - incidents) / totalRaces : 0;
 
-  const recent3 = raw.slice(0, 3);
-  const recentDQ = recent3.some((c) => c === "0" || c === "D");
-  const recentPositions = recent3.filter((c) => /[1-9]/.test(c)).map(Number);
+  const recent3 = races.slice(0, 3);
+  const recentDQ = recent3.some((t) => t.kind === "inc" && t.code === "D");
+  const recentPositions = recent3.filter((t) => t.kind === "pos").map(musicValue);
   const recentWin = recentPositions.includes(1);
   const recentPlaces = recentPositions.filter((v) => v <= 3).length;
   // DQ in recent window counts double as "bad"
   const badRecent = recentPositions.filter((v) => v >= 7).length + (recentDQ ? 2 : 0);
 
-  const weights = positions.map((_, i) => Math.pow(0.75, i));
-  const weightSum = weights.reduce((s, w) => s + w, 0.01);
-  const weightedAvg =
-    positions.length > 0 ? positions.reduce((s, v, i) => s + v * weights[i], 0) / weightSum : 8;
+  const weightedAvg = decayedAverage(positions, 8);
 
   const rebound =
     positions.length >= 2 && positions[0] <= 4 && positions.slice(1, 4).some((v) => v >= 7) ? 1 : 0;
@@ -206,37 +283,33 @@ function musicParserTrot(music?: string | null): TrotMusicProfile {
 }
 
 function musicParserObstacle(music?: string | null): ObstacleMusicProfile {
-  // Handles F (tombé), U (désarçonné), B (knocked-down), R (refus), P (pulled-up)
-  const raw = String(music ?? "")
-    .toUpperCase()
-    .split("")
-    .filter((c) => c !== " " && c !== "-" && c !== "(" && c !== ")");
+  // Codes PMU de l'obstacle : T tombé, A arrêté, D disqualifié, R refus/retiré.
+  // Les anciens codes anglais (F, U, B, P) n'apparaissent jamais dans les
+  // musiques de l'API : la pénalité de chute valait donc toujours zéro.
+  const races = tokenizeMusic(music);
+  const incidentCodes = races.filter((t): t is Extract<MusicToken, { kind: "inc" }> => t.kind === "inc").map((t) => t.code);
 
-  const falls = raw.filter((c) => c === "F" || c === "B").length;
-  const unseated = raw.filter((c) => c === "U").length;
-  const refused = raw.filter((c) => c === "R").length;
-  const pulledUp = raw.filter((c) => c === "P").length;
-  const positions = raw.filter((c) => /[1-9]/.test(c)).map(Number);
+  const falls = incidentCodes.filter((c) => c === "T").length;
+  const refused = incidentCodes.filter((c) => c === "R").length;
+  const pulledUp = incidentCodes.filter((c) => c === "A" || c === "D").length;
+  const positions = races.filter((t): t is Extract<MusicToken, { kind: "pos" }> => t.kind === "pos").map((t) => t.value);
 
-  const totalRaces = raw.filter((c) => /[1-9FBURP]/.test(c)).length;
-  const incidents = falls + unseated + refused + pulledUp;
+  const totalRaces = races.length;
+  const incidents = falls + refused + pulledUp;
   const completionRate = totalRaces > 0 ? Math.max(0, totalRaces - incidents) / totalRaces : 0;
   // Refusals are more damaging to cleanJump than falls
   const cleanJumpScore = clamp(completionRate * (1 - refused * 0.2), 0, 1);
   const jumpExperience = totalRaces;
 
-  const recent3 = raw.slice(0, 3);
-  const recentFall = recent3.some((c) => c === "F" || c === "U" || c === "B");
-  const recentPositions = recent3.filter((c) => /[1-9]/.test(c)).map(Number);
+  const recent3 = races.slice(0, 3);
+  const recentFall = recent3.some((t) => t.kind === "inc" && t.code === "T");
+  const recentPositions = recent3.filter((t) => t.kind === "pos").map(musicValue);
   const recentWin = recentPositions.includes(1);
   const recentPlaces = recentPositions.filter((v) => v <= 3).length;
   const badRecent =
     recentPositions.filter((v) => v >= 7).length + (recentFall ? 3 : 0) + (refused > 0 ? 2 : 0);
 
-  const weights = positions.map((_, i) => Math.pow(0.75, i));
-  const weightSum = weights.reduce((s, w) => s + w, 0.01);
-  const weightedAvg =
-    positions.length > 0 ? positions.reduce((s, v, i) => s + v * weights[i], 0) / weightSum : 8;
+  const weightedAvg = decayedAverage(positions, 8);
 
   const rebound =
     positions.length >= 2 && positions[0] <= 4 && positions.slice(1, 4).some((v) => v >= 7) ? 1 : 0;
@@ -304,9 +377,9 @@ function equipmentSignalPlat(equipment?: string | null): number {
 function distanceProfileSignalPlat(profile: DistanceProfile, music?: string | null): number {
   // Heuristic: horses with shorter music (fewer races) may be sprinters
   // Full version needs per-race distance history from DB
-  const positions = String(music ?? "").match(/[1-9]/g) ?? [];
-  if (profile === "sprint" && positions.length <= 3) return 0.3;
-  if (profile === "fond" && positions.length >= 6) return 0.3;
+  const races = musicRaceCount(music);
+  if (profile === "sprint" && races <= 3) return 0.3;
+  if (profile === "fond" && races >= 6) return 0.3;
   return 0;
 }
 
@@ -314,34 +387,56 @@ function distanceProfileSignalPlat(profile: DistanceProfile, music?: string | nu
 // TROT-SPECIFIC SIGNALS
 // ─────────────────────────────────────────────────────────────
 
-function reductionKmSignal(reductionKm?: string | null): number {
-  // Parse formats: "1'02\"5", "1.02.5", "1,025", "1'025"
-  const raw = String(reductionKm ?? "")
-    .replace(/[''`´]/g, ".")
-    .replace(/["]/g, "")
-    .trim();
-
-  const match = raw.match(/(\d+)[.,](\d+)/);
-  if (!match) return 0;
-
-  const minutes = parseInt(match[1]);
-  const frac = match[2];
-
-  let totalMinutes: number;
-  if (frac.length >= 3) {
-    // Format like "1.025" = 1 min 02.5 sec
-    totalMinutes = minutes + parseInt(frac) / 1000;
-  } else {
-    // Format like "1.02" = 1 min 02 sec
-    totalMinutes = minutes + parseInt(frac) / 60;
+/**
+ * Réduction kilométrique en secondes, ou `null` si inexploitable.
+ *
+ * L'API PMU livre la valeur en millièmes de seconde (`74300` = 1'14"3). La
+ * base la stocke telle quelle dans `reduction_km` (texte) et, depuis le relevé
+ * d'avant-course, sous forme numérique dans `speed_figure`. L'ancien parseur
+ * exigeait un séparateur (« 1'14"3 ») : sur la valeur réelle il renvoyait 0,
+ * et le signal le plus lourd du modèle Trot ne contribuait jamais.
+ *
+ * `speed_figure` a la priorité : c'est la valeur gelée avant le départ, alors
+ * que `reduction_km` est réécrit par l'API avec le chrono réalisé une fois la
+ * course courue.
+ */
+function reductionKmSeconds(speedFigure?: number | null, reductionKm?: string | null): number | null {
+  if (typeof speedFigure === "number" && Number.isFinite(speedFigure) && speedFigure > 0) {
+    return speedFigure / 1000;
   }
 
-  if (totalMinutes <= 1.01) return 1.0;
-  if (totalMinutes <= 1.03) return 0.90;
-  if (totalMinutes <= 1.05) return 0.75;
-  if (totalMinutes <= 1.07) return 0.55;
-  if (totalMinutes <= 1.10) return 0.35;
-  if (totalMinutes <= 1.15) return 0.15;
+  const raw = String(reductionKm ?? "").trim();
+  if (!raw) return null;
+
+  // Format brut de l'API : entier en millièmes.
+  if (/^\d{4,6}$/.test(raw)) return Number(raw) / 1000;
+
+  // Formats saisis à la main : 1'14"3, 1.14.3, 1,143, 1'143
+  const normalized = raw.replace(/[''`´]/g, ".").replace(/["]/g, "");
+  const match = normalized.match(/^(\d+)[.,](\d{1,2})(?:[.,]?(\d))?$/);
+  if (!match) return null;
+
+  const minutes = Number(match[1]);
+  const seconds = Number(match[2]);
+  const tenths = match[3] ? Number(match[3]) / 10 : 0;
+  return minutes * 60 + seconds + tenths;
+}
+
+/**
+ * Signal 0,05 → 1 selon la réduction kilométrique, sur l'échelle des
+ * trotteurs de niveau courant (1'11 excellent, 1'20 modeste).
+ */
+function reductionKmSignal(speedFigure?: number | null, reductionKm?: string | null): number {
+  const seconds = reductionKmSeconds(speedFigure, reductionKm);
+  // Hors de la plage plausible d'une réduction (40 s à 200 s) : valeur absente.
+  if (seconds === null || seconds < 40 || seconds > 200) return 0;
+
+  if (seconds <= 71) return 1.0;
+  if (seconds <= 73) return 0.90;
+  if (seconds <= 75) return 0.75;
+  if (seconds <= 77) return 0.55;
+  if (seconds <= 80) return 0.35;
+  if (seconds <= 85) return 0.15;
   return 0.05;
 }
 
@@ -386,9 +481,9 @@ function regularitySignalTrot(profile: TrotMusicProfile): number {
 }
 
 function trotDistanceSpecSignal(distanceMeters: number, music?: string | null): number {
-  const positions = String(music ?? "").match(/[1-9]/g) ?? [];
-  if (distanceMeters <= 1750 && positions.length <= 4) return 0.4;
-  if (distanceMeters >= 2500 && positions.length >= 6) return 0.4;
+  const races = musicRaceCount(music);
+  if (distanceMeters <= 1750 && races <= 4) return 0.4;
+  if (distanceMeters >= 2500 && races >= 6) return 0.4;
   return 0;
 }
 
@@ -444,7 +539,11 @@ function ageSignalObstacle(age?: number | null): number {
 
 function winterFormSignalObstacle(raceDate?: string | null): number {
   if (!raceDate) return 0;
-  const month = new Date(raceDate).getMonth() + 1; // 1-12
+  // Lecture textuelle du mois : `new Date("AAAA-MM-JJ").getMonth()` interprète
+  // la date en UTC puis la lit en heure locale, donc un visiteur à UTC−5
+  // obtenait un autre mois que le serveur — et une erreur d'hydratation.
+  const month = Number(raceDate.slice(5, 7)); // 1-12
+  if (!Number.isFinite(month) || month < 1 || month > 12) return 0;
   // Oct–Mar = peak obstacle season
   return month <= 3 || month >= 10 ? 0.8 : -0.3;
 }
@@ -542,7 +641,6 @@ function computeOutsiderWatchScore(
 
 function fieldStats(horses: HorsePrediction[]): FieldStats {
   const oddsList = horses.map((h) => sane(h.odds)).filter((o) => o > 1);
-  const rkList = horses.map((h) => reductionKmSignal(h.reductionKm)).filter((v) => v > 0);
 
   return {
     averageOdds: average(oddsList, 12),
@@ -550,17 +648,9 @@ function fieldStats(horses: HorsePrediction[]): FieldStats {
       horses.map((h) => sane(h.top3Probability)),
       24,
     ),
-    averageWin: average(
-      horses.map((h) => sane(h.winProbability)),
-      8,
-    ),
     earningsMax: Math.max(...horses.map((h) => sane(h.earnings)), 0),
     favoriteOdds: Math.min(...oddsList, 99),
     fieldSize: horses.length,
-    kzMax: Math.max(...horses.map((h) => sane(h.kzScore)), 1),
-    top3Max: Math.max(...horses.map((h) => sane(h.top3Probability)), 1),
-    winMax: Math.max(...horses.map((h) => sane(h.winProbability)), 1),
-    averageRk: average(rkList, 0.5),
   };
 }
 
@@ -633,7 +723,12 @@ function platScore(
     60,
   );
 
-  const drawSig = drawPositionSignalPlat(horse.number, distanceMeters, stats.fieldSize);
+  // La place à la corde (`draw`) n'est pas le numéro de dossard : sans elle,
+  // le signal est neutre plutôt que calculé sur une variable arbitraire.
+  const drawSig =
+    typeof horse.draw === "number" && horse.draw > 0
+      ? drawPositionSignalPlat(horse.draw, distanceMeters, stats.fieldSize)
+      : 0;
   const ageSig = ageSignalPlat(horse.age);
   const equipSig = equipmentSignalPlat(horse.equipment);
   const distProfileSig = distanceProfileSignalPlat(profile, horse.music);
@@ -722,8 +817,10 @@ function trotScore(
   const favoriteGap = clamp((stats.favoriteOdds || odds) - odds, -20, 20);
 
   const distanceMeters = parseDistanceMeters(context.distance);
-  const rkSig = reductionKmSignal(horse.reductionKm);
-  const innerRailSig = innerRailSignalTrot(horse.number, distanceMeters);
+  const rkSig = reductionKmSignal(horse.speedFigure, horse.reductionKm);
+  // Au trot, derrière l'autostart, le numéro de dossard est la position de
+  // départ : l'utiliser ici est légitime, contrairement au Plat.
+  const innerRailSig = innerRailSignalTrot(horse.draw ?? horse.number, distanceMeters);
   const ageSig = ageSignalTrot(horse.age);
   const dqPen = dqPenaltySignalTrot(music);
   const regularitySig = regularitySignalTrot(music);
@@ -910,95 +1007,35 @@ function obstacleScore(
 }
 
 // ─────────────────────────────────────────────────────────────
-// PLACKETT-LUCE — field-level coherent probability model
+// PROBABILITÉS — déléguées à src/lib/probability.ts
 // ─────────────────────────────────────────────────────────────
 
-// Temperature: divides scores before exp. Lower = sharper distribution.
-const PL_TEMPERATURE = 10;
-// Monte Carlo simulations per field. 2000 gives ±1.5pp std error at n=15 in <5ms.
-const PL_N_SIM = 2000;
-
 /**
- * Générateur congruentiel linéaire semé.
+ * Aligne les probabilités portées par chaque cheval sur `calibrateField`.
  *
- * `Math.random()` était utilisé ici, alors que ce code s'exécute pendant le
- * rendu serveur ET pendant l'hydratation client (appelé depuis un useMemo de
- * course-detail.tsx et directement dans dashboard.tsx). Les deux rendus
- * produisaient des probabilités différentes — « 41.3% » côté serveur, « 40.8% »
- * côté client — d'où l'erreur d'hydratation React #418 sur toutes les pages.
+ * Cette étape écrasait `winProbability` / `top3Probability` / `top5Probability`
+ * par un softmax du score à température 10 : un favori sortait à 79 % gagnant
+ * et 99,9 % placé dans l'onglet Partants, pendant que le panneau Sélection,
+ * ancré au marché, affichait 26 % et 65 % pour le même cheval. Deux moteurs
+ * contradictoires sur la même page.
  *
- * Effet de bord bénéfique : les probabilités affichées cessent de bouger d'un
- * rafraîchissement à l'autre, ce qui les rend enfin vérifiables.
+ * Il n'y a plus qu'une source : les chevaux ressortent calibrés (Σ gagnant =
+ * 100 %, Σ Top 3 = 300 %), les champs `pl*` en sont une copie. Le score et
+ * `exactOrderScore` restent des explicateurs, ils ne fabriquent plus de
+ * probabilité.
  */
-function makeRng(seed: number): () => number {
-  let state = seed >>> 0;
-  return () => {
-    state = (state * 1664525 + 1013904223) >>> 0;
-    return state / 4294967296;
-  };
-}
-
-function gumbelNoise(rand: () => number): number {
-  // Gumbel(0,1) via inverse CDF: -log(-log(U)), U ~ Uniform(0,1)
-  return -Math.log(-Math.log(rand() + 1e-12));
-}
-
-function plSoftmax(scores: number[]): number[] {
-  const maxS = Math.max(...scores);
-  const exps = scores.map((s) => Math.exp((s - maxS) / PL_TEMPERATURE));
-  const sum = exps.reduce((a, b) => a + b, 0);
-  return exps.map((e) => (e / sum) * 100);
-}
-
-function monteCarloTopKMulti(scores: number[], ks: [number, number], nSim: number): [number[], number[]] {
-  const n = scores.length;
-  const maxK = Math.max(...ks);
-  const counts: [number[], number[]] = [new Array(n).fill(0), new Array(n).fill(0)];
-  const scaled = scores.map((s) => s / PL_TEMPERATURE);
-  // Graine dérivée des scores : déterministe, et distincte d'une course à l'autre.
-  const rand = makeRng(
-    scores.reduce((acc, s, i) => (acc + Math.round(s * 1000) * (i + 1)) >>> 0, 1013904223 + n * 2654435761),
-  );
-
-  for (let sim = 0; sim < nSim; sim++) {
-    // Gumbel-max trick: argmax(score_i + Gumbel_i) ~ Plackett-Luce draw
-    const perturbed = scaled.map((s) => s + gumbelNoise(rand));
-    // Partial sort: only top maxK indices needed
-    const ranked: number[] = [];
-    for (let i = 0; i < n; i++) ranked.push(i);
-    ranked.sort((a, b) => perturbed[b] - perturbed[a]);
-
-    for (let pos = 0; pos < maxK && pos < n; pos++) {
-      const idx = ranked[pos];
-      if (pos < ks[0]) counts[0][idx]++;
-      if (pos < ks[1]) counts[1][idx]++;
-    }
-  }
-
-  return [
-    counts[0].map((c) => (c / nSim) * 100),
-    counts[1].map((c) => (c / nSim) * 100),
-  ];
-}
-
-function placketLucePostProcess(predictions: EnhancedPrediction[]): EnhancedPrediction[] {
+function alignOnCalibratedField(predictions: EnhancedPrediction[]): EnhancedPrediction[] {
   if (predictions.length === 0) return predictions;
-  const scores = predictions.map((p) => p.score);
-  const pWin = plSoftmax(scores);
-  const [pTop3, pTop5] = monteCarloTopKMulti(scores, [3, 5], PL_N_SIM);
+  const calibrated = calibrateField(predictions.map((p) => p.horse));
 
   return predictions.map((pred, i) => {
-    const plWin  = round(pWin[i], 1);
-    const plTop3 = round(pTop3[i], 1);
-    const plTop5 = round(pTop5[i], 1);
+    const horse = calibrated[i];
     return {
       ...pred,
-      // Overwrite horse-level probabilities with coherent PL values
-      // so that Σ(top3) ≈ 3 × n_bets / n and p_win ≤ p_top3 ≤ p_top5 always holds
-      horse: { ...pred.horse, winProbability: plWin, top3Probability: plTop3, top5Probability: plTop5 },
-      plWinProbability: plWin,
-      plTop3Probability: plTop3,
-      plTop5Probability: plTop5,
+      horse,
+      plWinProbability: horse.winProbability,
+      plTop3Probability: horse.top3Probability,
+      plTop5Probability: horse.top5Probability,
     };
   });
 }
@@ -1033,10 +1070,13 @@ export function enhancedArrival(
   context: RaceContext = {},
 ): EnhancedPrediction[] {
   const raw = horses.map((horse) => explainPredictionScore(horse, horses, context));
-  return placketLucePostProcess(raw).sort(
+  // Même clé de tri que la sélection publiée (`buildSelection`) : la
+  // probabilité calibrée. Le score n'intervient qu'en départage, sinon
+  // l'en-tête annonçait 5-2-9 et l'onglet Partants 2-5-11 pour la même course.
+  return alignOnCalibratedField(raw).sort(
     (a, b) =>
+      b.horse.winProbability - a.horse.winProbability ||
       b.score - a.score ||
-      b.plWinProbability - a.plWinProbability ||
       b.exactOrderScore - a.exactOrderScore ||
       a.horse.odds - b.horse.odds,
   );
@@ -1047,11 +1087,11 @@ export function exactArrival(
   context: RaceContext = {},
 ): EnhancedPrediction[] {
   const raw = horses.map((horse) => explainPredictionScore(horse, horses, context));
-  return placketLucePostProcess(raw).sort(
+  return alignOnCalibratedField(raw).sort(
     (a, b) =>
-      b.exactOrderScore - a.exactOrderScore ||
-      b.plWinProbability - a.plWinProbability ||
       b.horse.winProbability - a.horse.winProbability ||
+      b.exactOrderScore - a.exactOrderScore ||
+      b.score - a.score ||
       a.horse.odds - b.horse.odds,
   );
 }

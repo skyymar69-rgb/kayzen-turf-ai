@@ -56,7 +56,7 @@ const RANGES = [
 
 export default function KzScorePage() {
   return (
-    <main className="min-h-screen bg-bg pb-20">
+    <main className="min-h-screen bg-bg pb-20" id="contenu-principal">
       <div className="mx-auto max-w-4xl px-4 pt-6 sm:px-6 lg:px-8">
 
         <Link

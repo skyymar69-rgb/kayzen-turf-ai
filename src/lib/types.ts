@@ -10,6 +10,10 @@ export type HorsePrediction = {
   earnings?: number | null;
   handicapDistance?: number | null;
   reductionKm?: string | null;
+  /** Réduction kilométrique relevée avant la course, en millièmes de seconde (74300 = 1'14"3). */
+  speedFigure?: number | null;
+  /** Place à la corde (placeCorde PMU), distincte du numéro de dossard. */
+  draw?: number | null;
   equipment?: string | null;
   silksUrl?: string | null;
   jockey: string;

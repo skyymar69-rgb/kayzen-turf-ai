@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 export default function CguPage() {
   return (
     <LegalPage
-      title="Conditions generales d'utilisation"
+      title="Conditions générales d'utilisation"
       intro="Les présentes CGU encadrent l'accès au site PronoTurf, aux pronostics, analyses, scores et outils d'aide à la décision."
       sections={[
         editorSection,
@@ -22,9 +22,9 @@ export default function CguPage() {
           ],
         },
         {
-          title: "Acces et compte utilisateur",
+          title: "Accès et compte utilisateur",
           body: [
-            "Certaines fonctionnalites pourront être gratuites, d'autres réservées aux utilisateurs abonnés. L'utilisateur s'engage a fournir des informations exactes et a conserver la confidentialité de ses identifiants.",
+            "Certaines fonctionnalités pourront être gratuites, d'autres réservées aux utilisateurs abonnés. L'utilisateur s'engage à fournir des informations exactes et à conserver la confidentialité de ses identifiants.",
           ],
         },
         {

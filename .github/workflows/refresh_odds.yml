@@ -24,6 +24,16 @@ on:
     # de ne pas resserrer davantage serait de ménager l'API PMU, qu'on
     # n'interroge que pour les courses au départ dans les 45 minutes.
     - cron: "5,35 7-21 * * *"
+    # Créneau tardif pour l'heure d'hiver : le cron est en UTC, et de fin
+    # octobre à fin mars Paris n'est qu'à UTC+1. Sans lui, le dernier passage
+    # (21:35 UTC = 22:35 Paris) manquait les dernières courses des nocturnes de
+    # Vincennes, qui partent jusqu'à 22:30-23:00 Paris. En été ces deux passages
+    # ne trouvent aucune course dans la fenêtre et se terminent aussitôt.
+    - cron: "5,35 22 * * *"
+
+# Le job n'écrit rien dans le dépôt : lecture seule suffit.
+permissions:
+  contents: read
 
 # Un passage en retard ne doit pas s'empiler sur le suivant : la donnée fraîche
 # prime toujours sur la donnée en attente.
@@ -37,12 +47,15 @@ jobs:
     timeout-minutes: 15
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      # L'entrée passe par l'environnement, jamais interpolée dans `run:` :
+      # `${{ inputs.window }}` dans un script shell est une injection de commande.
+      ODDS_WINDOW: ${{ inputs.window || '45' }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Setup Node
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: "22"
           cache: npm
@@ -52,4 +65,4 @@ jobs:
 
       - name: Refresh odds for imminent races
         timeout-minutes: 10
-        run: npm run data:refresh:odds -- --window "${{ inputs.window || '45' }}"
+        run: npm run data:refresh:odds -- --window "$ODDS_WINDOW"

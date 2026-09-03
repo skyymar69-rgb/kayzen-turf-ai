@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Clock3, Flag, TrendingUp } from "lucide-react";
 import { AiDisclosure } from "@/components/ai-disclosure";
+import { DisciplinePill, TierBadge, titleCase } from "@/components/badges";
 import { buildBetRecommendations, probableArrival, raceToContext } from "@/lib/bet-recommendations";
 import { getRaces } from "@/lib/race-repository";
 
@@ -210,27 +211,8 @@ function RecapBox({ label, value, mono, accent }: { label: string; value: string
   );
 }
 
-function DisciplinePill({ discipline }: { discipline: string }) {
-  const cls =
-    discipline === "Trot"     ? "bg-sky-100 text-sky-800" :
-    discipline === "Obstacle" ? "bg-orange-100 text-orange-800" :
-                                "bg-emerald-100 text-emerald-800";
-  return <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${cls}`}>{discipline}</span>;
-}
-
-function TierBadge({ tier }: { tier: string }) {
-  if (tier === "Focus") return <span className="rounded-full bg-accent px-2.5 py-0.5 text-[10px] font-bold text-white">Focus</span>;
-  if (tier === "Value") return <span className="rounded-full bg-amber-400 px-2.5 py-0.5 text-[10px] font-bold text-amber-950">Value</span>;
-  return <span className="rounded-full bg-surface-inv px-2.5 py-0.5 text-[10px] font-bold text-white">Prudence</span>;
-}
-
 function RiskBadge({ risk }: { risk: string }) {
   if (risk === "Speculatif") return <span className="rounded-full border border-red-200 bg-red-50 px-2.5 py-0.5 text-[10px] font-bold text-red-700">Spéculatif</span>;
   if (risk === "Prudent")    return <span className="rounded-full border border-green-200 bg-green-50 px-2.5 py-0.5 text-[10px] font-bold text-green-700">Prudent</span>;
   return <span className="rounded-full border border-border bg-surface-sub px-2.5 py-0.5 text-[10px] font-bold text-muted">Équilibré</span>;
-}
-
-function titleCase(v: string) {
-  return v.toLowerCase().split(/(\s|-|')/)
-    .map((p) => (p.length > 1 ? p.charAt(0).toUpperCase() + p.slice(1) : p)).join("");
 }

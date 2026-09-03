@@ -173,6 +173,9 @@ async function main() {
   const apply = process.argv.includes("--apply");
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
   const client = await pool.connect();
+  // Vrai dès que l'index de dérive des cotes a été retiré : il DOIT être
+  // recréé avant de rendre la connexion, même si la suite a échoué.
+  let indexDropped = false;
 
   try {
     await client.query("set statement_timeout = '30min'");
@@ -196,6 +199,7 @@ async function main() {
     // marge pour que VACUUM FULL puisse écrire sa copie sans buter sur le
     // plafond Neon. Il est recréé à la fin, sur une table trois fois plus petite.
     console.log("\nSuppression temporaire de odds_snapshots_race_horse_observed_idx…");
+    indexDropped = true;
     await client.query("drop index if exists odds_snapshots_race_horse_observed_idx");
     // Doublon strict du préfixe de value_bets_race_horse_unique_idx, jamais lu.
     await client.query("drop index if exists value_bets_race_id_idx");
@@ -215,11 +219,11 @@ async function main() {
     `);
     console.log(`\nprediction_runs orphelins supprimés : ${orphanRuns.rowCount}`);
 
-    console.log("\nRecréation de l'index de dérive des cotes…");
-    await client.query(`
-      create index if not exists odds_snapshots_race_horse_observed_idx
-      on odds_snapshots (race_id, horse_id, observed_at desc)
-    `);
+    // L'index est recréé dans le `finally` ci-dessous : une erreur pendant le
+    // VACUUM laissait auparavant la base sans index de dérive des cotes, et
+    // chaque lecture de `odds_snapshots` partait en balayage complet.
+    await recreateOddsIndex(client);
+    indexDropped = false;
 
     const after = await databaseSize(client);
     console.log("\n─────────────────────────────────────────────");
@@ -229,9 +233,32 @@ async function main() {
     console.log(`Taille après           : ${after.pretty}`);
     console.log(`Espace récupéré        : ${Math.round((before.bytes - after.bytes) / 1024 / 1024)} MB`);
   } finally {
+    if (indexDropped) {
+      try {
+        await recreateOddsIndex(client);
+      } catch (error) {
+        console.error(
+          "\n!!! ÉCHEC DE LA RECRÉATION DE odds_snapshots_race_horse_observed_idx !!!\n" +
+            "La base est sans index de dérive des cotes. À recréer à la main :\n" +
+            "  create index if not exists odds_snapshots_race_horse_observed_idx\n" +
+            "  on odds_snapshots (race_id, horse_id, observed_at desc);\n",
+          error,
+        );
+        process.exitCode = 1;
+      }
+    }
     client.release();
     await pool.end();
   }
+}
+
+/** Idempotent (`if not exists`) : appelé en fin de parcours normal ET dans le `finally`. */
+async function recreateOddsIndex(client) {
+  console.log("\nRecréation de l'index de dérive des cotes…");
+  await client.query(`
+    create index if not exists odds_snapshots_race_horse_observed_idx
+    on odds_snapshots (race_id, horse_id, observed_at desc)
+  `);
 }
 
 main().catch((error) => {

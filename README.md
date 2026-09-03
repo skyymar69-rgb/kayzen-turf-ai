@@ -8,7 +8,6 @@ Open source SaaS starter for predictive horse racing analytics, value bet detect
 - React
 - TypeScript
 - Tailwind CSS
-- Recharts
 - Lucide React
 - Neon Postgres compatible data layer
 
@@ -19,6 +18,12 @@ The technical stack is based on open source packages. The product can still be c
 ```bash
 npm install
 npm run dev
+```
+
+Tests (Node's built-in `node:test`, no framework — they cover the pure helpers of `scripts/lib/`):
+
+```bash
+npm test
 ```
 
 ## Database
@@ -88,6 +93,17 @@ Manual trigger:
 gh workflow run import_pmu.yml -f date=03052026
 ```
 
+### Odds refresh before the off
+
+The market is the best predictor we have, but only close to the start (37.6 % of winners found with the starting price versus 31.0 % with odds 6-12 h old, see `scripts/evaluate-freshness.mjs`). `refresh_odds.yml` therefore runs every 30 minutes from 07:05 to 22:35 UTC and refreshes `entries.odds` for the races starting within the next 45 minutes — plus the late-published speed figures and pool shares — and removes declared non-runners. It never creates races.
+
+```bash
+npm run data:refresh:odds -- --window 90   # locally, 90-minute window
+npm run data:refresh:odds -- --dry-run     # no write
+```
+
+A weekly `compact_storage.yml` (Sunday 02:00 UTC) runs `npm run db:compact -- --apply`; it shares a concurrency group with the import so the two never overlap.
+
 ## MVP API
 
 - `GET /api/predictions`
@@ -111,6 +127,10 @@ gh workflow run import_pmu.yml -f date=03052026
 ## Architecture
 
 See [`docs/INSTITUTIONAL_SYSTEM_DESIGN.md`](docs/INSTITUTIONAL_SYSTEM_DESIGN.md) for the full institutional-grade system design: data engine, AI engine, scoring, database structure, API/MCP, compliance, and roadmap.
+
+## Archived research code
+
+`research/` holds the former Python tree (agents, pace, portfolio, drift models, `promote_challenger.py`). It is not deployed, not maintained and not wired to the site; see `research/README.md` before running any of it — never against production.
 
 ## Responsible Gaming
 

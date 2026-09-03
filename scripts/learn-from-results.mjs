@@ -160,13 +160,25 @@ function segmentFor(race) {
   return "DEFAULT";
 }
 
+/** Nombre fini, ou repli. `Number(undefined)` et `Number("NaN")` renvoient NaN. */
+function finite(value, fallback) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 function scoreEntry(entry, weights, race) {
-  const cappedEdge = Math.min(Math.max(Number(entry.edge) || 0, 0), weights.edgeCap);
-  const odds = Number(entry.odds) || 99;
+  const cappedEdge = Math.min(Math.max(finite(entry.edge, 0), 0), weights.edgeCap);
+  const odds = finite(entry.odds, 0) > 1 ? finite(entry.odds, 0) : 99;
   const favoriteFragility = favoriteFailureRisk(entry, race);
   const longshot = longshotSignal(entry, race);
-  const placeGap = Math.max(0, Number(entry.top3) - Number(entry.win) * 1.8);
-  const orderStability = Math.max(0, 12 - Math.abs(Number(entry.kz) - Number(entry.win) * 2.6));
+  const placeGap = Math.max(0, finite(entry.top3, 0) - finite(entry.win, 0) * 1.8);
+  // `entry.kz` manquait à la requête des partants à venir : Number(undefined)
+  // donnait NaN, Math.max(0, NaN) le propageait, et le script écrivait NaN
+  // dans `entries.kz_score` de tous les partants du jour (PostgreSQL accepte
+  // 'NaN' dans une colonne numeric). Un score absent vaut son estimation par
+  // la probabilité gagnant, jamais NaN.
+  const kz = finite(entry.kz, finite(entry.win, 0) * 2.6);
+  const orderStability = Math.max(0, 12 - Math.abs(kz - finite(entry.win, 0) * 2.6));
   const raw =
     Number(entry.win) * weights.win +
     Number(entry.top3) * weights.top3 +
@@ -178,6 +190,10 @@ function scoreEntry(entry, weights, race) {
     placeGap * (weights.placeGap ?? 0) +
     orderStability * (weights.orderStability ?? 0) -
     Math.max(0, odds - 32) * 0.18;
+
+  if (!Number.isFinite(raw)) {
+    throw new Error(`Score non fini pour le partant ${entry.entry_id ?? entry.horseId ?? "?"} : refus d'écrire NaN en base`);
+  }
 
   return Math.max(1, Math.min(99, Math.round(raw)));
 }
@@ -408,22 +424,28 @@ function lessonsFor(race, feedback) {
 }
 
 async function saveCalibration(sql, segment, candidate, learnedFromRaces) {
-  await sql`
-    update model_calibrations
-    set active = false
-    where segment = ${segment}
-  `;
-  await sql`
-    insert into model_calibrations (segment, model_version, weights, metrics, learned_from_races, active)
-    values (
-      ${segment},
-      ${MODEL_VERSION},
-      ${JSON.stringify({ name: candidate.name, ...candidate.weights })},
-      ${JSON.stringify(candidate.metrics)},
-      ${learnedFromRaces},
-      true
-    )
-  `;
+  // Les deux écritures partent dans la même transaction : avec le pilote HTTP,
+  // chaque appel isolé est auto-commité, et un insert en échec laissait le
+  // segment sans aucune calibration active — donc, au passage suivant, une
+  // promotion du challenger sans contrôle sur le lot de validation.
+  await sql.transaction([
+    sql`
+      update model_calibrations
+      set active = false
+      where segment = ${segment}
+    `,
+    sql`
+      insert into model_calibrations (segment, model_version, weights, metrics, learned_from_races, active)
+      values (
+        ${segment},
+        ${MODEL_VERSION},
+        ${JSON.stringify({ name: candidate.name, ...candidate.weights })},
+        ${JSON.stringify(candidate.metrics)},
+        ${learnedFromRaces},
+        true
+      )
+    `,
+  ]);
 }
 
 // Les partants encore sans arrivée : ce sont eux que le site affiche. La requête est
@@ -435,6 +457,8 @@ async function loadPendingEntries(sql) {
       r.market_volatility::float as market_volatility,
       r.bet_types,
       e.id as entry_id,
+      e.odds::float as odds,
+      e.kz_score::float as kz,
       e.win_probability::float as win,
       e.top3_probability::float as top3,
       e.top5_probability::float as top5,
@@ -492,8 +516,9 @@ function groupBySegment(races) {
     groups.set(segment, group);
   }
 
-  const all = races.slice();
-  if (!groups.has("DEFAULT")) groups.set("DEFAULT", all);
+  // Un segment DEFAULT vide reste vide : lui affecter tout le corpus faisait
+  // écrire les Quintés une seconde fois sous un autre jeu de poids.
+  if (!groups.has("DEFAULT")) groups.set("DEFAULT", []);
   return groups;
 }
 

@@ -1,8 +1,15 @@
 import type { BetSimulation, HorsePrediction, ModelCard, RaceAnalysis } from "@/lib/types";
 
 // ─────────────────────────────────────────────────────────────
-// PMU PARI-MUTUEL TAKEOUT RATES (approximate)
-// Source: PMU règlement — 16.5% simple, 21.5% couple, 24-27% bonus pools
+// PRÉLÈVEMENTS PMU PAR TYPE DE PARI (indicatifs)
+// Source : règlement PMU — 16,5 % simple, 21,5 % couplé, 24-27 % paris à
+// bonus.
+//
+// Ces taux servent UNIQUEMENT à décrire le rendement théorique d'un pool. Le
+// rapport PMU affiché (`dernierRapportDirect`) est déjà NET de prélèvement :
+// c'est ce que touche le parieur pour 1 € misé. Appliquer `(1 − takeout)` à
+// une cote nette compterait le prélèvement deux fois — c'est ce que faisait
+// l'ancienne `expectedValuePMU`, jamais branchée, et corrigé ci-dessous.
 // ─────────────────────────────────────────────────────────────
 
 export const PMU_TAKEOUT: Record<string, number> = {
@@ -24,18 +31,19 @@ export const PMU_TAKEOUT: Record<string, number> = {
 };
 
 /**
- * Expected value with PMU pari-mutuel takeout correction.
- * PMU pays dividends on the pool net of takeout, so the stated cote
- * is an estimate of gross payout. EV = p × odds × (1 − takeout) − 1.
+ * Espérance d'un enjeu unitaire au rapport PMU, en %.
+ *
+ * Le rapport est net de prélèvement : EV = p × rapport − 1. Le type de pari
+ * n'entre pas dans le calcul, il est conservé pour documenter le pool visé.
  */
 export function expectedValuePMU(
   winProbability: number,
   decimalOdds: number,
   betType: string = "SIMPLE_GAGNANT",
 ): number {
+  void betType;
   const p = winProbability / 100;
-  const takeout = PMU_TAKEOUT[betType] ?? 0.22;
-  return round((p * decimalOdds * (1 - takeout) - 1) * 100, 1);
+  return round((p * decimalOdds - 1) * 100, 1);
 }
 
 /**

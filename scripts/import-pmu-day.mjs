@@ -30,8 +30,22 @@ function parseArgs() {
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
-    if (arg === "--date") dates.push(args[index + 1]);
-    if (arg === "--max-races") maxRaces = Number(args[index + 1]);
+    if (arg === "--date") {
+      const value = args[index + 1];
+      // Une date mal formée partait telle quelle dans l'URL PMU : 404 en boucle,
+      // quatre tentatives, puis un échec incompréhensible. On refuse à l'entrée.
+      if (!/^\d{8}$/.test(String(value ?? ""))) {
+        throw new Error(`--date attend une date PMU au format JJMMAAAA, reçu : ${value ?? "(vide)"}`);
+      }
+      dates.push(value);
+    }
+    if (arg === "--max-races") {
+      const value = Number(args[index + 1]);
+      if (!Number.isFinite(value)) {
+        throw new Error(`--max-races attend un nombre, reçu : ${args[index + 1] ?? "(vide)"}`);
+      }
+      maxRaces = value;
+    }
   }
 
   return {
@@ -78,11 +92,15 @@ async function fetchJson(url) {
 
   for (let attempt = 1; attempt <= FETCH_ATTEMPTS; attempt += 1) {
     try {
+      // Sans délai maximal, une connexion que l'API PMU laisse pendre bloquait
+      // le job jusqu'à sa limite de 45 min. Le TimeoutError est traité comme
+      // une coupure réseau : il repasse par les tentatives ci-dessous.
       const response = await fetch(url, {
         headers: {
           Accept: "application/json",
           "User-Agent": USER_AGENT,
         },
+        signal: AbortSignal.timeout(20_000),
       });
 
       if (response.ok) return await response.json();
@@ -248,17 +266,35 @@ function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
 
+// Le nom de table est interpolé dans la requête : on n'accepte que les deux
+// tables prévues, quoi qu'en dise l'appelant.
+const NAME_TABLES = new Set(["jockeys", "trainers"]);
+
+// Cache par exécution : un même jockey ou entraîneur revient sur des dizaines
+// de partants dans la journée, inutile de le réécrire à chaque fois.
+const nameIdCache = new Map();
+
 async function upsertName(sql, table, name) {
+  if (!NAME_TABLES.has(table)) throw new Error(`upsertName : table non autorisée « ${table} »`);
   const safeName = name || "Non renseigne";
+  const cacheKey = `${table} ${safeName}`;
+  const cached = nameIdCache.get(cacheKey);
+  if (cached) return cached;
+
   const rows = await sql.query(
     `insert into ${table} (name) values ($1) on conflict (name) do update set name = excluded.name returning id`,
     [safeName],
   );
+  nameIdCache.set(cacheKey, rows[0].id);
   return rows[0].id;
 }
 
-function horseId(participant) {
-  return String(participant.idCheval || participant.nom || crypto.randomUUID())
+// Identifiant de cheval. À défaut d'identifiant PMU et de nom, l'ancien repli
+// `crypto.randomUUID()` créait un cheval neuf à chaque import — trois fois par
+// jour — sans jamais pouvoir le rattacher à son partant ni à son arrivée. Le
+// repli est désormais déterministe : course + numéro de partant.
+function horseId(participant, raceId) {
+  return String(participant.idCheval || participant.nom || `${raceId}-p${participant.numPmu}`)
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -379,7 +415,15 @@ async function importDate(sql, pmuDate, maxRaces) {
       if (!course?.numOrdre) continue;
 
       const raceId = `${isoDate}-R${reunion.numOfficiel}-C${course.numOrdre}`;
-      const startTime = new Date(course.heureDepart).toLocaleTimeString("fr-FR", {
+      const startDate = new Date(course.heureDepart);
+      if (Number.isNaN(startDate.getTime())) {
+        // `toLocaleTimeString` sur une date invalide renvoie « Invalid Date »,
+        // qui finissait tel quel dans `races.start_time` et cassait le tri du
+        // programme. Une course sans heure de départ n'est pas importable.
+        console.warn(`[pmu] ${raceId} ignorée : heure de départ invalide (${course.heureDepart ?? "absente"})`);
+        continue;
+      }
+      const startTime = startDate.toLocaleTimeString("fr-FR", {
         hour: "2-digit",
         minute: "2-digit",
         timeZone: "Europe/Paris",
@@ -439,21 +483,30 @@ async function importDate(sql, pmuDate, maxRaces) {
       // valeur d'avant-course reviendrait à stocker le résultat sous couvert de
       // pronostic : `speed_figure` est donc gelée dès que la course est partie.
       const raceFinished = (course.ordreArrivee?.flat?.() ?? []).length > 0;
+      // Chevaux effectivement écrits pour cette course : l'arrivée ne peut
+      // référencer qu'eux (clé étrangère results.horse_id -> horses.id).
+      const insertedHorseIds = new Set();
 
       for (const participant of participants) {
         if (participant.statut && participant.statut !== "PARTANT") continue;
 
-        const id = horseId(participant);
+        const id = horseId(participant, raceId);
         const jockeyId = await upsertName(sql, "jockeys", participant.driver);
         const trainerId = await upsertName(sql, "trainers", participant.entraineur);
         const prediction = buildPrediction(participant, participants.length || fieldSize || 12);
         const entryId = `${raceId}-P${participant.numPmu}`;
+        // Même garde-fou que refresh-odds.mjs : hors de cette plage, la valeur
+        // n'est pas une réduction kilométrique (champ vide, 0, ou unité inattendue).
+        const rawFigure = Number(participant.reductionKilometrique);
+        const speedFigure =
+          !raceFinished && Number.isFinite(rawFigure) && rawFigure > 40000 && rawFigure < 200000 ? rawFigure : null;
 
         await sql`
           insert into horses (id, name, age)
           values (${id}, ${participant.nom ?? id}, ${participant.age ?? null})
           on conflict (id) do update set name = excluded.name, age = excluded.age
         `;
+        insertedHorseIds.add(id);
 
         await sql`
           insert into entries (
@@ -471,7 +524,7 @@ async function importDate(sql, pmuDate, maxRaces) {
             ${participant.handicapDistance ?? null}, ${participant.reductionKilometrique ?? participant.record ?? null},
             ${participant.oeilleres ?? participant.deferre ?? null}, ${participant.urlCasaque ?? null},
             ${participant.handicapPoids ?? null}, ${participant.placeCorde ?? null},
-            ${participant.deferre ?? null}, ${raceFinished ? null : participant.reductionKilometrique ?? null},
+            ${participant.deferre ?? null}, ${speedFigure},
             ${jockeyId}, ${trainerId},
             ${prediction.odds}, ${prediction.fairOdds}, ${prediction.marketEdge},
             ${prediction.winProbability}, ${prediction.top3Probability}, ${prediction.top5Probability},
@@ -479,6 +532,7 @@ async function importDate(sql, pmuDate, maxRaces) {
             ${JSON.stringify(prediction.factors)}
           )
           on conflict (id) do update set
+            horse_id = excluded.horse_id,
             age = excluded.age,
             sex = excluded.sex,
             music = excluded.music,
@@ -488,8 +542,10 @@ async function importDate(sql, pmuDate, maxRaces) {
             weight = excluded.weight,
             draw = excluded.draw,
             shoeing = excluded.shoeing,
-            -- Une fois la course partie, on conserve la valeur d'avant-course.
-            speed_figure = coalesce(excluded.speed_figure, entries.speed_figure),
+            -- La première valeur relevée avant la course fait foi : refresh-odds
+            -- la relève au plus près du départ, et un import ultérieur ne doit
+            -- ni l'écraser ni la remplacer par le chrono de l'épreuve.
+            speed_figure = coalesce(entries.speed_figure, excluded.speed_figure),
             equipment = excluded.equipment,
             silks_url = excluded.silks_url,
             odds = excluded.odds,
@@ -537,21 +593,35 @@ async function importDate(sql, pmuDate, maxRaces) {
         // Remplacement intégral plutôt qu'un upsert ligne à ligne : une arrivée
         // peut être rectifiée (disqualification), et un upsert laisserait les
         // anciennes positions orphelines.
-        await sql`delete from results where race_id = ${raceId}`;
+        //
+        // Le tout part dans une seule transaction HTTP (`sql.transaction`, même
+        // instance `neon()`) : auparavant, un incident entre le DELETE et les
+        // INSERT laissait une course arrivée sans aucun résultat jusqu'au
+        // passage suivant — et le site l'affichait comme non courue.
+        const statements = [sql`delete from results where race_id = ${raceId}`];
 
         for (let index = 0; index < arrival.length; index += 1) {
           const number = Number(arrival[index]);
           const participant = participants.find((item) => Number(item.numPmu) === number);
           if (!participant) continue;
-          const id = horseId(participant);
-          await sql`
+          const id = horseId(participant, raceId);
+          if (!insertedHorseIds.has(id)) {
+            // Un cheval de l'arrivée qui n'a pas été écrit comme partant (statut
+            // autre que PARTANT dans la réponse) violerait la clé étrangère et
+            // ferait échouer toute la transaction.
+            console.warn(`[pmu] ${raceId}: n° ${number} présent à l'arrivée mais absent des partants — résultat ignoré`);
+            continue;
+          }
+          statements.push(sql`
             insert into results (race_id, horse_id, finish_position, won)
             values (${raceId}, ${id}, ${index + 1}, ${index === 0})
             on conflict (race_id, horse_id) do update set
               finish_position = excluded.finish_position,
               won = excluded.won
-          `;
+          `);
         }
+
+        await sql.transaction(statements);
 
         if (course.statut && course.statut !== "ARRIVEE_DEFINITIVE_COMPLETE") {
           console.log(`[pmu] ${raceId}: arrivée ${arrival.length} places, statut ${course.statut} — sera complétée au prochain passage`);

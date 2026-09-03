@@ -47,8 +47,18 @@ function databaseUrl() {
 }
 
 const args = process.argv.slice(2);
-const LIMIT = Number(args[args.indexOf("--races") + 1]) || 400;
-const DAYS = Number(args[args.indexOf("--days") + 1]) || 120;
+
+/** Valeur numérique d'un drapeau, ou la valeur par défaut s'il est absent ou illisible. */
+function numberFlag(name, fallback) {
+  const index = args.indexOf(name);
+  // `indexOf` à -1 faisait lire args[0] — le premier argument, quel qu'il soit.
+  if (index === -1 || index + 1 >= args.length) return fallback;
+  const value = Number(args[index + 1]);
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+const LIMIT = numberFlag("--races", 400);
+const DAYS = numberFlag("--days", 120);
 
 function devig(odds) {
   const raw = odds.map((o) => (Number.isFinite(o) && o > 1 ? 1 / o : 0));

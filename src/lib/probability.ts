@@ -82,18 +82,40 @@ const round2 = (v: number) => Number(v.toFixed(2));
 
 /**
  * Probabilités implicites du marché, overround retiré.
- * Une cote absente ou ≤ 1 est traitée comme une information manquante et reçoit
- * la probabilité moyenne du peloton plutôt que zéro.
+ *
+ * Une cote absente ou ≤ 1 est une information manquante. Elle recevait la
+ * probabilité MOYENNE du peloton : un cheval sans cote — le plus souvent un
+ * non-partant ou un cheval que le marché ignore — pouvait ainsi finir deuxième
+ * de la sélection. Il reçoit désormais la plus PETITE probabilité connue de la
+ * course : sans prix, il n'est pas un prétendant.
  */
 export function devig(odds: number[]): number[] {
   const raw = odds.map((o) => (Number.isFinite(o) && o > 1 ? 1 / o : 0));
   const known = raw.filter((r) => r > 0);
   if (known.length === 0) return odds.map(() => 1 / Math.max(odds.length, 1));
 
-  const meanKnown = known.reduce((a, b) => a + b, 0) / known.length;
-  const filled = raw.map((r) => (r > 0 ? r : meanKnown));
+  const minKnown = Math.min(...known);
+  const filled = raw.map((r) => (r > 0 ? r : minKnown));
   const total = filled.reduce((a, b) => a + b, 0);
   return filled.map((r) => r / total);
+}
+
+/**
+ * Graine déterministe dérivée du vecteur de probabilités.
+ *
+ * La graine ne dépendait que du nombre de partants : toutes les courses à 16
+ * chevaux partageaient la même suite pseudo-aléatoire, donc des erreurs de
+ * Monte-Carlo corrélées d'une course à l'autre. Le contenu du vecteur entre
+ * maintenant dans la graine, en arithmétique 32 bits pour rester exact.
+ */
+function seedFrom(pWin: number[], salt: number): number {
+  let seed = (salt + pWin.length * 2654435761) >>> 0;
+  for (let i = 0; i < pWin.length; i++) {
+    seed = (seed ^ Math.round((Number.isFinite(pWin[i]) ? pWin[i] : 0) * 1e6)) >>> 0;
+    seed = Math.imul(seed, 1664525) + 1013904223;
+    seed >>>= 0;
+  }
+  return seed;
 }
 
 /** Softmax sur scores centrés-réduits — l'échelle ne dépend plus de l'amplitude brute. */
@@ -148,9 +170,9 @@ export function monteCarloTopK(pWin: number[], ks: number[], nSim = N_SIM): Map<
   const maxK = Math.max(...ks);
   const counts = new Map(ks.map((k) => [k, new Array<number>(n).fill(0)]));
 
-  let seed = 1013904223 + n * 2654435761;
+  let seed = seedFrom(pWin, 1013904223);
   const rand = () => {
-    seed = (seed * 1664525 + 1013904223) >>> 0;
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
     return seed / 4294967296;
   };
 
@@ -207,9 +229,9 @@ export function simulateTopOrders(pWin: number[], depth = 5, nSim = 4000): numbe
   if (n === 0) return [];
   const realDepth = Math.min(depth, n);
 
-  let seed = 2463534242 + n * 40503;
+  let seed = seedFrom(pWin, 2463534242);
   const rand = () => {
-    seed = (seed * 1664525 + 1013904223) >>> 0;
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
     return seed / 4294967296;
   };
 

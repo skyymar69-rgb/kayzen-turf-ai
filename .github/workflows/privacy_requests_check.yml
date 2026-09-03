@@ -1,0 +1,37 @@
+# Veille quotidienne sur les demandes RGPD en attente.
+#
+# Le script sort en erreur dès qu'une demande est encore au statut « received » :
+# le workflow échoue, et GitHub envoie un email au propriétaire du dépôt. C'est
+# le mécanisme de notification — aucun service tiers. Le script applique aussi
+# la rétention (suppression des demandes closes depuis plus de trois ans).
+name: Privacy requests check
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check pending privacy requests
+        run: node scripts/check-privacy-requests.mjs

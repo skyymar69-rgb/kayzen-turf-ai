@@ -38,7 +38,18 @@ export async function GET(request: Request) {
 
   const jour = date.valeur ?? parisToday();
 
-  const races = await getRaces({ date: jour });
+  // Une panne de la source (`ErreurSourceDonnees`) répond 503 sans cache,
+  // distinct du 404 « aucune course ce jour-là ».
+  let races;
+  try {
+    races = await getRaces({ date: jour });
+  } catch (cause) {
+    console.error("GET /api/pdf/pronostics : lecture des courses impossible", cause instanceof Error ? cause.message : cause);
+    return NextResponse.json(
+      { error: "Données momentanément indisponibles." },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
+  }
 
   if (!races.length) {
     return NextResponse.json(

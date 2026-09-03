@@ -3,7 +3,9 @@ import { cache } from "react";
 import { notFound } from "next/navigation";
 import { CourseDetail } from "@/components/course-detail";
 import { JsonLd } from "@/components/json-ld";
+import { formatMeters } from "@/lib/format";
 import { getRaceById } from "@/lib/race-repository";
+import { buildSelection } from "@/lib/selection";
 import { SITE_URL } from "@/lib/site";
 
 type RacePageProps = {
@@ -74,10 +76,12 @@ export async function generateMetadata({ params }: RacePageProps): Promise<Metad
 
   const chemin = `/races/${encodeURIComponent(race.id)}`;
   const titre = `${race.programCode} ${race.name} — ${race.racecourse}`;
-  const favori = race.horses[0];
+  // `race.horses[0]` était le premier numéro du tableau, pas le favori du
+  // modèle : la description annonçait un « favori » qui n'en était pas un.
+  const favori = buildSelection(race.horses).base?.horse ?? race.horses[0];
   const description =
     `Pronostic IA de la ${race.programCode} ${race.name} à ${race.racecourse}, ` +
-    `le ${formatDate(race.raceDate)} à ${race.startTime} — ${race.discipline}, ${race.distance}, ` +
+    `le ${formatDate(race.raceDate)} à ${race.startTime} — ${race.discipline}, ${formatMeters(race.distance)}, ` +
     `${race.horses.length} partants.` +
     (favori ? ` Favori du modèle : ${favori.number} ${favori.horse}.` : "") +
     " Probabilités, top 3 et value bets.";

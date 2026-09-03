@@ -20,8 +20,18 @@ function databaseUrl() {
 }
 
 const args = process.argv.slice(2);
-const DAYS = Number(args[args.indexOf("--days") + 1]) || 60;
-const JSON_OUT = args.includes("--json") ? args[args.indexOf("--json") + 1] : null;
+
+/** Valeur numérique d'un drapeau, ou la valeur par défaut s'il est absent ou illisible. */
+function numberFlag(name, fallback) {
+  const index = args.indexOf(name);
+  // `indexOf` à -1 faisait lire args[0] — le premier argument, quel qu'il soit.
+  if (index === -1 || index + 1 >= args.length) return fallback;
+  const value = Number(args[index + 1]);
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+const DAYS = numberFlag("--days", 60);
+const JSON_OUT = args.includes("--json") ? args[args.indexOf("--json") + 1] ?? null : null;
 
 // ── Reproduction fidèle de src/lib/probability.ts ────────────────────────────
 
@@ -232,8 +242,10 @@ for (const d of dist) console.log(`  ${d.k}/5 : ${String(d.n).padStart(3)} ${pct
 const totalHits = quintes.reduce((s, q) => s + q.hits, 0);
 console.log(`\nMoyenne : ${(totalHits / quintes.length).toFixed(2)} chevaux trouvés sur 5`);
 console.log(`Gagnant en tête de notre sélection : ${pct(quintes.filter((q) => q.winnerFound).length, quintes.length)}`);
-console.log(`Gagnant présent dans notre top 5   : ${pct(quintes.filter((q) => q.winnerOurRank <= 5).length, quintes.length)}`);
-console.log(`Gagnant présent dans notre top 3   : ${pct(quintes.filter((q) => q.winnerOurRank <= 3).length, quintes.length)}`);
+// `null <= 5` vaut `true` en JavaScript : un gagnant absent de notre classement
+// comptait comme trouvé. D'où le test explicite.
+console.log(`Gagnant présent dans notre top 5   : ${pct(quintes.filter((q) => Number.isFinite(q.winnerOurRank) && q.winnerOurRank <= 5).length, quintes.length)}`);
+console.log(`Gagnant présent dans notre top 3   : ${pct(quintes.filter((q) => Number.isFinite(q.winnerOurRank) && q.winnerOurRank <= 3).length, quintes.length)}`);
 console.log(`Quinté dans l'ordre                : ${quintes.filter((q) => q.ordered).length}`);
 
 // Où se situent, dans notre classement, les cinq chevaux réellement arrivés ?

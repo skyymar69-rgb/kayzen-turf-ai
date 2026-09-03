@@ -24,6 +24,13 @@ export const dynamic = "force-dynamic";
 const LIMITE_APPELS = 3;
 const FENETRE_MS = 10 * 60_000;
 
+/**
+ * Plafond par adresse email sur 24 h. Le compteur par IP est propre à chaque
+ * instance et ne survit pas à un redémarrage : seul un contrôle en base tient
+ * face à un script qui rejoue le formulaire depuis plusieurs adresses.
+ */
+const DEMANDES_MAX_PAR_EMAIL_24H = 3;
+
 const schemaDemande = z.object({
   email: z.email("Adresse email invalide").max(254),
   requestType: z.enum([
@@ -54,6 +61,20 @@ function nouvelleReference(): string {
   const jour = new Date().toISOString().slice(0, 10).replace(/-/g, "");
   const alea = crypto.randomUUID().split("-")[0]!.toUpperCase();
   return `PT-${jour}-${alea}`;
+}
+
+/**
+ * Ce qu'on consigne d'une erreur base : son code SQLSTATE et son message, rien
+ * d'autre. L'objet complet du pilote embarque la requête paramétrée — donc
+ * l'email et le message du demandeur — et ne doit jamais partir dans les
+ * journaux.
+ */
+function resumerErreur(cause: unknown): { code?: string; message: string } {
+  if (cause instanceof Error) {
+    const code = (cause as Error & { code?: unknown }).code;
+    return { code: typeof code === "string" ? code : undefined, message: cause.message };
+  }
+  return { message: typeof cause === "string" ? cause : "erreur non identifiée" };
 }
 
 export async function POST(request: Request) {
@@ -108,12 +129,33 @@ export async function POST(request: Request) {
 
   try {
     const sql = getSql();
+
+    const [recentes] = await sql`
+      select count(*)::int as n
+      from privacy_requests
+      where email = ${email}
+        and created_at > now() - interval '24 hours'
+    `;
+    if ((recentes?.n ?? 0) >= DEMANDES_MAX_PAR_EMAIL_24H) {
+      return NextResponse.json(
+        {
+          error:
+            "Plusieurs demandes ont déjà été enregistrées pour cette adresse au cours des dernières 24 heures. Elles seront traitées ; pour un complément, écrivez-nous par email.",
+          contact: COMPANY.email,
+        },
+        {
+          status: 429,
+          headers: { "Retry-After": String(24 * 3600), "Cache-Control": "no-store" },
+        },
+      );
+    }
+
     await sql`
       insert into privacy_requests (reference, email, request_type, message)
       values (${reference}, ${email}, ${requestType}, ${message})
     `;
   } catch (cause) {
-    console.error("Enregistrement de la demande RGPD impossible", cause);
+    console.error("Enregistrement de la demande RGPD impossible", resumerErreur(cause));
     return NextResponse.json(
       {
         error:

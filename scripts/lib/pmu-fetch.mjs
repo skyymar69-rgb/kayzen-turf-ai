@@ -28,11 +28,15 @@ export async function fetchJson(url) {
 
   for (let attempt = 1; attempt <= FETCH_ATTEMPTS; attempt += 1) {
     try {
+      // Sans délai maximal, une connexion que l'API PMU laisse pendre bloquait
+      // le job jusqu'à sa limite. Le TimeoutError n'est pas marqué `permanent` :
+      // il repasse par les tentatives ci-dessous comme une coupure réseau.
       const response = await fetch(url, {
         headers: {
           Accept: "application/json",
           "User-Agent": USER_AGENT,
         },
+        signal: AbortSignal.timeout(20_000),
       });
 
       if (response.ok) return await response.json();

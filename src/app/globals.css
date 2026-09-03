@@ -1,4 +1,9 @@
 @import "tailwindcss";
+/* Le thème est porté par `data-theme` sur <html> (voir theme-toggle), pas par
+   `prefers-color-scheme`. Sans cette variante, `dark:` suivait le réglage du
+   système et ignorait le bouton du site : le bandeau démo restait clair en
+   thème sombre, et inversement. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 /* Les feuilles génériques de @fontsource déclarent les sept sous-ensembles
    d'Inter — latin, latin-ext, cyrillique, cyrillique-ext, grec, grec-ext et
    vietnamien — soit 28 règles @font-face pour quatre graisses. Le navigateur

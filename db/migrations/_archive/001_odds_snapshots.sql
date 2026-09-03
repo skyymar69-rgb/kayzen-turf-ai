@@ -1,3 +1,11 @@
+-- NE PAS APPLIQUER — remplacé par db/schema.sql
+--
+-- Archivé : ce fichier définissait une table `odds_snapshots` (colonnes
+-- minutes_to_off, pool_eur, bet_type…) et une table `prediction_logs` qui
+-- contredisent le schéma réellement en production. La source de vérité est
+-- db/schema.sql, appliqué par scripts/apply-schema.mjs (`npm run db:schema`).
+-- Conservé pour mémoire uniquement.
+
 -- Migration 001 — Snapshots de cotes PMU pour modèle de drift
 -- Appliquer avec : psql $DATABASE_URL -f db/migrations/001_odds_snapshots.sql
 

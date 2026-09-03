@@ -70,18 +70,20 @@ type EntryRow = {
   earnings: string | null;
   handicap_distance: number | null;
   reduction_km: string | null;
+  speed_figure: string | null;
+  draw: number | null;
   equipment: string | null;
   silks_url: string | null;
   jockey: string;
   trainer: string;
-  odds: string;
-  fair_odds: string;
-  market_edge: string;
-  win_probability: string;
-  top3_probability: string;
-  top5_probability: string;
-  kz_score: string;
-  value_index: string;
+  odds: string | null;
+  fair_odds: string | null;
+  market_edge: string | null;
+  win_probability: string | null;
+  top3_probability: string | null;
+  top5_probability: string | null;
+  kz_score: string | null;
+  value_index: string | null;
   confidence: Confidence;
   factors: string[] | string;
   finish_position: number | null;
@@ -192,6 +194,8 @@ async function fetchEntriesByRace(raceIds: string[]) {
       entries.earnings::text,
       entries.handicap_distance,
       entries.reduction_km,
+      entries.speed_figure::text,
+      entries.draw,
       entries.equipment,
       entries.silks_url,
       jockeys.name as jockey,
@@ -214,7 +218,7 @@ async function fetchEntriesByRace(raceIds: string[]) {
     left join trainers on trainers.id = entries.trainer_id
     left join results on results.race_id = entries.race_id and results.horse_id = entries.horse_id
     where entries.race_id = any(${raceIds})
-    order by entries.race_id, entries.kz_score desc
+    order by entries.race_id, entries.kz_score desc nulls last, entries.number
   `) as Array<EntryRow & { race_id: string }>;
 
   for (const row of rows) {
@@ -393,16 +397,22 @@ function mapHorse(row: EntryRow): HorsePrediction {
     earnings: row.earnings === null ? null : Number(row.earnings),
     handicapDistance: row.handicap_distance,
     reductionKm: row.reduction_km,
+    speedFigure: row.speed_figure != null ? Number(row.speed_figure) : null,
+    draw: row.draw,
     equipment: row.equipment,
     silksUrl: row.silks_url,
     jockey: row.jockey,
     trainer: row.trainer,
-    odds: Number(row.odds),
-    fairOdds: Number(row.fair_odds),
-    marketEdge: Number(row.market_edge),
-    winProbability: Number(row.win_probability),
-    top3Probability: Number(row.top3_probability),
-    top5Probability: Number(row.top5_probability),
+    // `Number(null)` vaut 0, pas NaN : une cote absente passait pour une cote
+    // de 0 et `devig` lui attribuait une probabilité. NaN dit « inconnu ».
+    odds: row.odds != null ? Number(row.odds) : NaN,
+    fairOdds: row.fair_odds != null ? Number(row.fair_odds) : NaN,
+    marketEdge: row.market_edge != null ? Number(row.market_edge) : 0,
+    winProbability: row.win_probability != null ? Number(row.win_probability) : 0,
+    top3Probability: row.top3_probability != null ? Number(row.top3_probability) : 0,
+    top5Probability: row.top5_probability != null ? Number(row.top5_probability) : 0,
+    // La valeur spéciale PostgreSQL 'NaN' arrive sous forme de texte : Number()
+    // la convertit bien en NaN, que `modelProbabilities` traite comme manquante.
     kzScore: row.kz_score != null ? Number(row.kz_score) : NaN,
     valueIndex: row.value_index != null ? Number(row.value_index) : 0,
     confidence: row.confidence,

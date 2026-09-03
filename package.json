@@ -1,7 +1,7 @@
 {
   "name": "kayzen-turf-ai",
   "version": "0.1.0",
-  "private": false,
+  "private": true,
   "license": "MIT",
   "scripts": {
     "dev": "next dev --turbopack",
@@ -9,6 +9,7 @@
     "start": "next start -p 3100",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "test": "node --test \"tests/**/*.test.mjs\"",
     "brand:icons": "node scripts/generate-icons.mjs",
     "db:schema": "node scripts/apply-schema.mjs",
     "db:stats": "node scripts/db-stats.mjs",
@@ -26,7 +27,7 @@
     "@neondatabase/serverless": "^1.1.0",
     "@react-pdf/renderer": "^4.5.1",
     "lucide-react": "^1.14.0",
-    "next": "^16.2.4",
+    "next": "^16.3.4",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "zod": "^4.4.3"
@@ -37,8 +38,8 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "eslint": "^9.39.4",
-    "eslint-config-next": "^16.2.4",
-    "sharp": "^0.34.5",
+    "eslint-config-next": "^16.3.4",
+    "sharp": "^0.35.4",
     "tailwindcss": "^4.2.4",
     "typescript": "^6.0.3"
   }
