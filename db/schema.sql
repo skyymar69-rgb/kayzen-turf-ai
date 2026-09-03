@@ -95,6 +95,12 @@ alter table entries add column if not exists reduction_km text;
 alter table entries add column if not exists equipment text;
 alter table entries add column if not exists silks_url text;
 
+-- Une cote absente est NULL. L'import y écrivait la cote juste du modèle
+-- faute de rapport PMU : le site affichait alors « cote 8,82 » pour une course
+-- dont le marché n'avait rien publié, et tous les partants ressortaient à la
+-- même probabilité. Idempotent : sans effet si la contrainte est déjà levée.
+alter table entries alter column odds drop not null;
+
 -- Variables disponibles dans l'API PMU avant le départ, qui n'étaient pas
 -- capturées. Aucune n'alimente encore le modèle : elles sont stockées pour être
 -- évaluées par scripts/evaluate-features.mjs une fois l'historique constitué.

@@ -23,7 +23,7 @@ import { DisciplinePill, TierBadge, titleCase } from "@/components/badges";
 import { useFavorites } from "@/hooks/use-favorites";
 import { usePdfJour } from "@/hooks/use-pdf-jour";
 import { probableArrival, raceToContext } from "@/lib/bet-recommendations";
-import { formatMeters } from "@/lib/format";
+import { formatMeters, formatOdds, hasOdds, oddsSortValue } from "@/lib/format";
 import { minutesActuellesParis, minutesDepuisHeure } from "@/lib/paris-time";
 import type { BetOffer, RaceAnalysis } from "@/lib/types";
 
@@ -923,7 +923,11 @@ export function Dashboard({ races }: DashboardProps) {
                         </td>
                         <td className="px-5 py-3 font-semibold text-fg">{horse.horse}</td>
                         <td className="px-5 py-3 text-sm text-muted">{horse.jockey}</td>
-                        <td className="px-5 py-3 text-right font-mono text-sm text-fg">{horse.odds}</td>
+                        <td className="px-5 py-3 text-right font-mono text-sm text-fg">
+                          {selectedRace.oddsAvailable === false
+                            ? <span className="font-sans text-xs text-muted">cotes à venir</span>
+                            : formatOdds(horse.odds)}
+                        </td>
                         <td className={`px-5 py-3 text-right font-mono font-bold ${idx === 0 ? "text-accent-text" : "text-muted"}`}>
                           {fmtScore(horse.kzScore)}
                         </td>
@@ -1264,12 +1268,16 @@ function raceOpportunity(race: RaceAnalysis) {
   const best = arrival[0];
   if (!best) return "Signal indisponible";
 
+  // Sans marché ouvert, « favori », « value » et « outsider » n'ont pas de
+  // sens : le signal le dit plutôt que d'afficher une cote qui n'existe pas.
+  if (race.oddsAvailable === false) return `Cotes à venir — base #${best.number}`;
+
   // Favori très fragile
-  const fav = race.horses.slice().sort((a, b) => a.odds - b.odds)[0];
-  const favIsFragile = fav && fav.odds < 3 && fav.top3Probability < 40;
+  const fav = race.horses.slice().sort((a, b) => oddsSortValue(a.odds) - oddsSortValue(b.odds))[0];
+  const favIsFragile = fav && hasOdds(fav.odds) && fav.odds < 3 && fav.top3Probability < 40;
 
   // Outsider avec value
-  const outsider = arrival.find((h) => h.valueIndex >= 10 && h.odds >= 7);
+  const outsider = arrival.find((h) => h.valueIndex >= 10 && hasOdds(h.odds) && h.odds >= 7);
 
   if (race.bettingTier === "Avoid" || (race.riskLevel === "Speculatif" && race.marketVolatility > 25))
     return "À éviter";
@@ -1282,7 +1290,7 @@ function raceOpportunity(race: RaceAnalysis) {
   if (race.modelConsensus >= 75)
     return `Base fiable #${best.number}`;
   if (outsider)
-    return `Outsider #${outsider.number} (${outsider.odds})`;
+    return `Outsider #${outsider.number} (${formatOdds(outsider.odds)})`;
   if (race.raceQualityScore >= 72)
     return `Course solide`;
   if (race.riskLevel === "Speculatif")

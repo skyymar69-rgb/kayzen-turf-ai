@@ -120,7 +120,8 @@ async function main() {
   const scorers = {
     marche: makeScorer("Marché seul (cotes dé-viggées)"),
     modele: makeScorer("Modèle seul (KZ Score)"),
-    w30: makeScorer("Mélange w=0.30 (en production)"),
+    // `MODEL_WEIGHT = 0.10` dans src/lib/probability.ts : c'est le mélange servi.
+    w30: makeScorer("Mélange w=0.10 (en production)"),
   };
   const sweep = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7].map((w) => ({ w, s: makeScorer(`w=${w}`) }));
 
@@ -136,7 +137,7 @@ async function main() {
 
     scorers.marche.add(market, winner);
     scorers.modele.add(model, winner);
-    scorers.w30.add(blend(market, model, 0.3), winner);
+    scorers.w30.add(blend(market, model, 0.1), winner);
     for (const { w, s } of sweep) s.add(blend(market, model, w), winner);
   }
 
@@ -157,7 +158,7 @@ async function main() {
     console.log(`  w=${w.toFixed(2)}  logLoss ${r.logLoss.toFixed(4)}  (${gain >= 0 ? "+" : ""}${gain.toFixed(2)} %)  Top1 ${r.top1.toFixed(1)} %  ${verdict}`);
   }
 
-  console.log(`\nCalibration du mélange en production (w=0.30)`);
+  console.log(`\nCalibration du mélange en production (w=0.10)`);
   console.log(`  ${"annoncé".padStart(12)}${"observé".padStart(10)}${"n".padStart(9)}   écart`);
   scorers.w30.buckets.forEach((b, i) => {
     if (b.n < 50) return;

@@ -308,6 +308,7 @@ export async function getValueBets() {
 }
 
 function mapRace(row: RaceRow, entries: EntryRow[]): RaceAnalysis {
+  const horses = entries.map(mapHorse);
   return {
     id: row.id,
     name: row.name,
@@ -334,7 +335,8 @@ function mapRace(row: RaceRow, entries: EntryRow[]): RaceAnalysis {
     // sont calculées cheval par cheval, sans normalisation (Σ win ≈ 185 %).
     // On les remplace ici, une seule fois, pour que tous les consommateurs —
     // page course, dashboard, tickets, API — lisent les mêmes valeurs.
-    horses: calibrateField(entries.map(mapHorse)),
+    horses: calibrateField(horses),
+    oddsAvailable: horses.some((horse) => Number.isFinite(horse.odds) && horse.odds > 1),
   };
 }
 

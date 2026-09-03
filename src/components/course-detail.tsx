@@ -19,7 +19,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Countdown } from "@/components/countdown";
 import { RaceSelectionPanel } from "@/components/race-selection";
 import { useClipboard, type EtatCopie } from "@/hooks/use-clipboard";
-import { formatMeters } from "@/lib/format";
+import { formatMeters, formatOdds, hasOdds, oddsSortValue } from "@/lib/format";
 import { SELECTION_SIZE, buildSelection } from "@/lib/selection";
 import { buildBetRecommendations, buildXTickets, probableArrival, raceToContext, type XTicket } from "@/lib/bet-recommendations";
 import { simulateBet } from "@/lib/betting-engine";
@@ -79,7 +79,14 @@ export function CourseDetail({ race }: CourseDetailProps) {
   const xTickets            = useMemo(() => buildXTickets(race.horses, race.betTypes, ctx), [race.horses, race.betTypes, ctx]);
   const ticketPlan          = useMemo(() => buildTicketPlan(betRecommendations, ticketMode, ticketBudget), [betRecommendations, ticketBudget, ticketMode]);
   const postRaceAnalysis    = useMemo(() => buildPostRaceAnalysis(race), [race]);
-  const simulation          = selectedHorse ? simulateBet(stake, selectedHorse.odds, selectedHorse.winProbability, 500, 0) : null;
+  // Sans cote PMU (marché pas encore ouvert), la simulation tournait sur
+  // `NaN` : EV, Kelly et edge affichaient « NaN € ». On se rabat sur la cote
+  // juste du modèle, sinon sur 5, et on le dit sous le formulaire.
+  const simulationOdds      = selectedHorse
+    ? hasOdds(selectedHorse.odds) ? selectedHorse.odds : hasOdds(selectedHorse.fairOdds) ? selectedHorse.fairOdds : 5
+    : 5;
+  const simulationSansCote  = !!selectedHorse && !hasOdds(selectedHorse.odds);
+  const simulation          = selectedHorse ? simulateBet(stake, simulationOdds, selectedHorse.winProbability, 500, 0) : null;
   const partantsCount       = race.horses.length;
 
   const topBet = betRecommendations[0];
@@ -164,6 +171,20 @@ export function CourseDetail({ race }: CourseDetailProps) {
         {/* ── LA SÉLECTION — unique chemin de décision ──
             Remplace l'ancien triptyque « ordre probable / ticket / signaux clés »,
             qui présentait trois classements différents du même peloton. */}
+        {race.oddsAvailable === false && (
+          <div
+            className="mt-4 flex items-start gap-3 rounded-2xl border border-warn/30 bg-warn-lo px-4 py-3 text-sm leading-6 text-warn sm:px-5"
+            role="status"
+          >
+            <AlertTriangle aria-hidden="true" className="mt-1 shrink-0" size={16} />
+            <p>
+              <strong className="font-bold">Cotes PMU non encore publiées pour cette course.</strong>{" "}
+              Le classement ci-dessous repose sur le modèle seul et sera recalculé dès l&apos;ouverture du marché
+              (les cotes arrivent en général la veille au soir pour le Quinté+, et dans la matinée pour les autres courses).
+            </p>
+          </div>
+        )}
+
         <RaceSelectionPanel
           horses={race.horses}
           recommendedTicket={topBet ? { label: topBet.label, ticket: topBet.ticket } : null}
@@ -390,6 +411,12 @@ export function CourseDetail({ race }: CourseDetailProps) {
                     <Result label="Edge marché"   value={`${simulation.marketEdge}%`} />
                     <Result label="Décision"      value={simulation.recommendation} accent={simulation.marketEdge > 0} />
                   </div>
+                  {simulationSansCote && (
+                    <p className="text-xs leading-5 text-muted">
+                      Cote PMU non publiée : simulation sur la cote{" "}
+                      {hasOdds(selectedHorse.fairOdds) ? `juste du modèle (${formatOdds(selectedHorse.fairOdds)})` : "indicative de 5.00"}.
+                    </p>
+                  )}
                 </div>
               ) : null}
             </Panel>
@@ -514,7 +541,7 @@ function PartantsTable({
               </div>
             </div>
             <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
-              <Result label="Cote"  value={horse.odds > 1 ? `${horse.odds}` : "—"} />
+              <Result label="Cote"  value={formatOdds(horse.odds)} />
               <Result label="Top 3" value={fmtProb(horse.top3Probability)} />
               <Result label="Gains" value={formatEuros(horse.earnings)} />
             </div>
@@ -587,9 +614,9 @@ function PartantsTable({
                 <td className="max-w-[260px] px-3 py-3.5" title={horse.music ?? ""}>
                   <MusicSparkline music={horse.music} />
                 </td>
-                <td className="px-3 py-3.5 font-mono text-fg">{horse.odds > 1 ? horse.odds : "—"}</td>
+                <td className="px-3 py-3.5 font-mono text-fg">{formatOdds(horse.odds)}</td>
                 <td className={`px-3 py-3.5 font-mono text-xs ${horse.marketEdge > 5 ? "text-cta font-bold" : horse.marketEdge < -5 ? "text-danger" : "text-muted"}`}>
-                  {Number.isFinite(horse.fairOdds) && horse.fairOdds > 0 ? horse.fairOdds : "—"}
+                  {formatOdds(horse.fairOdds)}
                   {Number.isFinite(horse.marketEdge) && Math.abs(horse.marketEdge) > 5 && (
                     <span className="ml-1 text-[9px]">{horse.marketEdge > 0 ? "↑" : "↓"}</span>
                   )}
@@ -619,7 +646,7 @@ function TabPlaceholder({
 
   /* ── COTES ── */
   if (activeTab === "Cotes") {
-    const maxOdds = Math.max(...arrival.map((h) => h.odds).filter((o) => o > 0), 1);
+    const maxOdds = Math.max(...arrival.map((h) => h.odds).filter(hasOdds), 1);
     return (
       <div className="overflow-x-auto">
         <table className="w-full min-w-[640px] border-collapse text-left text-sm">
@@ -644,8 +671,8 @@ function TabPlaceholder({
                 <tr key={horse.id} className="hover:bg-surface-sub transition">
                   <td className="px-4 py-3 font-mono font-bold text-muted">#{horse.number}</td>
                   <td className="px-4 py-3 font-semibold text-fg">{horse.horse}</td>
-                  <td className="px-4 py-3 font-mono text-fg">{Number.isFinite(horse.odds) && horse.odds > 0 ? horse.odds : "—"}</td>
-                  <td className="px-4 py-3 font-mono text-muted">{Number.isFinite(horse.fairOdds) && horse.fairOdds > 0 ? horse.fairOdds : "—"}</td>
+                  <td className="px-4 py-3 font-mono text-fg">{formatOdds(horse.odds)}</td>
+                  <td className="px-4 py-3 font-mono text-muted">{formatOdds(horse.fairOdds)}</td>
                   <td className={`px-4 py-3 font-mono font-bold ${isValue ? "text-cta" : isAvoid ? "text-danger" : "text-muted"}`}>
                     {edge > 0 ? `+${edge}%` : `${edge}%`}
                   </td>
@@ -656,7 +683,7 @@ function TabPlaceholder({
                   </td>
                   <td className="w-32 px-4 py-3">
                     <div className="h-2 overflow-hidden rounded-full bg-border">
-                      <div className="h-full rounded-full bg-accent/40" style={{ width: `${safeWidth((horse.odds / maxOdds) * 100)}%` }} />
+                      <div className="h-full rounded-full bg-accent/40" style={{ width: `${safeWidth(hasOdds(horse.odds) ? (horse.odds / maxOdds) * 100 : 0)}%` }} />
                     </div>
                   </td>
                 </tr>
@@ -808,7 +835,7 @@ function TabPlaceholder({
                   <p className="font-semibold text-fg">{horse.horse}</p>
                   <p className="text-xs text-muted">{horse.jockey}</p>
                 </td>
-                <td className="px-4 py-3 font-mono text-fg">{horse.odds > 0 ? horse.odds : "—"}</td>
+                <td className="px-4 py-3 font-mono text-fg">{formatOdds(horse.odds)}</td>
                 <td className="px-4 py-3 font-mono font-bold text-accent-text">{fmtProb(horse.winProbability)}</td>
                 <td className="px-4 py-3 font-mono text-fg">{fmtProb(horse.top3Probability)}</td>
                 <td className="px-4 py-3 font-mono text-muted">{fmtProb(horse.top5Probability)}</td>
@@ -844,7 +871,7 @@ function TabPlaceholder({
           <div key={h.id} className="col-span-2 rounded-xl border border-cta/20 bg-cta/5 p-4">
             <p className="text-xs font-bold uppercase tracking-widest text-cta">Gagnant officiel</p>
             <p className="mt-1 text-lg font-bold text-fg">#{h.number} {h.horse}</p>
-            <p className="text-sm text-muted">Cote : {h.odds} · Probabilité modèle : {fmtProb(h.winProbability)}</p>
+            <p className="text-sm text-muted">Cote : {formatOdds(h.odds)} · Probabilité modèle : {fmtProb(h.winProbability)}</p>
           </div>
         ))}
         {!arrival.some((h) => h.won) && (
@@ -1015,7 +1042,7 @@ function PredictionMethodology({ arrival, race }: { arrival: HorsePrediction[]; 
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {[
                     `Musique: ${horse.music || "non renseignée"}`,
-                    `Cote: ${horse.odds || "—"}`,
+                    `Cote: ${formatOdds(horse.odds)}`,
                     `Risque favori: ${analysis.favoriteFailureRisk}/60`,
                     `Signal tocard: ${analysis.top3UpsetScore}/60`,
                   ].map((tag) => (
@@ -1212,7 +1239,7 @@ function horseOpinion(
     analysis.top3UpsetScore >= 30   ? `signal outsider significatif (${analysis.top3UpsetScore}/60)` : null,
     horse.valueIndex >= 15          ? `edge marché positif (+${horse.valueIndex}% vs cote juste)` : null,
     horse.odds >= 8 && horse.winProbability >= 10
-                                    ? `bonne value sur outsider (cote ${horse.odds})` : null,
+                                    ? `bonne value sur outsider (cote ${formatOdds(horse.odds)})` : null,
     horse.confidence === "Forte"    ? `historique récent robuste` : null,
     horse.earnings && horse.earnings > 50000
                                     ? `gains significatifs (${new Intl.NumberFormat("fr-FR").format(horse.earnings)} €)` : null,
@@ -1228,7 +1255,7 @@ function horseOpinion(
     horse.odds < 2.5 && horse.winProbability < 35
                                     ? `favori court mais probabilité modérée` : null,
     horse.winProbability < 7        ? `probabilité gagnant faible (${horse.winProbability}%)` : null,
-    horse.odds >= 20                ? `cote spéculative (${horse.odds})` : null,
+    horse.odds >= 20                ? `cote spéculative (${formatOdds(horse.odds)})` : null,
     horse.confidence === "Faible"   ? `historique récent insuffisant` : null,
     isTrot && horse.reductionKm     ? `réduction kilométrique à surveiller (${horse.reductionKm})` : null,
   ].filter((x): x is string => x !== null);
@@ -1314,7 +1341,7 @@ function safeWidth(v: number | null | undefined, min = 4, max = 100): number {
 function sortHorses(horses: HorsePrediction[], key: SortKey): HorsePrediction[] {
   const arr = [...horses];
   if (key === "kz")   return arr.sort((a, b) => (b.kzScore ?? 0) - (a.kzScore ?? 0));
-  if (key === "odds") return arr.sort((a, b) => (a.odds > 0 ? a.odds : 99) - (b.odds > 0 ? b.odds : 99));
+  if (key === "odds") return arr.sort((a, b) => oddsSortValue(a.odds) - oddsSortValue(b.odds));
   if (key === "top3") return arr.sort((a, b) => (b.top3Probability ?? 0) - (a.top3Probability ?? 0));
   return arr;
 }
@@ -1507,8 +1534,8 @@ function HorseComparator({ arrival, selectedHorseId }: { arrival: HorsePredictio
     { label: "PronoScore",   getVal: (h) => (Number.isFinite(h.kzScore) ? String(Math.round(h.kzScore)) : "—") },
     { label: "P(Gagnant)", getVal: (h) => `${Math.round(h.winProbability)}%` },
     { label: "P(Top 3)",   getVal: (h) => `${Math.round(h.top3Probability)}%` },
-    { label: "Cote",       getVal: (h) => h.odds > 0 ? String(h.odds) : "—" },
-    { label: "Value",      getVal: (h) => `${Math.round(h.valueIndex)}%` },
+    { label: "Cote",       getVal: (h) => formatOdds(h.odds) },
+    { label: "Value",      getVal: (h) => (Number.isFinite(h.valueIndex) ? `${Math.round(h.valueIndex)}%` : "—") },
     { label: "Confiance",  getVal: (h) => h.confidence },
   ];
   return (
@@ -1591,7 +1618,7 @@ function HorseRadarChart({ horse }: { horse?: HorsePrediction | null }) {
 /* ─── OddsKzBubble (#93) ─────────────────────────────────────────── */
 function OddsKzBubble({ horses }: { horses: HorsePrediction[] }) {
   const W = 260, H = 160, PX = 30, PY = 20;
-  const valid = horses.filter((h) => h.odds > 0 && Number.isFinite(h.kzScore));
+  const valid = horses.filter((h) => hasOdds(h.odds) && Number.isFinite(h.kzScore));
   if (valid.length < 2) return <p className="text-sm text-muted">Données insuffisantes.</p>;
   const maxOdds = Math.max(...valid.map((h) => h.odds), 1);
   const maxKz   = Math.max(...valid.map((h) => h.kzScore), 1);

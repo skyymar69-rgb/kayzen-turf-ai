@@ -114,6 +114,12 @@ export type RaceAnalysis = {
   riskLevel: "Prudent" | "Equilibre" | "Speculatif";
   betTypes: BetOffer[];
   horses: HorsePrediction[];
+  /**
+   * Vrai dès qu'au moins un partant a une cote PMU publiée. Faux tant que le
+   * marché n'a rien émis : le classement repose alors sur le modèle seul et
+   * l'interface doit le dire, au lieu d'afficher une cote fabriquée.
+   */
+  oddsAvailable: boolean;
 };
 
 export type BetSimulation = {

@@ -62,6 +62,8 @@ export function probabilityToFairOdds(winProbability: number) {
 }
 
 export function marketEdgePercent(winProbability: number, decimalOdds: number) {
+  // Sans cote publiée (NaN ou ≤ 1), il n'y a pas d'edge à mesurer.
+  if (!Number.isFinite(decimalOdds) || decimalOdds <= 1) return 0;
   const probability = winProbability / 100;
   return round((decimalOdds * probability - 1) * 100, 1);
 }

@@ -21,6 +21,7 @@ export const raceAnalysis: RaceAnalysis = {
   id: `R1C3-${DEMO_TODAY}`,
   name: "Prix PronoTurf Data",
   raceDate: DEMO_TODAY,
+  oddsAvailable: true,
   relativeDay: "today",
   reunionNumber: 1,
   courseNumber: 3,

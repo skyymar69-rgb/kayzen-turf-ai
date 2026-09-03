@@ -1,5 +1,6 @@
 import { Flame, ShieldCheck, Sparkles, TrendingUp } from "lucide-react";
 
+import { formatOdds, hasOdds } from "@/lib/format";
 import { SELECTION_SIZE, buildSelection, roleLabel, type SelectedHorse, type SelectionRole } from "@/lib/selection";
 import type { HorsePrediction } from "@/lib/types";
 
@@ -102,7 +103,7 @@ export function RaceSelectionPanel({
         {tocard ? (
           <p className="text-xs text-fg">
             <span className="font-bold text-accent-text">Tocard signalé</span> — #{tocard.horse.number}{" "}
-            {tocard.horse.horse} à {tocard.horse.odds}, que le modèle estime{" "}
+            {tocard.horse.horse} à {formatOdds(tocard.horse.odds)}, que le modèle estime{" "}
             {tocard.horse.valueRatio?.toFixed(2)}× plus probable que ne le dit le marché.
             {tocard.isPromotedTocard && ` Retenu en ${SELECTION_SIZE}ᵉ place à ce titre, hors des ${SELECTION_SIZE - 1} meilleures probabilités.`}
           </p>
@@ -148,7 +149,8 @@ function SelectionRow({ entry }: { entry: SelectedHorse }) {
           )}
         </div>
         <p className="mt-1 truncate text-xs text-muted">
-          {horse.jockey} · cote {horse.odds} · marché {pct(horse.marketProbability ?? NaN)}
+          {horse.jockey} · cote {formatOdds(horse.odds)} · marché{" "}
+          {hasOdds(horse.odds) ? pct(horse.marketProbability ?? NaN) : "—"}
         </p>
         {/* Barre = probabilité Top 3 */}
         <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-surface-sub">

@@ -207,7 +207,12 @@ function buildPrediction(participant, fieldSize) {
   );
 
   return {
-    odds: odds > 1 ? odds : fairOdds,
+    // Sans rapport PMU, la cote est ABSENTE — pas remplacée par la cote juste
+    // du modèle. Stocker `fairOdds` à sa place faisait afficher « cote 8,82 »
+    // pour une course dont le marché n'avait encore rien publié, et `devig`
+    // comparait ensuite le modèle à lui-même : tous les partants ressortaient
+    // à la même probabilité (Quinté du 04/09/2026, quinze chevaux à 7-8 %).
+    odds: odds > 1 ? odds : null,
     fairOdds,
     marketEdge,
     winProbability: Number(winProbability.toFixed(1)),
