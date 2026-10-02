@@ -39,7 +39,9 @@ jobs:
 
       - name: Complete missing official payouts
         timeout-minutes: 15
-        run: node scripts/backfill-payouts.mjs --from 2026-04-01
+        # Borné : un rattrapage massif (première exécution, panne PMU) se fait
+        # en plusieurs nuits plutôt que de dépasser le délai de l'étape.
+        run: node scripts/backfill-payouts.mjs --from 2026-04-01 --limit 400
 
       - name: Backtest and live tracking
         timeout-minutes: 20
