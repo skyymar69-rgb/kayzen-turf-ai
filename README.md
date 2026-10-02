@@ -95,11 +95,11 @@ gh workflow run import_pmu.yml -f date=03052026
 
 ### Odds refresh before the off
 
-The market is the best predictor we have, but only close to the start (37.6 % of winners found with the starting price versus 31.0 % with odds 6-12 h old, see `scripts/evaluate-freshness.mjs`). `refresh_odds.yml` therefore runs every 30 minutes from 07:05 to 22:35 UTC and refreshes `entries.odds` for the races starting within the next 45 minutes — plus the late-published speed figures and pool shares — and removes declared non-runners. It never creates races.
+The market is the best predictor we have, but only close to the start (37.6 % of winners found with the starting price versus 31.0 % with odds 6-12 h old, see `scripts/evaluate-freshness.mjs`). GitHub does not guarantee scheduled-run times (8 real runs out of 60 planned between 30/09 and 02/10/2026), so `live_refresh.yml` starts every hour from 07:03 to 22:03 UTC a loop of almost three hours (`scripts/live-refresh.ts`); the next run cancels and replaces it. Each race starting within 90 minutes is refreshed through `src/lib/live/refresh-race.ts` — odds, pool shares, speed figures, declared non-runners — at most every 15 min beyond H-60, every 4 min until H-15, every 45 s in the last quarter of an hour. The same module serves the "Analyser maintenant" button on race pages. History is written sparingly (`odds_snapshots`, `pool_snapshots`) and the prediction displayed at H-60, H-15 and just before the off is frozen in `prediction_snapshots`. It never creates races.
 
 ```bash
-npm run data:refresh:odds -- --window 90   # locally, 90-minute window
-npm run data:refresh:odds -- --dry-run     # no write
+npm run data:refresh:live -- --once          # one pass, locally
+npm run data:refresh:live -- --minutes 30    # 30-minute loop
 ```
 
 A weekly `compact_storage.yml` (Sunday 02:00 UTC) runs `npm run db:compact -- --apply`; it shares a concurrency group with the import so the two never overlap.

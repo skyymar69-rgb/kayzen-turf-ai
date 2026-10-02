@@ -37,8 +37,8 @@ Every write path that removes rows, and the guard that bounds it:
   would remove more than 5 % of the races in the database aborts instead of
   deleting. An out-of-scope race is one the product never displays, so this is
   a scope decision, not retention.
-- **`scripts/refresh-odds.mjs`** (`npm run data:refresh:odds`, every 30 min
-  before the off) removes from `entries` the runners the PMU API no longer
+- **`src/lib/live/refresh-race.ts`** (loop `scripts/live-refresh.ts`, run by
+  `live_refresh.yml`, and the "Analyser maintenant" button) removes from `entries` the runners the PMU API no longer
   lists as `PARTANT` — declared non-runners. A phantom runner distorts the
   de-vigged probabilities of every real runner, so it must go. Guard: if the
   API returns fewer than 70 % of the runners known in the database for that
@@ -47,6 +47,16 @@ Every write path that removes rows, and the guard that bounds it:
   single transaction, each time the API publishes an arrival (provisional then
   final). Positions are replaced, never lost.
 - **`scripts/compact-storage.mjs`**, described below, removes redundancy only.
+
+## Tables added in October 2026
+
+`pool_snapshots`, `prediction_snapshots`, `race_payouts` and
+`track_record_reports` are retained indefinitely like the rest. They are sized
+for it: one row per race (not per runner) with parallel arrays, and snapshots
+spaced according to the time left before the off (every 30 min beyond H-60,
+10 min until H-15, 4 min afterwards). `prediction_snapshots` holds at most
+three rows per race (H-60, H-15, H-2) — H-2 is overwritten until the off,
+which is an update, not a deletion.
 
 ## Storage Strategy
 

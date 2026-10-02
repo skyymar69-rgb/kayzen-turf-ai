@@ -272,3 +272,66 @@ create table if not exists privacy_requests (
 );
 
 create index if not exists privacy_requests_status_idx on privacy_requests (status, created_at);
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Fondations de la roadmap d'octobre 2026 : historiser ce qui était écrasé,
+-- figer ce qui était recalculé, stocker ce qui n'était pas relevé.
+--
+-- Le budget de stockage commande la forme de ces tables : la base était à
+-- 342 Mo sur 512 le 02/10/2026 et la politique de rétention interdit la purge
+-- par ancienneté (docs/DATA_RETENTION_POLICY.md). D'où des lignes par COURSE
+-- plutôt que par cheval, des tableaux parallèles et un relevé espacé selon la
+-- distance au départ (voir src/lib/live/refresh-race.ts). Budget visé : moins
+-- de 0,5 Mo par jour pour l'ensemble.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- Dernier rafraîchissement des cotes : sert de verrou (un seul rafraîchissement
+-- par course à la fois, qu'il vienne de la boucle planifiée ou d'un visiteur)
+-- et d'âge de la cote affiché sur la page.
+alter table races add column if not exists odds_refreshed_at timestamptz;
+
+-- Parts des enjeux PMU dans le temps. `entries.pool_*` ne garde que la valeur
+-- courante : sans série, aucune mesure de « l'argent qui rentre » n'est possible.
+-- Une ligne par course et par relevé ; `numbers[i]` porte `pool_win[i]`.
+create table if not exists pool_snapshots (
+  race_id text not null references races(id) on delete cascade,
+  observed_at timestamptz not null,
+  numbers smallint[] not null,
+  pool_win real[] not null,
+  pool_place real[],
+  primary key (race_id, observed_at)
+);
+
+-- Pronostic tel qu'il était affiché avant le départ, gelé. Sans lui, aucun
+-- suivi honnête : recalculer après coup utiliserait la cote finale, que
+-- personne ne connaissait au moment de jouer.
+--   H-60 / H-15  premier relevé passé ce seuil, écrit une fois, jamais modifié ;
+--   H-2          dernier relevé avant le départ, réécrit jusqu'au départ.
+-- `payload` : tableaux parallèles (numéros, cotes, probabilités, profils).
+create table if not exists prediction_snapshots (
+  race_id text not null references races(id) on delete cascade,
+  stage text not null check (stage in ('H-60', 'H-15', 'H-2')),
+  captured_at timestamptz not null,
+  minutes_to_start integer not null,
+  model_version text not null,
+  payload jsonb not null,
+  primary key (race_id, stage)
+);
+
+-- Rapports officiels PMU, pour 1 €. Le ROI se calcule sur ce que le PMU a
+-- réellement payé, pas sur une cote observée avant le départ.
+create table if not exists race_payouts (
+  race_id text not null references races(id) on delete cascade,
+  bet_type text not null,
+  combination text not null,
+  dividend numeric not null,
+  primary key (race_id, bet_type, combination)
+);
+
+-- Rapports du suivi de performance (backtest et suivi en direct), lus par la
+-- page /track-record. Une ligne par génération ; quelques dizaines de Ko.
+create table if not exists track_record_reports (
+  id bigint generated always as identity primary key,
+  generated_at timestamptz not null default now(),
+  report jsonb not null
+);

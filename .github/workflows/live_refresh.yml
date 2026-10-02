@@ -1,0 +1,56 @@
+name: Live refresh
+
+# Cotes, parts des enjeux et pronostics gelés des courses imminentes.
+#
+# Le workflow précédent demandait un passage toutes les 30 minutes, mais GitHub
+# ne garantit pas l'heure des déclenchements planifiés : 8 passages réels sur 60
+# prévus entre le 30/09 et le 02/10/2026, jusqu'à deux heures de retard. Chaque
+# déclenchement lance désormais une boucle de près de trois heures
+# (scripts/live-refresh.ts) ; le suivant l'interrompt et prend le relais. Un
+# déclenchement en retard ou sauté ne laisse donc plus de trou.
+
+on:
+  workflow_dispatch:
+    inputs:
+      minutes:
+        description: "Durée de la boucle en minutes"
+        required: false
+        default: "170"
+        type: string
+  schedule:
+    # Toutes les heures de 07:00 à 22:00 UTC : réunions de la mi-journée
+    # jusqu'aux nocturnes de Vincennes, heure d'été comme d'hiver.
+    - cron: "3 7-22 * * *"
+
+permissions:
+  contents: read
+
+# Le passage le plus récent prend la main : sa boucle couvre les trois heures
+# suivantes, celle qu'il interrompt n'a plus rien à apporter.
+concurrency:
+  group: live-refresh
+  cancel-in-progress: true
+
+jobs:
+  live-refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 185
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      # Entrée passée par l'environnement, jamais interpolée dans `run:`.
+      LOOP_MINUTES: ${{ inputs.minutes || '170' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Refresh imminent races
+        run: npx tsx scripts/live-refresh.ts --minutes "$LOOP_MINUTES"

@@ -1,0 +1,35 @@
+name: Freshness check
+
+# Alerte quotidienne : échoue (et GitHub envoie son courriel d'échec) si plus
+# de 10 % des courses du jour sont parties sans relevé de cote ni de pool dans
+# les 20 minutes précédant le départ. Voir scripts/check-freshness.mjs.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "50 22 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  freshness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check odds freshness for today's races
+        run: node scripts/check-freshness.mjs

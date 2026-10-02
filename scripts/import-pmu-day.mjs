@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { neon } from "@neondatabase/serverless";
+import { storePayouts } from "./lib/payouts.mjs";
 
 const PMU_BASE = "https://offline.turfinfo.api.pmu.fr/rest/client/7/programme";
 const USER_AGENT = "KayzenTurfAI/0.1 contact:github.com/skyymar69-rgb/kayzen-turf-ai";
@@ -630,6 +631,18 @@ async function importDate(sql, pmuDate, maxRaces) {
 
         if (course.statut && course.statut !== "ARRIVEE_DEFINITIVE_COMPLETE") {
           console.log(`[pmu] ${raceId}: arrivée ${arrival.length} places, statut ${course.statut} — sera complétée au prochain passage`);
+        } else {
+          // Rapports officiels, une seule fois par course : ils ne bougent plus
+          // après l'arrivée définitive. Un échec ici ne doit pas coûter l'import.
+          const [{ known }] = await sql`select count(*)::int as known from race_payouts where race_id = ${raceId}`;
+          if (known === 0) {
+            try {
+              const rapports = await fetchJson(`${PMU_BASE}/${pmuDate}/R${reunion.numOfficiel}/C${course.numOrdre}/rapports-definitifs`);
+              await storePayouts(sql, raceId, rapports);
+            } catch (error) {
+              console.warn(`[pmu] ${raceId}: rapports officiels indisponibles (${error.message})`);
+            }
+          }
         }
       }
 

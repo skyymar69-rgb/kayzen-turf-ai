@@ -9,7 +9,7 @@
     "start": "next start -p 3100",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "node --test \"tests/**/*.test.mjs\"",
+    "test": "node --import tsx --test \"tests/**/*.test.mjs\" \"tests/**/*.test.ts\"",
     "brand:icons": "node scripts/generate-icons.mjs",
     "db:schema": "node scripts/apply-schema.mjs",
     "db:stats": "node scripts/db-stats.mjs",
@@ -17,7 +17,7 @@
     "model:learn": "node scripts/learn-from-results.mjs --apply",
     "data:prune:scope": "node scripts/prune-race-scope.mjs",
     "data:import:pmu": "node scripts/import-pmu-day.mjs",
-    "data:refresh:odds": "node scripts/refresh-odds.mjs",
+    "data:refresh:live": "tsx scripts/live-refresh.ts",
     "db:health": "node scripts/db-health.mjs",
     "model:evaluate": "node scripts/evaluate-model.mjs",
     "model:freshness": "node scripts/evaluate-freshness.mjs"
@@ -41,6 +41,7 @@
     "eslint-config-next": "^16.3.4",
     "sharp": "^0.35.4",
     "tailwindcss": "^4.2.4",
+    "tsx": "^4.23.15",
     "typescript": "^6.0.3"
   }
 }

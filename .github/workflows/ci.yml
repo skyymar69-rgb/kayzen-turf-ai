@@ -1,0 +1,44 @@
+name: CI
+
+# Vérification de chaque poussée : types, lint, tests, build de production.
+# Vercel construit aussi, mais sans lint ni tests : une régression de logique
+# partait en production sans signal.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Tests
+        run: npm test
+
+      # Sans DATABASE_URL, le build rend le mode démonstration : il vérifie que
+      # toutes les pages compilent et se pré-rendent, sans toucher à la base.
+      - name: Build
+        run: npm run build

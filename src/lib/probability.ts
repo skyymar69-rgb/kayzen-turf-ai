@@ -56,6 +56,14 @@ import type { HorsePrediction } from "@/lib/types";
 export const MODEL_WEIGHT = 0.1;
 
 /**
+ * Version de la chaîne de calcul servie, gravée dans chaque pronostic gelé
+ * (`prediction_snapshots.model_version`). À changer dès que `MODEL_WEIGHT`,
+ * les entrées du modèle ou les règles de profil changent : le suivi de
+ * performance sépare les résultats par version.
+ */
+export const MODEL_VERSION = "2026.10-marche-w0.10";
+
+/**
  * Étalement du modèle, appliqué sur des scores centrés-réduits.
  * Travailler en z-score rend le réglage indépendant de l'amplitude brute des
  * kzScore — c'est précisément ce qui manquait à l'ancienne constante

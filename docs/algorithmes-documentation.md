@@ -810,17 +810,14 @@ Le modèle actuel est **fonctionnel sur le Plat** mais présente des **lacunes s
 
 ### 10.3 Objectif Final
 
-Avec l'implémentation complète des 150 améliorations (50 × 3 disciplines) :
-
-```
-Plat    : winner hit ~36%, top3 ~62%, ROI simulé +8%
-Trot    : winner hit ~32%, top3 ~58%, ROI simulé +10%
-Obstacle: winner hit ~30%, top3 ~56%, ROI simulé +12%
-
-Global  : winner hit ~33%, top3 ~59%, ROI simulé +9%
-```
-
-Ces objectifs font de **PronoTurf le système de prédiction le plus précis et le plus complet disponible publiquement** sur les courses hippiques françaises.
+> **Avertissement (02/10/2026).** Les chiffres qui figuraient ici (« ROI simulé
+> +9 % » et ses déclinaisons par discipline) étaient des **objectifs rédigés le
+> 07/05/2026, jamais mesurés** : aucun script du dépôt ne les produisait. Ils
+> ont été retirés. Les seuls chiffres valables sont ceux du banc
+> `scripts/evaluate-model.mjs` (marché seul 36,5 % de gagnants trouvés, modèle
+> 32,1 %) et du suivi publié sur la page `/track-record`, calculé sur les
+> rapports officiels PMU, net du prélèvement, avec la période et le nombre de
+> paris.
 
 ---
 
