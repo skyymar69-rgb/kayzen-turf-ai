@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Lexique turf",
-  description: "Tous les termes du turf expliqués : PronoScore, value bet, Kelly criterion, Quinté+, PMU, arrivée, cote, mise…",
+  description: "Tous les termes du turf expliqués : avis de l'IA, value bet, Kelly criterion, Quinté+, PMU, arrivée, cote, mise…",
   alternates: { canonical: "/lexique" },
 };
 
@@ -21,7 +21,7 @@ const GLOSSARY: Array<{ term: string; definition: string; category: string }> = 
   { category: "Paris", term: "Multi", definition: "Pari combinatoire sur 4 à 8 chevaux dans les 4 premiers. Flexi possible pour réduire la mise." },
   { category: "Paris", term: "Flexi", definition: "Option permettant de parier une fraction du ticket de base (ex : 25%). Réduit la mise, réduit proportionnellement le rapport." },
   /* Algorithme */
-  { category: "Algorithme", term: "PronoScore", definition: "Score composite PronoTurf de 0 à 99. Combine probabilité gagnant, probabilité Top 3, edge marché, stabilité des rangs par Monte Carlo et niveau de confiance." },
+  { category: "Algorithme", term: "IA (avis sans cote)", definition: "Probabilité de victoire estimée par le modèle fondamental de PronoTurf à partir de la forme, des gains et de l'entourage, sans jamais voir la cote. Comparée à la probabilité du marché, elle fait apparaître les désaccords (profils Caché, Value, À éviter). Voir la page Méthode." },
   { category: "Algorithme", term: "Value Bet", definition: "Pari à valeur positive : la probabilité estimée dépasse la probabilité implicite de la cote. Edge > 10% = signal fort." },
   { category: "Algorithme", term: "Edge marché", definition: "Écart en % entre la probabilité du modèle et la probabilité implicite du marché. Positif = sous-évaluation, négatif = surcote." },
   { category: "Algorithme", term: "Kelly Criterion", definition: "Formule mathématique donnant la fraction optimale de bankroll à miser : f = (bp − q) / b. PronoTurf utilise Kelly fractionné (50%) pour limiter la variance." },

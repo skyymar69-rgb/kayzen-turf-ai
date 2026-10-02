@@ -12,7 +12,8 @@ const NAV_LINKS = [
   { href: "/",                      label: "Programme" },
   { href: "/pronostics",            label: "Pronostics" },
   { href: "/tarifs",                label: "Tarifs" },
-  { href: "/techniques-prediction", label: "Notre IA" },
+  { href: "/methode",               label: "Méthode" },
+  { href: "/track-record",          label: "Suivi" },
   { href: "/lexique",               label: "Lexique" },
 ] as const;
 
@@ -107,7 +108,7 @@ export function SiteHeader() {
           {/* amélioration #15 — logo texte masqué quand scrolled sur mobile */}
           <span className={`hidden flex-col sm:flex transition-opacity duration-200 ${scrolled ? "opacity-80" : ""}`}>
             <span className="font-display text-base font-bold leading-tight tracking-tight text-white">PronoTurf</span>
-            <span className="text-[11px] font-medium uppercase tracking-widest text-white/70">Prédictions · Analyses · Gains</span>
+            <span className="text-[11px] font-medium uppercase tracking-widest text-white/70">Prédictions · Analyses · Suivi</span>
           </span>
         </Link>
 

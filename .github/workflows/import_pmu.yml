@@ -68,3 +68,7 @@ jobs:
       - name: Learn from official results
         timeout-minutes: 30
         run: npm run model:learn
+
+      - name: Update jockey and trainer statistics
+        timeout-minutes: 5
+        run: node scripts/update-connection-stats.mjs

@@ -1,47 +1,39 @@
-import { Flame, ShieldCheck, Sparkles, TrendingUp } from "lucide-react";
+"use client";
 
+import { useMemo, useState } from "react";
 import { formatOdds, hasOdds } from "@/lib/format";
-import { SELECTION_SIZE, buildSelection, roleLabel, type SelectedHorse, type SelectionRole } from "@/lib/selection";
-import type { HorsePrediction } from "@/lib/types";
+import type { SignalRecord } from "@/lib/race-repository";
+import type { RaceSelection, SelectedHorse } from "@/lib/selection";
+import { STRATEGY_LABELS, strategyTicket, type Strategy } from "@/lib/strategy";
+import { ProfileBadge, pct, roiLine } from "@/components/course/shared";
 
 /**
  * LA SÉLECTION — unique classement de la page course.
  *
  * Huit chevaux, ordonnés par probabilité. Le Top 3 est constitué des trois
- * premiers de cette même liste : aucun autre bloc de la page ne doit reclasser
- * le peloton, sous peine de réintroduire les contradictions d'affichage.
+ * premiers de cette même liste : aucun autre bloc de la page ne reclasse le
+ * peloton. La stratégie choisie change le ticket proposé, jamais l'ordre.
  */
 
-const ROLE_STYLES: Record<SelectionRole, string> = {
-  base: "bg-accent text-white",
-  favori: "bg-surface-inv text-white",
-  outsider: "bg-accent-lo text-accent-text",
-  tocard: "bg-surface-sub text-fg border border-border-strong",
-};
-
-const ROLE_ICONS: Record<SelectionRole, typeof ShieldCheck> = {
-  base: ShieldCheck,
-  favori: TrendingUp,
-  outsider: Sparkles,
-  tocard: Flame,
-};
-
-function pct(value: number): string {
-  return Number.isFinite(value) ? `${Math.round(value)}%` : "—";
-}
-
 function barWidth(value: number): number {
-  return Number.isFinite(value) ? Math.max(2, Math.min(100, value)) : 2;
+  // Arrondi : un flottant brut s'écrit différemment au rendu serveur et au client.
+  return Number.isFinite(value) ? Math.round(Math.max(2, Math.min(100, value)) * 10) / 10 : 2;
 }
 
 export function RaceSelectionPanel({
-  horses,
-  recommendedTicket,
+  selection,
+  signals,
+  selectedNumber,
+  onSelect,
 }: {
-  horses: HorsePrediction[];
-  recommendedTicket?: { label: string; ticket: string } | null;
+  selection: RaceSelection;
+  signals: Map<string, SignalRecord>;
+  selectedNumber: number | null;
+  onSelect: (number: number) => void;
 }) {
-  const selection = buildSelection(horses);
+  const [strategy, setStrategy] = useState<Strategy>("securise");
+  const ticket = useMemo(() => strategyTicket(selection, strategy), [selection, strategy]);
+
   if (selection.horses.length === 0) {
     return (
       <section className="mt-4 rounded-2xl border border-border bg-surface p-6 text-sm text-muted">
@@ -50,21 +42,16 @@ export function RaceSelectionPanel({
     );
   }
 
-  const { top3, tocard } = selection;
+  const { top3 } = selection;
   const complements = selection.horses.slice(3);
+  const signal = ticket?.signalKey ? signals.get(ticket.signalKey) : undefined;
 
   return (
-    <section className="mt-4 overflow-hidden rounded-2xl border-2 border-accent/30 bg-surface shadow-sm">
-      {/* En-tête : les chevaux à jouer, Top 3 détaché du reste.
-          C'est la seule chose à lire pour décider — tout le reste de la page
-          n'est là que pour justifier ces numéros. */}
+    <section className="mt-4 overflow-hidden rounded-2xl border-2 border-accent/30 bg-surface shadow-sm" aria-label="Notre sélection">
       <header className="border-b border-border bg-accent-lo px-5 py-4 sm:px-6">
-        <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-x-8 gap-y-4">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-accent-text">
-              Notre sélection — {selection.horses.length} chevaux
-            </p>
-
+            <p className="text-[10px] font-bold uppercase tracking-widest text-accent-text">Notre sélection — {selection.horses.length} chevaux</p>
             <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <span className="font-mono text-4xl font-bold leading-none tracking-tight text-accent-text">
                 {top3.map((s) => s.horse.number).join(" – ")}
@@ -75,95 +62,91 @@ export function RaceSelectionPanel({
                 </span>
               )}
             </div>
-
             <p className="mt-2 text-xs text-accent-text/80">
               <span className="font-bold">Top 3</span> en gras — les trois plus fortes probabilités
               {complements.length > 0 && <> · les {complements.length} suivants complètent les tickets larges</>}
             </p>
           </div>
 
-          {recommendedTicket && (
-            <div className="rounded-xl border border-border bg-surface px-4 py-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Ticket recommandé</p>
-              <p className="mt-0.5 text-sm font-semibold text-fg">{recommendedTicket.label}</p>
-              <p className="mt-1 font-mono text-2xl font-bold text-accent-text">{recommendedTicket.ticket}</p>
+          <div className="w-full max-w-sm rounded-xl border border-border bg-surface px-4 py-3 sm:w-auto">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Ticket</p>
+              <div role="radiogroup" aria-label="Stratégie" className="flex overflow-hidden rounded-lg border border-border text-[11px] font-bold">
+                {(Object.keys(STRATEGY_LABELS) as Strategy[]).map((s) => (
+                  <button
+                    key={s}
+                    aria-checked={strategy === s}
+                    className={`px-2.5 py-1 transition ${strategy === s ? "bg-accent text-white" : "text-muted hover:bg-surface-sub"}`}
+                    onClick={() => setStrategy(s)}
+                    role="radio"
+                    type="button"
+                  >
+                    {STRATEGY_LABELS[s]}
+                  </button>
+                ))}
+              </div>
             </div>
-          )}
+            {ticket ? (
+              <>
+                <p className="mt-2 text-sm font-semibold text-fg">{ticket.betLabel}</p>
+                <p className="font-mono text-2xl font-bold text-accent-text">{ticket.numbers.join(" – ")}</p>
+                <p className="mt-1 text-xs text-muted">
+                  Passe dans <span className="font-bold text-fg">{pct(ticket.probability)}</span> des cas selon nos probabilités. {ticket.rationale}
+                </p>
+                <p className="mt-1 text-[11px] text-muted">
+                  {signal && signal.bets > 0 ? <>Historique : <span className={signal.roi >= 0 ? "font-bold text-accent-text" : "font-bold text-danger"}>{roiLine(signal.roi, signal.bets)}</span>.</> : "Rendement historique non encore mesuré."}
+                </p>
+              </>
+            ) : (
+              <p className="mt-2 text-sm text-muted">Aucun cheval ne correspond à cette stratégie dans cette course.</p>
+            )}
+          </div>
         </div>
       </header>
 
-      {/* La sélection entière, un seul classement */}
       <ol className="divide-y divide-border">
         {selection.horses.map((entry) => (
-          <SelectionRow key={entry.horse.id} entry={entry} />
+          <SelectionRow key={entry.horse.id} entry={entry} selected={selectedNumber === entry.horse.number} onSelect={onSelect} />
         ))}
       </ol>
-
-      <footer className="border-t border-border bg-surface-sub px-5 py-3 sm:px-6">
-        {tocard ? (
-          <p className="text-xs text-fg">
-            <span className="font-bold text-accent-text">Tocard signalé</span> — #{tocard.horse.number}{" "}
-            {tocard.horse.horse} à {formatOdds(tocard.horse.odds)}, que le modèle estime{" "}
-            {tocard.horse.valueRatio?.toFixed(2)}× plus probable que ne le dit le marché.
-            {tocard.isPromotedTocard && ` Retenu en ${SELECTION_SIZE}ᵉ place à ce titre, hors des ${SELECTION_SIZE - 1} meilleures probabilités.`}
-          </p>
-        ) : (
-          <p className="text-xs text-muted">
-            Aucun tocard signalé sur cette course : le marché ne sous-évalue aucune grosse cote.
-          </p>
-        )}
-      </footer>
     </section>
   );
 }
 
-function SelectionRow({ entry }: { entry: SelectedHorse }) {
-  const { horse, rank, role, isValue } = entry;
-  const Icon = ROLE_ICONS[role];
+function SelectionRow({ entry, selected, onSelect }: { entry: SelectedHorse; selected: boolean; onSelect: (n: number) => void }) {
+  const { horse, rank, profile } = entry;
   const inTop3 = rank <= 3;
 
   return (
-    <li className={`flex items-center gap-3 px-4 py-3 sm:px-6 ${inTop3 ? "bg-surface" : "bg-surface-sub/40"}`}>
-      {/* Rang */}
-      <span
-        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl font-mono text-base font-bold ${
-          inTop3 ? "bg-accent text-white" : "bg-surface-sub text-muted"
-        }`}
+    <li>
+      <button
+        aria-pressed={selected}
+        className={`flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-accent-lo/50 sm:px-6 ${selected ? "bg-accent-lo" : inTop3 ? "bg-surface" : "bg-surface-sub/40"}`}
+        onClick={() => onSelect(horse.number)}
+        type="button"
       >
-        {rank}
-      </span>
-
-      {/* Numéro + nom + rôle */}
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-mono text-lg font-bold text-fg">#{horse.number}</span>
-          <span className="truncate font-semibold text-fg">{horse.horse}</span>
-          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${ROLE_STYLES[role]}`}>
-            <Icon size={11} />
-            {roleLabel(role)}
+        <span className={`flex size-9 shrink-0 items-center justify-center rounded-xl font-mono text-base font-bold ${inTop3 ? "bg-accent text-white" : "bg-surface-sub text-muted"}`}>
+          {rank}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="font-mono text-lg font-bold text-fg">#{horse.number}</span>
+            <span className="truncate font-semibold text-fg">{horse.horse}</span>
+            <ProfileBadge profile={profile} />
           </span>
-          {isValue && (
-            <span className="rounded-full bg-accent-lo px-2 py-0.5 text-[10px] font-bold uppercase text-accent-text">
-              Value
-            </span>
-          )}
-        </div>
-        <p className="mt-1 truncate text-xs text-muted">
-          {horse.jockey} · cote {formatOdds(horse.odds)} · marché{" "}
-          {hasOdds(horse.odds) ? pct(horse.marketProbability ?? NaN) : "—"}
-        </p>
-        {/* Barre = probabilité Top 3 */}
-        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-surface-sub">
-          <div className="h-full rounded-full bg-accent" style={{ width: `${barWidth(horse.top3Probability)}%` }} />
-        </div>
-      </div>
-
-      {/* Probabilités */}
-      <div className="shrink-0 text-right">
-        <p className="font-mono text-xl font-bold leading-none text-fg">{pct(horse.top3Probability)}</p>
-        <p className="mt-1 text-[10px] uppercase tracking-wide text-muted">Top 3</p>
-        <p className="mt-1.5 font-mono text-xs text-muted">{pct(horse.winProbability)} gagnant</p>
-      </div>
+          <span className="mt-1 block truncate text-xs text-muted">
+            {horse.jockey} · cote {formatOdds(horse.odds)} · marché {hasOdds(horse.odds) ? pct(horse.marketProbability) : "—"} · IA {pct(horse.fundamentalProbability ?? NaN)}
+          </span>
+          <span className="mt-2 block h-1.5 w-full overflow-hidden rounded-full bg-surface-sub">
+            <span className="block h-full rounded-full bg-accent" style={{ width: `${barWidth(horse.top3Probability)}%` }} />
+          </span>
+        </span>
+        <span className="shrink-0 text-right">
+          <span className="block font-mono text-xl font-bold leading-none text-fg">{pct(horse.top3Probability)}</span>
+          <span className="mt-1 block text-[10px] uppercase tracking-wide text-muted">Top 3</span>
+          <span className="mt-1.5 block font-mono text-xs text-muted">{pct(horse.winProbability)} gagnant</span>
+        </span>
+      </button>
     </li>
   );
 }

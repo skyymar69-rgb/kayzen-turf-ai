@@ -20,7 +20,7 @@ const PLANS = [
     features: [
       "1 course analysée par jour",
       "Ordre probable des partants",
-      "PronoScore et base IA",
+      "Profils des chevaux et base IA",
       "Lecture marché simplifiée",
       "Jeu responsable & pédagogie",
     ],

@@ -1,6 +1,8 @@
 import { getSql } from "@/lib/db";
 import { MODEL_VERSION } from "@/lib/probability";
+import { PROFILES_VERSION, type Profile } from "@/lib/profiles";
 import { getRaceById } from "@/lib/race-repository";
+import { buildSelection } from "@/lib/selection";
 import type { RaceAnalysis } from "@/lib/types";
 
 /**
@@ -20,16 +22,25 @@ export type FrozenPayload = {
   top3: number[];
   /** Probabilité implicite du marché, overround retiré, en %. */
   market: number[];
+  /** Avis de l'IA sans cote, en %. */
+  ai: Array<number | null>;
+  profile: Profile[];
+  profilesVersion: string;
 };
 
 export function buildFrozenPayload(race: RaceAnalysis): FrozenPayload {
-  const horses = [...race.horses].sort((a, b) => b.winProbability - a.winProbability || a.number - b.number);
+  // L'ordre est celui du classement publié : `field` vient de la même
+  // classification que la page.
+  const field = buildSelection(race.horses).field;
   return {
-    numbers: horses.map((h) => h.number),
-    odds: horses.map((h) => (Number.isFinite(h.odds) && h.odds > 1 ? h.odds : null)),
-    win: horses.map((h) => h.winProbability),
-    top3: horses.map((h) => h.top3Probability),
-    market: horses.map((h) => h.marketProbability ?? 0),
+    numbers: field.map((s) => s.horse.number),
+    odds: field.map((s) => (Number.isFinite(s.horse.odds) && s.horse.odds > 1 ? s.horse.odds : null)),
+    win: field.map((s) => s.horse.winProbability),
+    top3: field.map((s) => s.horse.top3Probability),
+    market: field.map((s) => s.horse.marketProbability ?? 0),
+    ai: field.map((s) => (Number.isFinite(Number(s.horse.fundamentalProbability)) ? Number(s.horse.fundamentalProbability) : null)),
+    profile: field.map((s) => s.profile),
+    profilesVersion: PROFILES_VERSION,
   };
 }
 

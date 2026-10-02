@@ -53,7 +53,7 @@ export default function JeuResponsablePage() {
             </div>
             <div className="space-y-3 text-sm leading-6 text-muted">
               <p>Les paris hippiques sont une activité de loisir qui comporte des risques financiers réels. Aucun système de pronostic — y compris le nôtre — ne peut garantir des gains.</p>
-              <p>Nos analyses sont des <strong className="text-fg">outils d’aide à la décision</strong>, pas des certitudes. Le modèle PronoScore est une probabilité statistique, pas une prédiction certaine.</p>
+              <p>Nos analyses sont des <strong className="text-fg">outils d’aide à la décision</strong>, pas des certitudes. Nos probabilités sont des estimations statistiques, pas des certitudes : leur rendement réel, presque toujours négatif une fois le prélèvement du PMU déduit, est publié sur la page Suivi de performance.</p>
               <p>Misez uniquement des sommes que vous pouvez vous permettre de perdre. Ne cherchez jamais à récupérer vos pertes en augmentant vos mises.</p>
             </div>
           </section>

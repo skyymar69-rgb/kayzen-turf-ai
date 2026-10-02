@@ -1,6 +1,8 @@
 import { getSql, hasDatabase } from "@/lib/db";
 import { probableArrival, raceToContext } from "@/lib/bet-recommendations";
 import { raceCards, valueBets } from "@/lib/mock-data";
+import { fundamentalProbabilities } from "@/lib/fundamental/model";
+import type { MarketHistory } from "@/lib/market";
 import { calibrateField } from "@/lib/probability";
 import type { BetOffer, Confidence, HorsePrediction, RaceAnalysis } from "@/lib/types";
 
@@ -58,6 +60,7 @@ type RaceRow = {
   betting_tier: RaceAnalysis["bettingTier"];
   risk_level: RaceAnalysis["riskLevel"];
   bet_types: BetOffer[] | string | null;
+  odds_refreshed_at: string | null;
 };
 
 type EntryRow = {
@@ -88,6 +91,12 @@ type EntryRow = {
   factors: string[] | string;
   finish_position: number | null;
   won: boolean | null;
+  pool_win: string | null;
+  pool_place: string | null;
+  jockey_runs: number | null;
+  jockey_wins: number | null;
+  trainer_runs: number | null;
+  trainer_wins: number | null;
 };
 
 export async function getRaces(filters?: { date?: string | null; day?: string | null }) {
@@ -131,7 +140,8 @@ export async function getRaces(filters?: { date?: string | null; day?: string | 
         races.race_quality_score::text,
         races.betting_tier,
         races.risk_level,
-        races.bet_types
+        races.bet_types,
+        to_char(races.odds_refreshed_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as odds_refreshed_at
       from races
       left join racecourses on racecourses.id = races.racecourse_id
       where
@@ -211,11 +221,19 @@ async function fetchEntriesByRace(raceIds: string[]) {
       entries.confidence,
       entries.factors,
       results.finish_position,
-      results.won
+      results.won,
+      entries.pool_win::text,
+      entries.pool_place::text,
+      js.runs as jockey_runs,
+      js.wins as jockey_wins,
+      ts.runs as trainer_runs,
+      ts.wins as trainer_wins
     from entries
     join horses on horses.id = entries.horse_id
     left join jockeys on jockeys.id = entries.jockey_id
     left join trainers on trainers.id = entries.trainer_id
+    left join connection_stats js on js.kind = 'jockey' and js.person_id = entries.jockey_id
+    left join connection_stats ts on ts.kind = 'trainer' and ts.person_id = entries.trainer_id
     left join results on results.race_id = entries.race_id and results.horse_id = entries.horse_id
     where entries.race_id = any(${raceIds})
     order by entries.race_id, entries.kz_score desc nulls last, entries.number
@@ -271,7 +289,8 @@ export async function getRaceById(id?: string | null): Promise<RaceAnalysis | nu
         races.race_quality_score::text,
         races.betting_tier,
         races.risk_level,
-        races.bet_types
+        races.bet_types,
+        to_char(races.odds_refreshed_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as odds_refreshed_at
       from races
       left join racecourses on racecourses.id = races.racecourse_id
       where races.id = ${id}
@@ -308,7 +327,7 @@ export async function getValueBets() {
 }
 
 function mapRace(row: RaceRow, entries: EntryRow[]): RaceAnalysis {
-  const horses = entries.map(mapHorse);
+  const horses = withFundamental(entries.map(mapHorse), row.discipline);
   return {
     id: row.id,
     name: row.name,
@@ -337,7 +356,15 @@ function mapRace(row: RaceRow, entries: EntryRow[]): RaceAnalysis {
     // page course, dashboard, tickets, API — lisent les mêmes valeurs.
     horses: calibrateField(horses),
     oddsAvailable: horses.some((horse) => Number.isFinite(horse.odds) && horse.odds > 1),
+    oddsRefreshedAt: row.odds_refreshed_at,
   };
+}
+
+/** Ajoute l'avis du modèle fondamental (sans cote), en %, à chaque partant. */
+function withFundamental(horses: HorsePrediction[], discipline: RaceAnalysis["discipline"]): HorsePrediction[] {
+  const probabilities = fundamentalProbabilities(horses, discipline);
+  if (!probabilities) return horses;
+  return horses.map((horse, i) => ({ ...horse, fundamentalProbability: Math.round(probabilities[i] * 1000) / 10 }));
 }
 
 function dateForRelativeDay(day: string) {
@@ -421,6 +448,12 @@ function mapHorse(row: EntryRow): HorsePrediction {
     factors: parseJsonArray<string>(row.factors),
     finishPosition: row.finish_position,
     won: row.won,
+    poolWin: row.pool_win != null ? Number(row.pool_win) : null,
+    poolPlace: row.pool_place != null ? Number(row.pool_place) : null,
+    jockeyRuns: row.jockey_runs,
+    jockeyWins: row.jockey_wins,
+    trainerRuns: row.trainer_runs,
+    trainerWins: row.trainer_wins,
   };
 }
 
@@ -433,5 +466,74 @@ function parseJsonArray<T>(value: T[] | string | null | undefined): T[] {
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
+  }
+}
+
+/**
+ * Historique de marché d'une course : relevés de cote par numéro et parts des
+ * enjeux. Deux requêtes indexées (race_id en tête de clé), quelques centaines
+ * de lignes au plus.
+ */
+export async function getRaceMarketHistory(raceId: string): Promise<MarketHistory> {
+  if (!hasDatabase()) return { odds: {}, pools: [] };
+  const sql = getSql();
+  try {
+    const [oddsRaw, poolRaw] = await Promise.all([
+      sql`
+        select e.number, o.odds::float8 as odds, to_char(o.observed_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as t
+          from odds_snapshots o
+          join entries e on e.race_id = o.race_id and e.horse_id = o.horse_id
+         where o.race_id = ${raceId}
+         order by o.observed_at
+      `,
+      sql`
+        select to_char(observed_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as t, numbers, pool_win
+          from pool_snapshots
+         where race_id = ${raceId}
+         order by observed_at
+      `,
+    ]);
+    const oddsRows = oddsRaw as Array<{ number: number; odds: number; t: string }>;
+    const poolRows = poolRaw as Array<{ t: string; numbers: number[]; pool_win: number[] }>;
+    const odds: MarketHistory["odds"] = {};
+    for (const row of oddsRows) (odds[row.number] ??= []).push({ t: row.t, odds: Number(row.odds) });
+    const pools = poolRows.map((row) => ({ t: row.t, numbers: row.numbers.map(Number), win: row.pool_win.map(Number) }));
+    return { odds, pools };
+  } catch (cause) {
+    // L'historique enrichit la page, il ne la conditionne pas.
+    console.error("Historique de marché indisponible pour %s", raceId, cause);
+    return { odds: {}, pools: [] };
+  }
+}
+
+export type SignalRecord = {
+  key: string;
+  label: string;
+  betType: string;
+  bets: number;
+  hitRate: number;
+  roi: number;
+  roiLow: number;
+  roiHigh: number;
+};
+
+export type TrackRecordSummary = {
+  generatedAt: string;
+  period: { from: string; to: string };
+  signals: SignalRecord[];
+};
+
+/** Dernier rapport du suivi de performance, ou `null` s'il n'en existe pas encore. */
+export async function getLatestTrackRecord(): Promise<(TrackRecordSummary & Record<string, unknown>) | null> {
+  if (!hasDatabase()) return null;
+  try {
+    const sql = getSql();
+    const rows = (await sql`
+      select report from track_record_reports order by generated_at desc limit 1
+    `) as Array<{ report: TrackRecordSummary & Record<string, unknown> }>;
+    return rows[0]?.report ?? null;
+  } catch (cause) {
+    console.error("Suivi de performance indisponible", cause);
+    return null;
   }
 }

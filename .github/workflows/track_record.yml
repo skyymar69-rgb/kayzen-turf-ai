@@ -1,0 +1,46 @@
+name: Track record
+
+# Suivi de performance quotidien : complète les rapports officiels PMU manquants,
+# puis recalcule le backtest et le suivi en direct (pronostics gelés), publiés
+# sur /track-record. Voir scripts/backtest.ts.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "15 23 * * *"
+
+permissions:
+  contents: read
+
+# Lecture seule de la base, hormis une ligne de rapport : peut tourner pendant
+# un import, mais jamais en double.
+concurrency:
+  group: track-record
+  cancel-in-progress: false
+
+jobs:
+  track-record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Complete missing official payouts
+        timeout-minutes: 15
+        run: node scripts/backfill-payouts.mjs --from 2026-04-01
+
+      - name: Backtest and live tracking
+        timeout-minutes: 20
+        run: npx tsx scripts/backtest.ts

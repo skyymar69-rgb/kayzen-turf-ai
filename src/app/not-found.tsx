@@ -27,10 +27,10 @@ const PISTES = [
     body: "Ordre probable, base IA et value bets, course par course.",
   },
   {
-    href: "/prono-score",
+    href: "/methode",
     icon: Compass,
-    title: "Le PronoScore",
-    body: "Comment le score est calculé, et ce qu'il ne dit pas.",
+    title: "Notre méthode",
+    body: "Comment chaque chiffre est calculé, et ce qu'il ne dit pas.",
   },
   {
     href: "/lexique",

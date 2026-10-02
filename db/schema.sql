@@ -335,3 +335,17 @@ create table if not exists track_record_reports (
   generated_at timestamptz not null default now(),
   report jsonb not null
 );
+
+-- Réussite des jockeys/drivers et entraîneurs, variable du modèle fondamental.
+-- Recalculée après chaque import (scripts/update-connection-stats.mjs) plutôt
+-- qu'à chaque affichage : une agrégation sur tout l'historique par page servie
+-- coûterait plus que la page elle-même.
+create table if not exists connection_stats (
+  kind text not null check (kind in ('jockey', 'trainer')),
+  person_id uuid not null,
+  runs integer not null,
+  wins integer not null,
+  places integer not null,
+  updated_at timestamptz not null default now(),
+  primary key (kind, person_id)
+);

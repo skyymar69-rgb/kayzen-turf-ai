@@ -79,3 +79,23 @@ export function formaterCompteARebours(secondes: number): string {
     ? `${heures}h${String(minutes).padStart(2, "0")}`
     : `${minutes}m${String(reste).padStart(2, "0")}s`;
 }
+
+/** Décalage de Paris sur UTC, en minutes, à un instant donné (+60 l'hiver, +120 l'été). */
+function decalageParisMinutes(instant: Date): number {
+  const nom = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Paris", timeZoneName: "longOffset" })
+    .formatToParts(instant)
+    .find((part) => part.type === "timeZoneName")?.value;
+  const correspondance = /GMT([+-])(\d{2}):(\d{2})/.exec(nom ?? "");
+  if (!correspondance) return 60;
+  const signe = correspondance[1] === "-" ? -1 : 1;
+  return signe * (Number(correspondance[2]) * 60 + Number(correspondance[3]));
+}
+
+/** Instant du départ d'une course (date AAAA-MM-JJ et heure « HH:MM » de Paris), ou `null`. */
+export function instantDepart(dateCourse: string, heureDepart: string): Date | null {
+  const minutes = minutesDepuisHeure(heureDepart);
+  const [annee, mois, jour] = dateCourse.split("-").map(Number);
+  if (minutes === null || !annee || !mois || !jour) return null;
+  const approche = Date.UTC(annee, mois - 1, jour, Math.floor(minutes / 60), minutes % 60);
+  return new Date(approche - decalageParisMinutes(new Date(approche)) * 60_000);
+}

@@ -34,6 +34,19 @@ export type HorsePrediction = {
   marketProbability?: number;
   /** Probabilité retenue ÷ probabilité marché. > 1 = sous-coté. Renseigné par `calibrateField`. */
   valueRatio?: number;
+  /**
+   * Probabilité de victoire du modèle fondamental, qui n'a jamais vu la cote (%).
+   * C'est l'« avis IA » comparable au marché — voir src/lib/fundamental.
+   */
+  fundamentalProbability?: number | null;
+  /** Courses et victoires du jockey/driver et de l'entraîneur (historique en base). */
+  jockeyRuns?: number | null;
+  jockeyWins?: number | null;
+  trainerRuns?: number | null;
+  trainerWins?: number | null;
+  /** Part des enjeux PMU sur ce cheval, au dernier relevé (%). */
+  poolWin?: number | null;
+  poolPlace?: number | null;
 };
 
 export type BetOffer = {
@@ -120,6 +133,8 @@ export type RaceAnalysis = {
    * l'interface doit le dire, au lieu d'afficher une cote fabriquée.
    */
   oddsAvailable: boolean;
+  /** Dernier rafraîchissement des cotes (ISO), `null` si jamais rafraîchie depuis l'import. */
+  oddsRefreshedAt?: string | null;
 };
 
 export type BetSimulation = {

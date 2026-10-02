@@ -25,9 +25,21 @@ import { usePdfJour } from "@/hooks/use-pdf-jour";
 import { probableArrival, raceToContext } from "@/lib/bet-recommendations";
 import { formatMeters, formatOdds, hasOdds, oddsSortValue } from "@/lib/format";
 import { minutesActuellesParis, minutesDepuisHeure } from "@/lib/paris-time";
+import { PROFILE_LABELS, READING_LABELS } from "@/lib/profiles";
+import { buildSelection } from "@/lib/selection";
 import type { BetOffer, RaceAnalysis } from "@/lib/types";
 
-type DashboardProps = { races: RaceAnalysis[] };
+type DashboardProps = { races: RaceAnalysis[]; performance?: DashboardPerformance | null };
+
+/** Chiffres réels du suivi de performance (dernier rapport), pour la section « Performances de l'IA ». */
+export type DashboardPerformance = {
+  generatedAt: string;
+  racesEvaluated: number;
+  top3HitsPerRace: number;
+  rank1WinRate: number | null;
+  rank1Roi: number | null;
+  rank1Bets: number;
+};
 
 type RaceMeeting = {
   key: string;
@@ -58,7 +70,7 @@ type DisciplineFilter = (typeof DISCIPLINES)[number];
 /** Signaux dérivés d'une course, calculés une fois par rendu du programme. */
 type RaceSignals = { signal: string; highlights: ReturnType<typeof raceHighlights> };
 
-export function Dashboard({ races }: DashboardProps) {
+export function Dashboard({ races, performance = null }: DashboardProps) {
   const currentMinute = useCurrentMinute();
   const { favs, toggle: toggleFav } = useFavorites();
   const [dayFilter, setDayFilter]           = useState<RaceAnalysis["relativeDay"]>("today");
@@ -911,7 +923,7 @@ export function Dashboard({ races }: DashboardProps) {
                       <th className="px-5 py-3" scope="col">Cheval</th>
                       <th className="px-5 py-3" scope="col">{selectedRace?.discipline === "Trot" ? "Driver" : selectedRace?.discipline === "Obstacle" ? "Jockey" : "Jockey"}</th>
                       <th className="px-5 py-3 text-right" scope="col">Cote</th>
-                      <th className="px-5 py-3 text-right" scope="col">PronoScore</th>
+                      <th className="px-5 py-3 text-right" scope="col" title="Probabilité de victoire selon l'IA, sans cote">IA</th>
                       <th className="px-5 py-3 text-right" scope="col">Top 3</th>
                     </tr>
                   </thead>
@@ -929,7 +941,7 @@ export function Dashboard({ races }: DashboardProps) {
                             : formatOdds(horse.odds)}
                         </td>
                         <td className={`px-5 py-3 text-right font-mono font-bold ${idx === 0 ? "text-accent-text" : "text-muted"}`}>
-                          {fmtScore(horse.kzScore)}
+                          {fmtProb(horse.fundamentalProbability ?? NaN)}
                         </td>
                         <td className="px-5 py-3 text-right font-mono text-sm text-muted">{fmtProb(horse.top3Probability)}</td>
                       </tr>
@@ -948,7 +960,7 @@ export function Dashboard({ races }: DashboardProps) {
                       <p className="truncate text-xs text-muted">{horse.jockey}</p>
                     </div>
                     <div className="text-right">
-                      <p className={`font-mono text-sm font-bold ${idx === 0 ? "text-accent-text" : "text-fg"}`}>{fmtScore(horse.kzScore)}</p>
+                      <p className={`font-mono text-sm font-bold ${idx === 0 ? "text-accent-text" : "text-fg"}`}>IA {fmtProb(horse.fundamentalProbability ?? NaN)}</p>
                       <p className="text-xs text-muted">Top3 {fmtProb(horse.top3Probability)}</p>
                     </div>
                   </div>
@@ -968,12 +980,21 @@ export function Dashboard({ races }: DashboardProps) {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3 p-5">
-                <SmMetric label="Consensus"      value={`${selectedRace.modelConsensus}%`} />
-                <SmMetric label="Qualité course" value={`${selectedRace.raceQualityScore}/100`} />
-                <SmMetric label="Risque"         value={formatRisk(selectedRace.riskLevel)} />
-                <SmMetric label="Discipline"     value={selectedRace.specialty} />
-                <SmMetric label="Scénario"       value={signalsFor(selectedRace).signal} />
-                <SmMetric label="Stratégie"      value={strategyForRace(selectedRace)} />
+                {(() => {
+                  const { verdict } = buildSelection(selectedRace.horses);
+                  return (
+                    <>
+                      <div className="col-span-2 rounded-xl border border-border bg-surface-sub p-3">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted">{READING_LABELS[verdict.reading]}</p>
+                        <p className="mt-1 text-sm font-bold text-fg">{verdict.sentence}</p>
+                      </div>
+                      <SmMetric label="Bases"      value={verdict.bases.length ? verdict.bases.join(", ") : "Aucune"} />
+                      <SmMetric label="Cachés"     value={verdict.hidden.length ? verdict.hidden.join(", ") : "Aucun"} />
+                      <SmMetric label="Discipline" value={selectedRace.specialty} />
+                      <SmMetric label="Partants"   value={String(selectedRace.horses.length)} />
+                    </>
+                  );
+                })()}
               </div>
               <div className="border-t border-border px-5 pb-5">
                 <div className="rounded-xl border border-warn/30 bg-warn-lo px-4 py-3 text-xs leading-5 text-warn">
@@ -984,38 +1005,37 @@ export function Dashboard({ races }: DashboardProps) {
           </section>
         )}
 
-        {/* ── BARRE PROGRESSION + DISTRIBUTION PRONOSCORE (#53 #90) ────── */}
+        {/* ── PROFILS DU JOUR ────── */}
         {dayRaces.length > 0 && (() => {
-          const kzScores  = dayRaces.flatMap((r) => r.horses.map((h) => h.kzScore)).filter((s) => Number.isFinite(s));
-          // Borne haute ouverte : avec 99 en dernière borne et un test strict
-          // `< 99`, un PronoScore de 99 — le maximum — ne tombait dans aucune
-          // tranche et disparaissait de l'histogramme.
-          const buckets   = [0, 20, 40, 60, 80, Infinity];
-          const labels    = ["0-20", "20-40", "40-60", "60-80", "80+"];
-          const counts    = labels.map((_, i) => kzScores.filter((s) => s >= buckets[i] && s < buckets[i + 1]).length);
-          const maxCount  = Math.max(...counts, 1);
+          const profiledDay = dayRaces.map((race) => ({ race, selection: buildSelection(race.horses) }));
+          const counts = (["base", "cache", "value", "outsider", "eviter"] as const).map((profile) => ({
+            profile,
+            count: profiledDay.reduce((t, { selection }) => t + selection.field.filter((f) => f.profile === profile).length, 0),
+          }));
+          const maxCount  = Math.max(...counts.map((c) => c.count), 1);
           const valueBetRaces = dayRaces.filter((r) => r.horses.some((h) => h.valueIndex > 10));
           return (
-            <section className="mt-4 grid gap-4 lg:grid-cols-2" aria-label="Distribution et value bets">
-              {/* Distribution PronoScore */}
+            <section className="mt-4 grid gap-4 lg:grid-cols-2" aria-label="Profils du jour et value bets">
               <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Distribution · {kzScores.length} chevaux</p>
-                <h2 className="mt-0.5 font-display text-lg font-bold text-fg">PronoScore du jour</h2>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Profils · {dayRaces.reduce((t, r) => t + r.horses.length, 0)} partants</p>
+                <h2 className="mt-0.5 font-display text-lg font-bold text-fg">Lecture du programme</h2>
                 <div className="mt-4 flex items-end gap-2">
-                  {counts.map((count, i) => (
-                    <div key={labels[i]} className="flex flex-1 flex-col items-center gap-1">
+                  {counts.map(({ profile, count }) => (
+                    <div key={profile} className="flex flex-1 flex-col items-center gap-1">
                       <span className="text-[10px] font-bold text-accent-text">{count > 0 ? count : ""}</span>
-                      <div className="w-full overflow-hidden rounded-t-md bg-border" style={{ height: 64 }}>
-                        <div
-                          className="w-full rounded-t-md bg-accent/70 transition-all"
-                          style={{ height: `${Math.round((count / maxCount) * 100)}%`, marginTop: "auto" }}
-                        />
+                      <div className="flex w-full items-end overflow-hidden rounded-t-md bg-border" style={{ height: 64 }}>
+                        <div className="w-full rounded-t-md bg-accent/70 transition-all" style={{ height: `${Math.round((count / maxCount) * 100)}%` }} />
                       </div>
-                      <span className="text-[9px] text-muted">{labels[i]}</span>
+                      <span className="text-[9px] text-muted">{PROFILE_LABELS[profile]}</span>
                     </div>
                   ))}
                 </div>
-                <p className="mt-3 text-xs text-muted"><strong className="text-fg">{dayRaces.length}</strong> courses analysées · <strong className="text-fg">{dayRaces.reduce((t, r) => t + r.horses.length, 0)}</strong> partants</p>
+                <p className="mt-3 text-xs text-muted">
+                  <strong className="text-fg">{dayRaces.length}</strong> courses ·{" "}
+                  <strong className="text-fg">{profiledDay.filter(({ selection }) => selection.verdict.reading === "lisible").length}</strong> lisibles ·{" "}
+                  <strong className="text-fg">{profiledDay.filter(({ selection }) => selection.verdict.reading === "piege").length}</strong> pièges ·{" "}
+                  <Link className="font-semibold text-accent-text hover:underline" href="/methode">règles des profils</Link>
+                </p>
               </div>
               {/* Timeline value bets */}
               <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
@@ -1056,16 +1076,16 @@ export function Dashboard({ races }: DashboardProps) {
             <p className="text-xs font-bold uppercase tracking-widest text-muted">Mémoire & auto-apprentissage</p>
             <h2 id="perf-title" className="font-display text-xl font-bold text-fg">Performances de l’IA</h2>
             <p className="mt-1 text-sm text-muted">
-              Toutes les prédictions sont stockées et comparées aux arrivées officielles.
-              Le modèle se recalibre à chaque résultat pour affiner ses prochaines analyses.
+              Chaque pronostic est gelé avant le départ, puis confronté à l’arrivée et aux rapports officiels du PMU.
+              Les chiffres ci-dessous sont mesurés, prélèvement déduit — même quand ils sont négatifs.
             </p>
           </div>
           <div className="grid gap-px bg-border sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { icon: <Trophy size={20} />,    label: "Taux Top 3",         value: "—",      hint: "% de fois où le gagnant est dans notre top 3" },
-              { icon: <BarChart3 size={20} />, label: "ROI moyen",          value: "—",      hint: "Retour sur investissement moyen sur 30 jours" },
-              { icon: <Brain size={20} />,     label: "Prédictions stockées",value: "—",     hint: "Nombre total d'analyses conservées en base" },
-              { icon: <Zap size={20} />,       label: "Dernière calibration",value: "Auto",  hint: "Le modèle apprend à chaque arrivée officielle" },
+              { icon: <Trophy size={20} />,    label: "Notre n° 1 gagne",    value: performance?.rank1WinRate != null ? `${Math.round(performance.rank1WinRate * 100)} %` : "—", hint: "Part des courses où le premier de notre classement a gagné" },
+              { icon: <BarChart3 size={20} />, label: "ROI net du n° 1",     value: performance?.rank1Roi != null ? `${performance.rank1Roi > 0 ? "+" : "−"}${Math.abs(performance.rank1Roi * 100).toFixed(1).replace(".", ",")} %` : "—", hint: performance ? `Simple gagnant, rapports officiels PMU, sur ${new Intl.NumberFormat("fr-FR").format(performance.rank1Bets)} paris` : "Calcul en cours" },
+              { icon: <Brain size={20} />,     label: "Top 3 trouvés",       value: performance ? `${performance.top3HitsPerRace.toFixed(2).replace(".", ",")} / 3` : "—", hint: performance ? `En moyenne, sur ${new Intl.NumberFormat("fr-FR").format(performance.racesEvaluated)} courses mesurées` : "Calcul en cours" },
+              { icon: <Zap size={20} />,       label: "Dernier calcul",      value: performance ? new Date(performance.generatedAt).toLocaleDateString("fr-FR") : "—", hint: "Le suivi complet est publié sur la page Suivi" },
             ].map(({ icon, label, value, hint }) => (
               <div key={label} className="flex gap-4 bg-surface px-5 py-5">
                 <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent-lo text-accent-text">
@@ -1080,8 +1100,8 @@ export function Dashboard({ races }: DashboardProps) {
             ))}
           </div>
           <div className="border-t border-border px-5 py-4 text-center">
-            <Link href="/techniques-prediction" className="text-sm font-semibold text-accent-text hover:text-accent">
-              En savoir plus sur notre méthode IA →
+            <Link href="/track-record" className="text-sm font-semibold text-accent-text hover:text-accent">
+              Voir le suivi complet →
             </Link>
           </div>
         </section>
@@ -1299,12 +1319,6 @@ function raceOpportunity(race: RaceAnalysis) {
     return `À surveiller #${best.number}`;
   return "Signal faible";
 }
-function strategyForRace(race: RaceAnalysis) {
-  if (race.riskLevel === "Prudent")   return "Sécurisé";
-  if (race.bettingTier === "Value")   return "Value";
-  if (race.riskLevel === "Speculatif") return "Agressif";
-  return "Équilibré";
-}
 function selectTimelineRace(races: RaceAnalysis[], currentMinute: number) {
   return (
     races.filter((r) => minutesFromStartTime(r.startTime) >= currentMinute)
@@ -1321,11 +1335,6 @@ function raceStatus(race: RaceAnalysis, currentMinute: number) {
   if (start < currentMinute)         return race.horses.some((h) => h.finishPosition) ? "Arrivée disponible" : `Départ à ${race.startTime}`;
   if (start - currentMinute <= 30)   return `Départ imminent ${race.startTime}`;
   return `Départ à ${race.startTime}`;
-}
-/** Affiche un score numérique — retourne "—" si null / undefined / NaN */
-function fmtScore(v: number | null | undefined): string {
-  if (v === null || v === undefined || (typeof v === "number" && isNaN(v))) return "—";
-  return String(v);
 }
 /** Affiche une probabilité % — retourne "—" si invalide, sinon "XX.X%" */
 function fmtProb(v: number | null | undefined): string {

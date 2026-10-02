@@ -55,13 +55,30 @@ import type { HorsePrediction } from "@/lib/types";
  */
 export const MODEL_WEIGHT = 0.1;
 
+/*
+ * Octobre 2026 — le modèle mélangé au marché est désormais le modèle
+ * FONDAMENTAL (src/lib/fundamental), qui n'utilise aucune cote. Le poids 0.10
+ * est conservé, sur deux mesures hors échantillon (juin-septembre 2026) :
+ *
+ *   contre les cotes de CLÔTURE (scripts/train-fundamental.ts), le mélange
+ *   coûte 0,1 à 0,4 % de log loss selon la discipline — dans le bruit au trot
+ *   et en obstacle ;
+ *   contre les cotes connues 15 min avant le départ (scripts/backtest.ts), il
+ *   GAGNE 0,5 % de log loss (2,0869 contre 2,0978) et 0,8 point de gagnants
+ *   trouvés, parce que ces cotes avaient en médiane 3 h 30 d'âge.
+ *
+ * Avec la boucle de rafraîchissement d'octobre, les cotes servies seront
+ * fraîches et le premier cas deviendra la norme : le poids sera revu sur le
+ * suivi en direct (pronostics gelés), pas avant.
+ */
+
 /**
  * Version de la chaîne de calcul servie, gravée dans chaque pronostic gelé
  * (`prediction_snapshots.model_version`). À changer dès que `MODEL_WEIGHT`,
  * les entrées du modèle ou les règles de profil changent : le suivi de
  * performance sépare les résultats par version.
  */
-export const MODEL_VERSION = "2026.10-marche-w0.10";
+export const MODEL_VERSION = "2026.10-fondamental-w0.10";
 
 /**
  * Étalement du modèle, appliqué sur des scores centrés-réduits.
@@ -75,11 +92,6 @@ export const MODEL_SPREAD = 1.0;
 /** Tirages Monte-Carlo par course. 20 000 → erreur type ≈ 0,3 pp sur le Top 3. */
 const N_SIM = 20000;
 
-/** Au-delà de ce rapport modèle/marché, un cheval est considéré en value. */
-export const VALUE_RATIO = 1.3;
-
-/** Cote minimale pour qu'un cheval en value soit qualifiable de tocard. */
-export const TOCARD_MIN_ODDS = 12;
 
 /** Cheval dont les champs de calibration sont garantis présents. */
 export type CalibratedHorse = HorsePrediction & Required<Pick<HorsePrediction, "marketProbability" | "valueRatio">>;
@@ -325,7 +337,14 @@ export function calibrateField(horses: HorsePrediction[]): CalibratedHorse[] {
   }
 
   const market = devig(horses.map((h) => h.odds));
-  const model = modelProbabilities(horses.map((h) => h.kzScore));
+  // Le modèle fondamental (sans cote) remplace le PronoScore dès qu'il est
+  // disponible : le PronoScore étant dérivé des cotes, le mélanger au marché
+  // revenait à mélanger le marché avec lui-même. Repli sur l'ancien score pour
+  // une discipline sans modèle ajusté.
+  const fundamental = horses.map((h) => Number(h.fundamentalProbability));
+  const model = fundamental.every((p) => Number.isFinite(p) && p > 0)
+    ? fundamental.map((p) => p / 100)
+    : modelProbabilities(horses.map((h) => h.kzScore));
   const pWin = blendProbabilities(market, model);
 
   const topK = monteCarloTopK(pWin, [3, 5]);

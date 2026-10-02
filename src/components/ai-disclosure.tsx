@@ -23,7 +23,7 @@ export function AiDisclosure() {
           automatiquement par nos modèles à partir de données publiques. Ils ne sont pas relus
           course par course par un humain, peuvent contenir des erreurs et ne constituent ni un
           conseil en investissement ni une garantie de gain.{" "}
-          <Link className="font-semibold text-accent-text underline-offset-4 hover:underline" href="/techniques-prediction">
+          <Link className="font-semibold text-accent-text underline-offset-4 hover:underline" href="/methode">
             Comment nos modèles fonctionnent
           </Link>
           .

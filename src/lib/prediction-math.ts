@@ -126,7 +126,7 @@ type ObstacleMusicProfile = {
  * `value` vaut 10 pour un cheval non placé (« 0 » = 10e et au-delà) — c'est la
  * valeur la plus défavorable de l'échelle, pas une absence de course.
  */
-type MusicToken = { kind: "pos"; value: number } | { kind: "inc"; code: string };
+export type MusicToken = { kind: "pos"; value: number } | { kind: "inc"; code: string };
 
 /** Lettres qui suivent un résultat pour indiquer la discipline (a, m, p, h, s, c…). */
 const MUSIC_DISCIPLINE_LETTER = /[a-z]/i;
@@ -147,7 +147,7 @@ const MUSIC_DISCIPLINE_LETTER = /[a-z]/i;
  * d'attelé comptait comme un abandon, « (25) » comme une 2e puis une 5e place,
  * et « 0 » disparaissait. Tokeniser d'abord règle les trois.
  */
-function tokenizeMusic(music?: string | null, maxRaces = 10): MusicToken[] {
+export function tokenizeMusic(music?: string | null, maxRaces = 10): MusicToken[] {
   const raw = String(music ?? "").replace(/\s/g, "");
   const tokens: MusicToken[] = [];
   let i = 0;

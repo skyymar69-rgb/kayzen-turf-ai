@@ -22,7 +22,7 @@ export const revalidate = 3600;
  * croire la date, y compris pour les pages de courses où elle est vraie. Date
  * fixe, à mettre à jour lorsque le contenu de ces pages change réellement.
  */
-const DERNIERE_MODIFICATION_STATIQUE = "2026-09-04";
+const DERNIERE_MODIFICATION_STATIQUE = "2026-10-02";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = SITE_URL;
@@ -33,9 +33,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: base,                            lastModified: now,  changeFrequency: "daily",   priority: 1.0 },
     { url: `${base}/pronostics`,            lastModified: now,  changeFrequency: "daily",   priority: 0.9 },
     { url: `${base}/tarifs`,                lastModified: fixe, changeFrequency: "monthly", priority: 0.8 },
-    { url: `${base}/techniques-prediction`, lastModified: fixe, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${base}/methode`,               lastModified: fixe, changeFrequency: "monthly", priority: 0.8 },
+    { url: `${base}/track-record`,          lastModified: now,  changeFrequency: "daily",   priority: 0.8 },
     { url: `${base}/lexique`,               lastModified: fixe, changeFrequency: "monthly", priority: 0.7 },
-    { url: `${base}/prono-score`,           lastModified: fixe, changeFrequency: "monthly", priority: 0.7 },
     { url: `${base}/jeu-responsable`,       lastModified: fixe, changeFrequency: "yearly",  priority: 0.4 },
     { url: `${base}/mentions-legales`,      lastModified: fixe, changeFrequency: "yearly",  priority: 0.3 },
     { url: `${base}/cgu`,                   lastModified: fixe, changeFrequency: "yearly",  priority: 0.3 },

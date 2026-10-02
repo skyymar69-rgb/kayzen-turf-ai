@@ -7,9 +7,9 @@ const PRODUCT_LINKS = [
   { href: "/",                      label: "Programme du jour" },
   { href: "/pronostics",            label: "Pronostics PMU" },
   { href: "/tarifs",                label: "Tarifs & offres" },
-  { href: "/techniques-prediction", label: "Notre IA" },
+  { href: "/methode",               label: "Notre méthode" },
+  { href: "/track-record",          label: "Suivi de performance" },
   { href: "/lexique",               label: "Lexique turf" },
-  { href: "/prono-score",             label: "Le PronoScore" },
 ];
 
 const LEGAL_LINKS = [
@@ -35,7 +35,7 @@ export function SiteFooter() {
               <Image src="/brand/pronoturf-mark.png" alt="" width={69} height={40} className="h-10 w-auto shrink-0" />
               <div>
                 <p className="font-display text-base font-bold leading-tight text-white">PronoTurf</p>
-                <p className="text-[11px] font-medium uppercase tracking-widest text-white/75">Prédictions · Analyses · Gains</p>
+                <p className="text-[11px] font-medium uppercase tracking-widest text-white/75">Prédictions · Analyses · Suivi</p>
               </div>
             </div>
             <p className="mt-4 max-w-sm text-sm leading-6 text-white/80">

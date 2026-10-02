@@ -31,6 +31,6 @@ jobs:
     steps:
       - name: Re-enable every scheduled workflow if disabled
         run: |
-          for workflow in import_pmu.yml live_refresh.yml compact_storage.yml keepalive.yml; do
+          for workflow in import_pmu.yml live_refresh.yml compact_storage.yml keepalive.yml track_record.yml freshness_check.yml; do
             gh workflow enable "$workflow" || echo "::warning::impossible de réactiver $workflow"
           done

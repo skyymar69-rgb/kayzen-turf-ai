@@ -46,7 +46,14 @@ const nextConfig: NextConfig = {
    * seraient perdus, et le sitemap déclarerait une page absente.
    */
   async redirects() {
-    return [{ source: "/kz-score", destination: "/prono-score", permanent: true }];
+    // Octobre 2026 : le PronoScore et la page « techniques » décrivaient des
+    // modèles qui n'existaient pas (pondérations fixes, XGBoost, réseaux de
+    // neurones). Ils sont remplacés par la méthode réelle, publiée sur /methode.
+    return [
+      { source: "/kz-score", destination: "/methode", permanent: true },
+      { source: "/prono-score", destination: "/methode", permanent: true },
+      { source: "/techniques-prediction", destination: "/methode", permanent: true },
+    ];
   },
   async headers() {
     return [

@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { CourseDetail } from "@/components/course-detail";
 import { JsonLd } from "@/components/json-ld";
 import { formatMeters } from "@/lib/format";
-import { getRaceById } from "@/lib/race-repository";
+import { getLatestTrackRecord, getRaceById, getRaceMarketHistory } from "@/lib/race-repository";
 import { buildSelection } from "@/lib/selection";
 import { SITE_URL } from "@/lib/site";
 
@@ -124,6 +124,8 @@ export default async function RacePage({ params }: RacePageProps) {
 
   if (!race) notFound();
 
+  const [history, trackRecord] = await Promise.all([getRaceMarketHistory(race.id), getLatestTrackRecord()]);
+
   /* Données structurées : une course est un SportsEvent daté et localisé. */
   const jsonLd = {
     "@context": "https://schema.org",
@@ -150,7 +152,7 @@ export default async function RacePage({ params }: RacePageProps) {
       {/* Les noms de course, d'hippodrome et de cheval viennent de l'API PMU :
           `JSON.stringify` seul laissait passer `</script>`. */}
       <JsonLd data={jsonLd} />
-      <CourseDetail race={race} />
+      <CourseDetail history={history} race={race} signals={trackRecord?.signals ?? []} />
     </>
   );
 }
