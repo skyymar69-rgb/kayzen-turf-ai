@@ -20,7 +20,7 @@ npm install
 npm run dev
 ```
 
-Tests (Node's built-in `node:test`, no framework — they cover the pure helpers of `scripts/lib/`):
+Tests (Node's built-in `node:test` run through `tsx`, no framework — they cover the pure helpers of `scripts/lib/` and `src/lib/`: profiles, market reading, strategies, live cadence, payouts):
 
 ```bash
 npm test
@@ -103,6 +103,26 @@ npm run data:refresh:live -- --minutes 30    # 30-minute loop
 ```
 
 A weekly `compact_storage.yml` (Sunday 02:00 UTC) runs `npm run db:compact -- --apply`; it shares a concurrency group with the import so the two never overlap.
+
+## Prediction, proof and tracking (October 2026)
+
+Two independent opinions are compared on every runner:
+
+- **the market** — PMU odds, overround removed (`devig` in `src/lib/probability.ts`);
+- **the AI** — `src/lib/fundamental/`, a conditional logit per discipline that never sees the odds (form, earnings, age, sex, jockey and trainer strike rates, trot handicap distance, draw). Trained by `npx tsx scripts/train-fundamental.ts` on races before the cutoff stored in `model.json`, measured on the following months.
+
+The displayed probability blends both (`MODEL_WEIGHT = 0.10`). `src/lib/profiles.ts` is the single source for runner profiles (Base, Caché, Value, Favori, Outsider, Tocard, À éviter) and the race reading (lisible / ouverte / piège); the course page, the dashboard, the frozen predictions and the backtest all read it. Every rule and threshold is published on `/methode`.
+
+Proof:
+
+```bash
+npx tsx scripts/backtest.ts --dry-run            # odds known 15 min before the off, official PMU payouts, 90 % bootstrap
+npx tsx scripts/backtest.ts --dry-run --dump f.json   # every evaluated runner, to explore thresholds
+node scripts/backfill-payouts.mjs --from 2026-04-01   # official payouts for past races
+node scripts/check-freshness.mjs                 # did a race start without fresh odds today?
+```
+
+`track_record.yml` stores a report every night in `track_record_reports`; `/track-record` publishes it, negative results included, with the live tracking of frozen predictions (`prediction_snapshots`, stage H-2). `freshness_check.yml` fails — and GitHub emails — when more than 10 % of the day's races started without odds observed in the 20 minutes before the off.
 
 ## MVP API
 

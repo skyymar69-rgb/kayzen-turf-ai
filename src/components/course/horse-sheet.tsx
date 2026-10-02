@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import { ThumbsDown, ThumbsUp } from "lucide-react";
+import { Star, ThumbsDown, ThumbsUp } from "lucide-react";
+import { useFollowedHorses } from "@/hooks/use-followed-horses";
 import type { HorseRow } from "@/lib/course-view-model";
 import type { FeatureName } from "@/lib/fundamental/features";
 import { fundamentalContributions, type Contribution } from "@/lib/fundamental/model";
@@ -45,6 +46,7 @@ function describe(c: Contribution): string {
 
 export function HorseSheet({ race, row }: { race: RaceAnalysis; row: HorseRow | null }) {
   const contributions = useMemo(() => fundamentalContributions(race.horses, race.discipline), [race.horses, race.discipline]);
+  const { followed, toggle } = useFollowedHorses();
 
   if (!row) return null;
   const index = race.horses.findIndex((h) => h.number === row.horse.number);
@@ -67,6 +69,17 @@ export function HorseSheet({ race, row }: { race: RaceAnalysis; row: HorseRow | 
           <p className="mt-1 text-sm text-muted">
             {row.horse.jockey} · {row.horse.trainer} · cote {formatOdds(row.horse.odds, 1)}
           </p>
+          {row.horse.horseId && (
+            <button
+              aria-pressed={followed.has(row.horse.horseId)}
+              className="mt-2 inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-border bg-surface-sub px-2.5 text-xs font-semibold text-fg transition hover:border-accent"
+              onClick={() => toggle({ id: row.horse.horseId!, name: row.horse.horse })}
+              type="button"
+            >
+              <Star aria-hidden="true" className={followed.has(row.horse.horseId) ? "fill-amber-400 text-amber-400" : "text-muted"} size={13} />
+              {followed.has(row.horse.horseId) ? "Cheval suivi" : "Suivre ce cheval"}
+            </button>
+          )}
           {rule && <p className="mt-2 max-w-xl text-xs leading-5 text-muted">Profil attribué parce que : {rule.charAt(0).toLowerCase() + rule.slice(1)}</p>}
         </div>
 

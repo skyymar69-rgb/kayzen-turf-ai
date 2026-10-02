@@ -65,6 +65,7 @@ type RaceRow = {
 
 type EntryRow = {
   id: string;
+  horse_id: string;
   number: number;
   horse: string;
   age: number | null;
@@ -196,6 +197,7 @@ async function fetchEntriesByRace(raceIds: string[]) {
     select
       entries.race_id,
       entries.id,
+      entries.horse_id,
       entries.number,
       horses.name as horse,
       coalesce(entries.age, horses.age) as age,
@@ -418,6 +420,7 @@ function sortByStartTime(races: RaceAnalysis[]) {
 function mapHorse(row: EntryRow): HorsePrediction {
   return {
     id: row.id,
+    horseId: row.horse_id,
     number: row.number,
     horse: row.horse,
     age: row.age,

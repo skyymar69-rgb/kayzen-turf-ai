@@ -114,3 +114,40 @@ describe("instantDepart", () => {
     assert.equal(instantDepart("2026-12-14", "15:30")?.toISOString(), "2026-12-14T14:30:00.000Z");
   });
 });
+
+describe("strategyTicket", async () => {
+  const { buildSelection } = await import("../src/lib/selection");
+  const { strategyTicket } = await import("../src/lib/strategy");
+  const runners = Array.from({ length: 10 }, (_, i) => ({
+    id: `e${i + 1}`,
+    number: i + 1,
+    horse: `Cheval ${i + 1}`,
+    jockey: "J",
+    trainer: "T",
+    odds: [2.5, 4, 6, 9, 12, 15, 20, 30, 40, 60][i],
+    fairOdds: NaN,
+    marketEdge: 0,
+    winProbability: 0,
+    top3Probability: 0,
+    top5Probability: 0,
+    kzScore: NaN,
+    valueIndex: 0,
+    confidence: "Moyenne" as const,
+    factors: [],
+    fundamentalProbability: [30, 18, 12, 9, 11, 6, 5, 4, 3, 2][i],
+  }));
+  const selection = buildSelection(runners);
+
+  it("le ticket sécurisé joue le n° 1 de la sélection au placé", () => {
+    const t = strategyTicket(selection, "securise")!;
+    assert.equal(t.betLabel, "Simple placé");
+    assert.deepEqual(t.numbers, [selection.horses[0].horse.number]);
+    assert.ok(t.probability > 50 && t.probability < 100);
+  });
+
+  it("le ticket outsiders choisit une cote d'au moins 8/1", () => {
+    const t = strategyTicket(selection, "outsiders")!;
+    const odds = runners.find((r) => r.number === t.numbers[0])!.odds;
+    assert.ok(odds >= 8);
+  });
+});

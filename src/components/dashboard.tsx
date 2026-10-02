@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { DisciplinePill, TierBadge, titleCase } from "@/components/badges";
+import { FollowedHorsesPanel } from "@/components/followed-horses-panel";
 import { useFavorites } from "@/hooks/use-favorites";
 import { usePdfJour } from "@/hooks/use-pdf-jour";
 import { probableArrival, raceToContext } from "@/lib/bet-recommendations";
@@ -892,6 +893,8 @@ export function Dashboard({ races, performance = null }: DashboardProps) {
             )}
           </div>
         </section>
+
+        <FollowedHorsesPanel races={races} />
 
         {/* ── PREVIEW COURSE ACTIVE ─────────────────────────────── */}
         {topArrival.length > 0 && (

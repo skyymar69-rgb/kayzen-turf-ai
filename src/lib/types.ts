@@ -2,6 +2,8 @@ export type Confidence = "Faible" | "Moyenne" | "Forte";
 
 export type HorsePrediction = {
   id: string;
+  /** Identifiant du cheval, stable d'une course à l'autre (sert au suivi). */
+  horseId?: string;
   number: number;
   horse: string;
   age?: number | null;

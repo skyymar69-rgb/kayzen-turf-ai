@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, type KeyboardEvent, type ReactNode } from "react";
-import { ArrowDownRight, ArrowRight, ArrowUpRight } from "lucide-react";
+import { ArrowDownRight, ArrowRight, ArrowUpRight, Star } from "lucide-react";
+import { useFollowedHorses } from "@/hooks/use-followed-horses";
 import type { CourseViewModel, HorseRow } from "@/lib/course-view-model";
 import { formatOdds } from "@/lib/format";
 import { MVT_NOISE_PCT } from "@/lib/market";
@@ -36,6 +37,7 @@ export function FieldTable({
   onSelect: (number: number) => void;
 }) {
   const [tab, setTab] = useState<Tab>("Classement IA");
+  const { followed } = useFollowedHorses();
 
   function onTabKey(e: KeyboardEvent) {
     const i = TABS.indexOf(tab);
@@ -111,6 +113,9 @@ export function FieldTable({
                     <div className="flex min-w-[200px] items-center gap-2">
                       <span className="font-mono font-bold text-fg">{row.horse.number}</span>
                       <span className="truncate font-semibold text-fg">{row.horse.horse}</span>
+                      {row.horse.horseId && followed.has(row.horse.horseId) && (
+                        <Star aria-label="Cheval suivi" className="shrink-0 fill-amber-400 text-amber-400" size={13} />
+                      )}
                       <ProfileBadge profile={row.profile} />
                     </div>
                   </th>
