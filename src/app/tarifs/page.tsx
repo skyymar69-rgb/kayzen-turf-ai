@@ -233,9 +233,9 @@ export default function TarifsPage() {
         <section className="mb-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Garanties">
           {[
             { icon: <Shield size={20} />,    title: "Pas de promesse de gain",  desc: "Nous vendons de l'analyse, pas des certitudes. La transparence est notre valeur principale." },
-            { icon: <Brain size={20} />,     title: "IA auto-apprenante",       desc: "Chaque arrivée officielle recalibre le modèle. Les prédictions s'améliorent avec le temps." },
+            { icon: <Brain size={20} />,     title: "Rendement publié",         desc: "Chaque pronostic est gelé avant le départ puis confronté aux rapports officiels du PMU. Le rendement de chaque signal est public, même négatif." },
             { icon: <BarChart3 size={20} />, title: "Données transparentes",    desc: "Consultez les probabilités brutes, l'edge calculé et l'historique de performance du modèle." },
-            { icon: <Zap size={20} />,       title: "Mise à jour en temps réel",desc: "Programme mis à jour dès l'ouverture des paris. Alertes instantanées sur les value bets." },
+            { icon: <Zap size={20} />,       title: "Cotes fraîches",           desc: "Cotes relues chaque minute dans le dernier quart d'heure avant le départ, et âge de la cote affiché sur chaque course." },
           ].map(({ icon, title, desc }) => (
             <div key={title} className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-lo text-accent-text">
