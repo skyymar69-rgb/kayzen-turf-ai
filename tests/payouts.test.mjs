@@ -23,6 +23,11 @@ describe("payoutRows", () => {
     assert.ok(!rows.some((r) => r.combination.includes("NP")));
   });
 
+  it("garde le rapport régional quand aucun rapport national n'est publié", () => {
+    const rows = payoutRows("R", [{ typePari: "SIMPLE_GAGNANT", audience: "LOCAL", rapports: [{ combinaison: "2", dividendePourUnEuro: 1490 }] }]);
+    assert.deepEqual(rows, [{ raceId: "R", betType: "SIMPLE_GAGNANT", combination: "2", dividend: 14.9 }]);
+  });
+
   it("ignore une réponse vide ou malformée", () => {
     assert.deepEqual(payoutRows("R", null), []);
     assert.deepEqual(payoutRows("R", [{ typePari: "SIMPLE_GAGNANT", rapports: [{ combinaison: "", dividendePourUnEuro: 100 }] }]), []);

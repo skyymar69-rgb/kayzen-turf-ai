@@ -13,11 +13,17 @@ const KEPT_TYPES = new Set(["SIMPLE_GAGNANT", "SIMPLE_PLACE", "COUPLE_GAGNANT", 
 
 /** Lignes à écrire à partir de la réponse de l'API. Fonction pure, testée. */
 export function payoutRows(raceId, rapports) {
+  const blocs = (Array.isArray(rapports) ? rapports : []).filter((b) => KEPT_TYPES.has(b?.typePari) && !b?.rembourse);
+  // Un même pari peut être publié pour plusieurs audiences : on garde le
+  // national quand il existe. Les réunions régionales ne publient qu'en
+  // « LOCAL » ou « REGIONAL » : c'est alors le seul rapport payé, on le garde.
+  const chosen = new Map();
+  for (const bloc of blocs) {
+    const current = chosen.get(bloc.typePari);
+    if (!current || (current.audience !== "NATIONAL" && bloc.audience === "NATIONAL")) chosen.set(bloc.typePari, bloc);
+  }
   const rows = [];
-  for (const bloc of Array.isArray(rapports) ? rapports : []) {
-    if (!KEPT_TYPES.has(bloc?.typePari) || bloc?.rembourse) continue;
-    // Les paris nationaux et internationaux coexistent parfois : on garde le national.
-    if (bloc.audience && bloc.audience !== "NATIONAL") continue;
+  for (const bloc of chosen.values()) {
     for (const rapport of bloc.rapports ?? []) {
       const centimes = Number(rapport?.dividendePourUnEuro);
       const combination = String(rapport?.combinaison ?? "").trim();
