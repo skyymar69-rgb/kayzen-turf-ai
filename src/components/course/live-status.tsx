@@ -6,17 +6,30 @@ import { RefreshCw } from "lucide-react";
 import { instantDepart } from "@/lib/paris-time";
 import { formatAge, minutesAgo } from "@/components/course/shared";
 
-/** Doit rester égal à `WINDOW_MINUTES` de la route /api/races/[id]/refresh. */
-const WINDOW_MINUTES = 10;
+/** Relecture automatique chaque minute dans les dix dernières minutes. */
+const AUTO_WINDOW_MINUTES = 10;
 const AUTO_REFRESH_MS = 60_000;
+/** Doit rester égal à `MAX_MINUTES_BEFORE` de la route /api/races/[id]/refresh. */
+const MAX_MINUTES_BEFORE = 18 * 60;
+
+export type RelaunchResult = {
+  auto: boolean;
+  status: "refreshed" | "skipped";
+  reason?: string;
+  oddsChanged?: number;
+  scratched?: number[];
+  oddsRefreshedAt: string | null;
+};
 
 /**
- * ÂGE DE LA COTE ET « ANALYSER MAINTENANT ».
+ * ÂGE DE LA COTE ET « RELANCER L'ANALYSE IA ».
  *
  * Le pari mutuel ne fixe la cote qu'après le départ : aucune cote affichée
- * n'est définitive. Ce bandeau dit donc toujours de quand elle date. Dans les
- * dix dernières minutes, la page se rafraîchit seule chaque minute et le bouton
- * force une lecture immédiate du PMU.
+ * n'est définitive. Ce bandeau dit donc toujours de quand elle date. Le bouton
+ * relit le PMU et fait recalculer toute l'analyse, à tout moment avant le
+ * départ ; dans les dix dernières minutes, la relance est en plus automatique
+ * chaque minute. La page compare ensuite les deux lectures (voir
+ * src/lib/analysis-diff.ts).
  */
 export function LiveStatus({
   raceId,
@@ -24,12 +37,18 @@ export function LiveStatus({
   startTime,
   lastObservation,
   finished,
+  onStart,
+  onDone,
 }: {
   raceId: string;
   raceDate: string;
   startTime: string;
   lastObservation: string | null;
   finished: boolean;
+  /** Appelé juste avant la relance : la page photographie son analyse. */
+  onStart?: (auto: boolean) => void;
+  /** Appelé une fois les données relues et la page en cours de recalcul. */
+  onDone?: (result: RelaunchResult) => void;
 }) {
   const router = useRouter();
   const [now, setNow] = useState<number | null>(null);
@@ -50,32 +69,47 @@ export function LiveStatus({
 
   const depart = instantDepart(raceDate, startTime)?.getTime() ?? null;
   const minutesToStart = now !== null && depart !== null ? (depart - now) / 60_000 : null;
-  const open = minutesToStart !== null && minutesToStart <= WINDOW_MINUTES && minutesToStart >= -2;
+  const available = minutesToStart !== null && minutesToStart >= -2 && minutesToStart <= MAX_MINUTES_BEFORE;
+  const open = available && minutesToStart !== null && minutesToStart <= AUTO_WINDOW_MINUTES;
 
-  const refresh = useCallback(async () => {
+  const relaunch = useCallback(async (auto: boolean) => {
     if (busy.current) return;
     busy.current = true;
     setState("loading");
     setMessage(null);
+    onStart?.(auto);
     try {
-      const response = await fetch(`/api/races/${encodeURIComponent(raceId)}/refresh`, { method: "POST" });
-      const body = (await response.json().catch(() => ({}))) as { error?: string };
-      if (!response.ok) throw new Error(body.error ?? "Actualisation impossible");
+      const response = await fetch(`/api/races/${encodeURIComponent(raceId)}/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ auto }),
+      });
+      const body = (await response.json().catch(() => ({}))) as Partial<RelaunchResult> & { error?: string };
+      if (!response.ok) throw new Error(body.error ?? "Relance impossible");
       router.refresh();
+      onDone?.({
+        auto,
+        status: body.status === "refreshed" ? "refreshed" : "skipped",
+        reason: body.reason,
+        oddsChanged: body.oddsChanged,
+        scratched: body.scratched,
+        oddsRefreshedAt: body.oddsRefreshedAt ?? null,
+      });
       setState("idle");
     } catch (error) {
       setState("error");
       setMessage((error as Error).message);
+      onDone?.({ auto, status: "skipped", reason: "error", oddsRefreshedAt: null });
     } finally {
       busy.current = false;
     }
-  }, [raceId, router]);
+  }, [raceId, router, onStart, onDone]);
 
   useEffect(() => {
     if (!open) return;
-    const id = setInterval(refresh, AUTO_REFRESH_MS);
+    const id = setInterval(() => relaunch(true), AUTO_REFRESH_MS);
     return () => clearInterval(id);
-  }, [open, refresh]);
+  }, [open, relaunch]);
 
   if (finished || now === null || (minutesToStart !== null && minutesToStart < -2)) return null;
 
@@ -99,14 +133,14 @@ export function LiveStatus({
         . La cote finale n&apos;est connue qu&apos;après le départ.
       </p>
       <button
-        className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-accent px-3 text-xs font-bold text-accent-fg transition hover:bg-accent-hi disabled:cursor-not-allowed disabled:opacity-50"
-        disabled={!open || state === "loading"}
-        onClick={refresh}
-        title={open ? "Relire le PMU maintenant" : `Disponible dans les ${WINDOW_MINUTES} dernières minutes avant le départ`}
+        className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-accent px-4 text-sm font-bold text-accent-fg transition hover:bg-accent-hi disabled:cursor-not-allowed disabled:opacity-50"
+        disabled={!available || state === "loading"}
+        onClick={() => relaunch(false)}
+        title={available ? "Relire les cotes PMU et recalculer tout le pronostic" : "Relance possible le jour de la course, jusqu'au départ"}
         type="button"
       >
-        <RefreshCw aria-hidden="true" className={state === "loading" ? "animate-spin" : ""} size={14} />
-        Analyser maintenant
+        <RefreshCw aria-hidden="true" className={state === "loading" ? "animate-spin" : ""} size={15} />
+        {state === "loading" ? "Analyse en cours…" : "Relancer l'analyse IA"}
       </button>
       {message && <p className="w-full text-xs text-danger">{message}</p>}
     </div>

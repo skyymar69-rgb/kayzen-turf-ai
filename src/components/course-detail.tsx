@@ -1,17 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, ArrowLeft, Clock3 } from "lucide-react";
 import { Countdown } from "@/components/countdown";
 import { FieldTable } from "@/components/course/field-table";
 import { HorseSheet } from "@/components/course/horse-sheet";
-import { LiveStatus } from "@/components/course/live-status";
+import { AnalysisReport } from "@/components/course/analysis-report";
+import { LiveStatus, type RelaunchResult } from "@/components/course/live-status";
 import { MarketPanel } from "@/components/course/market-panel";
 import { PostRacePanel, SimulationPanel } from "@/components/course/side-panels";
 import { BetBadges, ShareButton, TicketTools, formatLongDate } from "@/components/course/tools";
 import { VerdictBanner } from "@/components/course/verdict-banner";
 import { RaceSelectionPanel } from "@/components/race-selection";
+import { diffAnalysis, hasChanges, snapshotAnalysis, type AnalysisDiff, type AnalysisSnapshot } from "@/lib/analysis-diff";
 import { buildBetRecommendations, buildXTickets, raceToContext } from "@/lib/bet-recommendations";
 import { buildCourseViewModel } from "@/lib/course-view-model";
 import { formatMeters, properName } from "@/lib/format";
@@ -24,7 +26,8 @@ import type { RaceAnalysis } from "@/lib/types";
 /**
  * PAGE COURSE — le verdict d'abord, le détail à la demande.
  *
- *   1. en-tête et âge des cotes (« Analyser maintenant » dans les 10 dernières minutes) ;
+ *   1. en-tête et âge des cotes (« Relancer l'analyse IA » jusqu'au départ, automatique dans les 10 dernières minutes) ;
+ *   1 bis. le panneau « Analyse réactualisée » : ce que la relance a changé ;
  *   2. verdict en une phrase et tuiles de profils, avec le ROI historique de chaque signal ;
  *   3. notre sélection et un ticket par stratégie ;
  *   4. le tableau unique (Classement IA, MVT, Cotes & Marché, Forme) ;
@@ -57,6 +60,41 @@ export function CourseDetail({ race, history = EMPTY_HISTORY, signals = [] }: Co
   const [selectedNumber, setSelectedNumber] = useState<number | null>(() => vm.rows[0]?.horse.number ?? null);
   const selectedRow = vm.rows.find((r) => r.horse.number === selectedNumber) ?? vm.rows[0] ?? null;
   const finished = race.horses.some((h) => h.finishPosition != null);
+
+  // Analyse de dernière minute : photographie avant la relance, comparaison
+  // une fois la page recalculée avec les nouvelles données.
+  const vmRef = useRef(vm);
+  useEffect(() => {
+    vmRef.current = vm;
+  }, [vm]);
+  const baselineRef = useRef<AnalysisSnapshot | null>(null);
+  const vmAtDoneRef = useRef<typeof vm | null>(null);
+  const [pending, setPending] = useState<RelaunchResult | null>(null);
+  const [report, setReport] = useState<{ diff: AnalysisDiff; result: RelaunchResult } | null>(null);
+
+  const onRelaunchStart = useCallback(() => {
+    baselineRef.current = snapshotAnalysis(vmRef.current);
+  }, []);
+  const onRelaunchDone = useCallback((result: RelaunchResult) => {
+    vmAtDoneRef.current = vmRef.current;
+    setPending(result);
+  }, []);
+
+  useEffect(() => {
+    const baseline = baselineRef.current;
+    if (!pending || !baseline) return;
+    const finish = () => {
+      const diff = diffAnalysis(baseline, snapshotAnalysis(vm));
+      // Une relance automatique sans effet ne vient pas interrompre la lecture.
+      if (!pending.auto || hasChanges(diff)) setReport({ diff, result: pending });
+      baselineRef.current = null;
+      setPending(null);
+    };
+    // Page recalculée : on compare tout de suite. Sinon (rien de neuf côté
+    // serveur), on conclut après quelques secondes.
+    const timer = setTimeout(finish, vm !== vmAtDoneRef.current ? 0 : 5000);
+    return () => clearTimeout(timer);
+  }, [pending, vm]);
 
   function select(number: number) {
     setSelectedNumber(number);
@@ -110,6 +148,8 @@ export function CourseDetail({ race, history = EMPTY_HISTORY, signals = [] }: Co
               raceDate={race.raceDate}
               raceId={race.id}
               startTime={race.startTime}
+              onDone={onRelaunchDone}
+              onStart={onRelaunchStart}
             />
           </div>
         </header>
@@ -122,6 +162,10 @@ export function CourseDetail({ race, history = EMPTY_HISTORY, signals = [] }: Co
               sur l&apos;IA seule et sera recalculé dès l&apos;ouverture du marché.
             </p>
           </div>
+        )}
+
+        {report && (
+          <AnalysisReport diff={report.diff} onClose={() => setReport(null)} onSelect={select} result={report.result} />
         )}
 
         <VerdictBanner onSelect={select} selectedNumber={selectedRow?.horse.number ?? null} signals={signalMap} vm={vm} />

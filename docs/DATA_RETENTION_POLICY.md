@@ -38,7 +38,7 @@ Every write path that removes rows, and the guard that bounds it:
   deleting. An out-of-scope race is one the product never displays, so this is
   a scope decision, not retention.
 - **`src/lib/live/refresh-race.ts`** (loop `scripts/live-refresh.ts`, run by
-  `live_refresh.yml`, and the "Analyser maintenant" button) removes from `entries` the runners the PMU API no longer
+  `live_refresh.yml`, and the "Relancer l'analyse IA" button) removes from `entries` the runners the PMU API no longer
   lists as `PARTANT` — declared non-runners. A phantom runner distorts the
   de-vigged probabilities of every real runner, so it must go. Guard: if the
   API returns fewer than 70 % of the runners known in the database for that

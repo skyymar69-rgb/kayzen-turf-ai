@@ -4,7 +4,7 @@ import { freezePrediction } from "@/lib/live/freeze";
 
 /**
  * RAFRAÎCHISSEMENT D'UNE COURSE — partagé par la boucle planifiée
- * (scripts/live-refresh.ts) et par le bouton « Analyser maintenant ».
+ * (scripts/live-refresh.ts) et par le bouton « Relancer l'analyse IA ».
  *
  * Ce qui est écrit, dans l'ordre :
  *   1. `entries.odds` et `entries.pool_*` — la valeur courante, lue par la page ;

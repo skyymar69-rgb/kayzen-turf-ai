@@ -19,8 +19,10 @@ de feuille de route, et une bonne partie est déjà en ligne :
   probabilité du marché sans la marge du PMU.
 - **Mouvements de cotes et parts des enjeux** : les flèches de cote depuis le
   matin, et l'évolution de la part de chaque cheval dans les mises.
-- **Cotes relues en continu** avant le départ, avec l'âge de la cote affiché,
-  et un bouton « Analyser maintenant » dans les dix dernières minutes.
+- **Analyse de dernière minute** : sur chaque course, un bouton « Relancer
+  l'analyse IA » relit les cotes PMU et recalcule tout le pronostic, puis
+  montre ce qui a changé (Top 3, classement, cotes, profils, non-partants).
+  Dans les dix dernières minutes, la relance est automatique chaque minute.
 - **Chevaux suivis et alertes** : une notification 30 minutes avant le départ
   et en cas de non-partant, sans créer de compte.
 - **Suivi de performance public** (rubrique « Suivi ») : chaque pronostic est

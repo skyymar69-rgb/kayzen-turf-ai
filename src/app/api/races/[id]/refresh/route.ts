@@ -7,19 +7,27 @@ import { adresseAppelant, limiterDebit, reponseTropDeRequetes } from "@/lib/rate
 import { schemaIdCourse } from "@/lib/validation";
 
 /**
- * « Analyser maintenant » — rafraîchit une course dans ses dix dernières
- * minutes : cotes, parts des mises, non-partants, pronostic gelé.
+ * « Relancer l'analyse IA » — relit le PMU pour une course (cotes, parts des
+ * mises, non-partants, pronostic gelé) puis fait recalculer la page.
  *
- * Le PMU n'est interrogé qu'une fois toutes les 30 secondes par course, quel
- * que soit le nombre de visiteurs : le verrou vit en base
+ * Ouvert à tout moment avant le départ. Le PMU n'est interrogé qu'une fois par
+ * course toutes les 30 s dans le dernier quart d'heure, toutes les 2 min avant,
+ * quel que soit le nombre de visiteurs : le verrou vit en base
  * (`races.odds_refreshed_at`), pas dans l'instance.
  */
 
 export const dynamic = "force-dynamic";
 
-/** Fenêtre d'ouverture du bouton, en minutes avant le départ. */
-const WINDOW_MINUTES = 10;
+/** Au-delà, la course n'est pas du jour : rien à relire. */
+const MAX_MINUTES_BEFORE = 18 * 60;
 
+/**
+ * Régénérations de page déclenchées par un clic alors que le PMU venait d'être
+ * relu (par la boucle ou un autre visiteur) : au plus une toutes les 15 s par
+ * course et par instance, pour que cent clics ne fassent pas cent rendus.
+ */
+const lastRevalidation = new Map<string, number>();
+const REVALIDATE_GAP_MS = 15_000;
 const NO_STORE = { "Cache-Control": "no-store" };
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -33,6 +41,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Identifiant de course invalide" }, { status: 400, headers: NO_STORE });
   }
   const parsed = schemaIdCourse.safeParse(id);
+  // Relecture automatique (chaque minute dans les dix dernières) ou clic.
+  const body = (await request.json().catch(() => ({}))) as { auto?: unknown };
+  const auto = body?.auto === true;
   if (!parsed.success) return NextResponse.json({ error: "Identifiant de course invalide" }, { status: 400, headers: NO_STORE });
   if (!hasDatabase()) return NextResponse.json({ error: "Données indisponibles" }, { status: 503, headers: NO_STORE });
 
@@ -44,20 +55,30 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const depart = instantDepart(race.race_date, race.start_time);
   const minutesToStart = depart ? (depart.getTime() - Date.now()) / 60_000 : NaN;
-  if (!(minutesToStart <= WINDOW_MINUTES && minutesToStart >= -2)) {
-    return NextResponse.json(
-      { error: `Actualisation à la demande ouverte dans les ${WINDOW_MINUTES} dernières minutes avant le départ.` },
-      { status: 409, headers: NO_STORE },
-    );
+  if (!(minutesToStart >= -2)) {
+    return NextResponse.json({ error: "La course est partie : l'analyse n'est plus relancée." }, { status: 409, headers: NO_STORE });
+  }
+  if (!(minutesToStart <= MAX_MINUTES_BEFORE)) {
+    return NextResponse.json({ error: "Relance possible le jour de la course." }, { status: 409, headers: NO_STORE });
   }
 
   try {
-    const outcome = await refreshRace(raceId, { minutesToStart, minIntervalSeconds: 30 });
-    // Ne régénérer la page que si le PMU a réellement été relu : sinon chaque
-    // visiteur ouvert dans les dix dernières minutes forçait un rendu complet
-    // par minute, au moment même de l'affluence.
-    if (outcome.status === "refreshed") revalidatePath(`/races/${raceId}`);
-    return NextResponse.json({ ...outcome, refreshedAt: new Date().toISOString() }, { headers: NO_STORE });
+    const outcome = await refreshRace(raceId, { minutesToStart, minIntervalSeconds: minutesToStart <= 15 ? 30 : 120 });
+    // Régénérer la page si le PMU a été relu. Sur un clic, aussi quand il
+    // venait de l'être par quelqu'un d'autre (la page en cache peut avoir une
+    // minute de retard), mais au plus une fois toutes les 15 s par course.
+    // Les relectures automatiques ne régénèrent que sur des données neuves :
+    // sinon chaque onglet ouvert forçait un rendu complet par minute.
+    const now = Date.now();
+    if (outcome.status === "refreshed" || (!auto && now - (lastRevalidation.get(raceId) ?? 0) > REVALIDATE_GAP_MS)) {
+      lastRevalidation.set(raceId, now);
+      if (lastRevalidation.size > 500) lastRevalidation.clear();
+      revalidatePath(`/races/${raceId}`);
+    }
+    const [{ odds_refreshed_at }] = (await getSql()`
+      select odds_refreshed_at from races where id = ${raceId}
+    `) as Array<{ odds_refreshed_at: string | null }>;
+    return NextResponse.json({ ...outcome, oddsRefreshedAt: odds_refreshed_at }, { headers: NO_STORE });
   } catch (cause) {
     console.error("POST /api/races/%s/refresh", raceId, cause instanceof Error ? cause.message : cause);
     return NextResponse.json({ error: "Le PMU ne répond pas, réessayez dans un instant." }, { status: 502, headers: NO_STORE });
