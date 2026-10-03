@@ -30,12 +30,23 @@ const subscribeSchema = z.object({
       auth: z.string().min(8).max(100),
     }),
   }),
-  horseIds: z.array(z.string().min(1).max(120)).max(MAX_FOLLOWED_HORSES),
+  horseIds: z.array(z.string().regex(/^[a-z0-9][a-z0-9-]{0,79}$/)).max(MAX_FOLLOWED_HORSES),
 });
 
 const unsubscribeSchema = z.object({ endpoint: endpointSchema });
 
 const NO_STORE = { "Cache-Control": "no-store" };
+
+/**
+ * Plafond global de NOUVEAUX abonnements par heure. Le compteur par IP vit
+ * dans l'instance : seul un contrôle en base empêche un script réparti de
+ * remplir la table (la base Neon est plafonnée à 512 Mo).
+ */
+const NEW_SUBSCRIPTIONS_PER_HOUR = 300;
+
+function unavailable() {
+  return NextResponse.json({ error: "Alertes momentanément indisponibles." }, { status: 503, headers: NO_STORE });
+}
 
 async function readJson(request: Request): Promise<unknown> {
   try {
@@ -48,9 +59,7 @@ async function readJson(request: Request): Promise<unknown> {
 function guard(request: Request) {
   const limite = limiterDebit(`push:${adresseAppelant(request)}`, 30, 10 * 60_000);
   if (!limite.autorise) return reponseTropDeRequetes(limite);
-  if (!hasDatabase()) {
-    return NextResponse.json({ error: "Alertes momentanément indisponibles." }, { status: 503, headers: NO_STORE });
-  }
+  if (!hasDatabase()) return unavailable();
   return null;
 }
 
@@ -64,14 +73,31 @@ export async function POST(request: Request) {
   }
   const { subscription, horseIds } = parsed.data;
 
-  await getSql().query(
-    `insert into push_subscriptions (endpoint, p256dh, auth, horse_ids)
-     values ($1, $2, $3, $4::text[])
-     on conflict (endpoint) do update
-       set p256dh = excluded.p256dh, auth = excluded.auth,
-           horse_ids = excluded.horse_ids, seen_at = now()`,
-    [subscription.endpoint, subscription.keys.p256dh, subscription.keys.auth, [...new Set(horseIds)]],
-  );
+  try {
+    const sql = getSql();
+    const [known] = (await sql.query(`select 1 from push_subscriptions where endpoint = $1`, [subscription.endpoint])) as unknown[];
+    if (!known) {
+      const [{ n }] = (await sql.query(
+        `select count(*)::int as n from push_subscriptions where created_at > now() - interval '1 hour'`,
+      )) as Array<{ n: number }>;
+      if (n >= NEW_SUBSCRIPTIONS_PER_HOUR) {
+        return NextResponse.json({ error: "Trop d'activations en ce moment, réessayez plus tard." }, { status: 429, headers: { ...NO_STORE, "Retry-After": "3600" } });
+      }
+    }
+    // Seuls les chevaux connus sont gardés : une liste inventée ne déclencherait
+    // jamais d'envoi, donc jamais la purge des abonnements expirés.
+    await sql.query(
+      `insert into push_subscriptions (endpoint, p256dh, auth, horse_ids)
+       values ($1, $2, $3, coalesce((select array_agg(id order by id) from horses where id = any($4::text[])), '{}'))
+       on conflict (endpoint) do update
+         set p256dh = excluded.p256dh, auth = excluded.auth,
+             horse_ids = excluded.horse_ids, seen_at = now()`,
+      [subscription.endpoint, subscription.keys.p256dh, subscription.keys.auth, [...new Set(horseIds)]],
+    );
+  } catch (cause) {
+    console.error("POST /api/push", cause instanceof Error ? cause.message : "erreur");
+    return unavailable();
+  }
 
   return NextResponse.json({ ok: true }, { status: 200, headers: NO_STORE });
 }
@@ -85,6 +111,11 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Requête invalide." }, { status: 400, headers: NO_STORE });
   }
 
-  await getSql().query(`delete from push_subscriptions where endpoint = $1`, [parsed.data.endpoint]);
+  try {
+    await getSql().query(`delete from push_subscriptions where endpoint = $1`, [parsed.data.endpoint]);
+  } catch (cause) {
+    console.error("DELETE /api/push", cause instanceof Error ? cause.message : "erreur");
+    return unavailable();
+  }
   return NextResponse.json({ ok: true }, { status: 200, headers: NO_STORE });
 }

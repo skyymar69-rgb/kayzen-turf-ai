@@ -180,7 +180,7 @@ function variantFor(
   return {
     confidence,
     numbers,
-    rationale: ordered ? "Ordre calcule dans le champ IA priorise." : "Combinaison calculee dans le champ IA priorise.",
+    rationale: ordered ? "Ordre le plus probable selon nos probabilités." : "Combinaison la plus probable selon nos probabilités.",
     ticket: ordered ? `${numbers.join("-")} ordre` : numbers.join("-"),
   };
 }
@@ -254,12 +254,12 @@ function rationaleFor(type: string, horses: HorsePrediction[], { longshot }: Rac
   const lead = horses[0];
   const discipline = context.discipline ?? "Plat";
 
-  if (type === "SIMPLE_PLACE") return `Base place sur le meilleur compromis PronoScore / Top 3 (${discipline}): ${lead.horse}.`;
-  if (type === "DEUX_SUR_QUATRE") return "Couverture sur les bases les plus regulieres du classement probable.";
-  if (type.includes("ORDRE") || type === "TIERCE") return `Combinaisons ordre calculees depuis le champ IA ${discipline} priorise.`;
-  if ((type === "QUARTE_PLUS" || type === "QUINTE_PLUS") && longshot) return `Selection elargie avec tocard surveille #${longshot.number}, a jouer prudemment avec flexi si disponible.`;
-  if (type === "QUARTE_PLUS" || type === "QUINTE_PLUS") return "Selection elargie, a jouer prudemment avec flexi si disponible.";
-  return `Selection issue de l'ordre d'arrivee le plus probable (algo ${discipline}), leader: ${lead.horse}.`;
+  if (type === "SIMPLE_PLACE") return `Le cheval le plus souvent dans les 3 premiers selon nos probabilités : ${lead.horse}.`;
+  if (type === "DEUX_SUR_QUATRE") return "Les chevaux les plus réguliers de notre classement.";
+  if (type.includes("ORDRE") || type === "TIERCE") return `Ordre d'arrivée le plus probable selon nos probabilités (${discipline.toLowerCase()}).`;
+  if ((type === "QUARTE_PLUS" || type === "QUINTE_PLUS") && longshot) return `Sélection élargie avec un outsider surveillé, le n° ${longshot.number} ; à jouer avec prudence, en flexi si disponible.`;
+  if (type === "QUARTE_PLUS" || type === "QUINTE_PLUS") return "Sélection élargie, à jouer avec prudence, en flexi si disponible.";
+  return `Ordre d'arrivée le plus probable selon nos probabilités ; en tête : ${lead.horse}.`;
 }
 
 function requiredHorsesFor(type: string) {
@@ -363,11 +363,14 @@ export function buildXTickets(
     const combos = xCount === 0 ? 1 : ncr(Math.max(0, N - bn.length), xCount);
     if (combos < 1) return;
     const picks  = bases.map(indexOf).filter((i) => i >= 0);
-    const conf   = roundConfidence(ticketProbability(orders, picks, positions, false));
+    // Sans X, le ticket est le même que dans « Tickets proposés » : même règle
+    // d'ordre, sinon le même 1-2-3 affichait deux confiances (4 et 21).
+    const ordered = xCount === 0 && isOrderedType(betType);
+    const conf   = roundConfidence(ticketProbability(orders, picks, positions, ordered));
     const xs     = Array(xCount).fill("X").join(" ");
     const ticket = xCount === 0 ? bn.join("-") : xs ? `${bn.join("-")} ${xs}` : bn.join("-");
     const label  = xCount === 0
-      ? `${offer.label} — ${bn.length} ${bn.length > 1 ? "chevaux fixés" : "cheval fixé"}`
+      ? `${offer.label} — ${bn.length} ${bn.length > 1 ? "chevaux fixés" : "cheval fixé"}${ordered ? " dans l'ordre" : ""}`
       : `${offer.label} — ${bn.length} base${bn.length > 1 ? "s" : ""} + ${xCount} X`;
     out.push({
       betType, label, ticket, bases: bn, xPositions: xCount,

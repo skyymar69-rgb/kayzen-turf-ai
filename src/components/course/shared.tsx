@@ -3,7 +3,7 @@ import { PROFILE_LABELS, type Profile } from "@/lib/profiles";
 
 /** Pastilles de profil — mêmes couleurs partout où un profil apparaît. */
 export const PROFILE_STYLES: Record<Profile, string> = {
-  base: "bg-accent text-white",
+  base: "bg-accent text-accent-fg",
   cache: "bg-violet-100 text-violet-900 dark:bg-violet-950 dark:text-violet-200",
   value: "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200",
   favori: "bg-surface-inv text-white",

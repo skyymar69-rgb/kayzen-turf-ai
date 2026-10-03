@@ -97,20 +97,20 @@ export function PrivacyForm() {
   if (etat.phase === "succes") {
     return (
       <div
-        className="mt-5 rounded-md border border-emerald-700/30 bg-emerald-50 p-5 text-[#26312e]"
+        className="mt-5 rounded-2xl border border-accent/30 bg-accent-lo p-5 text-fg"
         role="status"
       >
-        <h2 className="flex items-center gap-2 text-lg font-bold text-emerald-900">
+        <h2 className="flex items-center gap-2 text-lg font-bold text-accent-text">
           <CheckCircle2 aria-hidden="true" size={19} />
           Demande enregistrée
         </h2>
-        <p className="mt-3 text-sm leading-6 text-[#52615d]">
+        <p className="mt-3 text-sm leading-6 text-muted">
           Votre demande est consignée sous la référence{" "}
-          <strong className="font-mono font-bold text-[#26312e]">{etat.reference}</strong>. Une
+          <strong className="font-mono font-bold text-fg">{etat.reference}</strong>. Une
           réponse vous sera adressée sous un mois au maximum, conformément à l&apos;article 12.3 du
           RGPD. Conservez cette référence pour tout échange ultérieur.
         </p>
-        <p className="mt-3 text-sm leading-6 text-[#52615d]">
+        <p className="mt-3 text-sm leading-6 text-muted">
           En cas de difficulté, vous pouvez saisir la CNIL à tout moment.
         </p>
       </div>
@@ -118,38 +118,38 @@ export function PrivacyForm() {
   }
 
   return (
-    <form className="mt-5 grid gap-4 rounded-md border border-[#d9e1de] bg-white p-5" onSubmit={envoyer}>
+    <form className="mt-5 grid gap-4 rounded-2xl border border-border bg-surface p-5" onSubmit={envoyer}>
       <div>
-        <h2 className="text-lg font-bold text-[#26312e]">Exercer vos droits RGPD</h2>
-        <p className="mt-1 text-sm leading-6 text-[#52615d]">
+        <h2 className="text-lg font-bold text-fg">Exercer vos droits RGPD</h2>
+        <p className="mt-1 text-sm leading-6 text-muted">
           Accès, rectification, effacement, opposition, limitation ou portabilité de vos données.
           Réponse sous un mois maximum.
         </p>
       </div>
 
       <div className="grid gap-1.5">
-        <label className="text-sm font-semibold text-[#52615d]" htmlFor={idEmail}>
+        <label className="text-sm font-semibold text-muted" htmlFor={idEmail}>
           Email <span aria-hidden="true">*</span>
         </label>
         <input
           autoComplete="email"
-          className="min-h-11 w-full rounded-sm border border-[#cdd7d3] px-3 text-[#26312e]"
+          className="min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-fg"
           id={idEmail}
           name="email"
           required
           type="email"
         />
-        <p className="text-xs leading-5 text-[#65746f]">
+        <p className="text-xs leading-5 text-muted">
           Utilisé uniquement pour vous répondre et vérifier votre identité.
         </p>
       </div>
 
       <div className="grid gap-1.5">
-        <label className="text-sm font-semibold text-[#52615d]" htmlFor={idObjet}>
+        <label className="text-sm font-semibold text-muted" htmlFor={idObjet}>
           Objet de la demande <span aria-hidden="true">*</span>
         </label>
         <select
-          className="min-h-11 w-full rounded-sm border border-[#cdd7d3] px-3 text-[#26312e]"
+          className="min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-fg"
           defaultValue="access"
           id={idObjet}
           name="requestType"
@@ -164,11 +164,11 @@ export function PrivacyForm() {
       </div>
 
       <div className="grid gap-1.5">
-        <label className="text-sm font-semibold text-[#52615d]" htmlFor={idMessage}>
+        <label className="text-sm font-semibold text-muted" htmlFor={idMessage}>
           Message <span aria-hidden="true">*</span>
         </label>
         <textarea
-          className="min-h-28 w-full rounded-sm border border-[#cdd7d3] px-3 py-2 text-[#26312e]"
+          className="min-h-28 w-full rounded-xl border border-border bg-surface px-3 py-2 text-fg"
           id={idMessage}
           minLength={10}
           name="message"
@@ -186,7 +186,7 @@ export function PrivacyForm() {
           required
           type="checkbox"
         />
-        <label className="text-sm leading-6 text-[#52615d]" htmlFor={idConsent}>
+        <label className="text-sm leading-6 text-muted" htmlFor={idConsent}>
           J&apos;accepte que mon adresse email et le contenu de ma demande soient conservés le temps
           de l&apos;instruction, puis archivés selon la{" "}
           <a className="font-semibold underline underline-offset-4" href="#conservation">
@@ -203,13 +203,13 @@ export function PrivacyForm() {
         <input autoComplete="off" id={`${idBase}-website`} name="website" tabIndex={-1} />
       </div>
 
-      <p className="text-xs leading-5 text-[#65746f]">
+      <p className="text-xs leading-5 text-muted">
         Champs limités au strict nécessaire (RGPD art. 5.1.c). Responsable du traitement :{" "}
         {COMPANY.editor} — {COMPANY.email}.
       </p>
 
       <button
-        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-sm bg-emerald-700 px-4 font-bold text-white transition hover:bg-emerald-800 disabled:opacity-60"
+        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-cta px-5 font-bold text-cta-text transition hover:bg-cta-hi disabled:opacity-60"
         disabled={etat.phase === "envoi"}
         type="submit"
       >
@@ -226,7 +226,7 @@ export function PrivacyForm() {
       {/* `role="alert"` : l'échec doit être annoncé immédiatement, sans attendre
           que l'utilisateur revienne sur la zone. */}
       {etat.phase === "echec" && (
-        <p className="flex items-start gap-2 text-sm leading-6 font-semibold text-[#a1112f]" role="alert">
+        <p className="flex items-start gap-2 text-sm leading-6 font-semibold text-danger" role="alert">
           <AlertTriangle aria-hidden="true" className="mt-0.5 shrink-0" size={16} />
           <span>
             {etat.message}

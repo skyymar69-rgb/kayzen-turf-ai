@@ -59,7 +59,7 @@ export default function TarifsPage() {
           </ul>
           <Link
             href="/"
-            className="mt-8 inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-bold text-white transition hover:bg-accent-hi"
+            className="mt-8 inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-bold text-accent-fg transition hover:bg-accent-hi"
           >
             Voir le programme du jour <ArrowRight size={14} />
           </Link>

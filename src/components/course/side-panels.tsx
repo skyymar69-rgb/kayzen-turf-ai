@@ -3,15 +3,18 @@
 import { useState } from "react";
 import { Gauge, Sparkles } from "lucide-react";
 import { simulateBet } from "@/lib/betting-engine";
-import { formatOdds, hasOdds } from "@/lib/format";
+import { formatEuros, formatOdds, formatPct, hasOdds } from "@/lib/format";
 import type { PostRaceAnalysis } from "@/lib/types";
 import type { HorseRow } from "@/lib/course-view-model";
 import { Card, Stat } from "@/components/course/shared";
 
 /** Simulation d'une mise sur le cheval sélectionné. */
 export function SimulationPanel({ row }: { row: HorseRow | null }) {
-  const [stake, setStake] = useState(10);
+  // Saisie gardée en texte : forcer un nombre à chaque frappe empêchait de
+  // vider le champ (effacer « 10 » puis taper « 25 » donnait « 125 »).
+  const [stakeInput, setStakeInput] = useState("10");
   if (!row) return null;
+  const stake = Math.max(1, Math.min(10_000, Number(stakeInput.replace(",", ".")) || 1));
   const horse = row.horse;
   const odds = hasOdds(horse.odds) ? horse.odds : hasOdds(horse.fairOdds) ? horse.fairOdds : 5;
   const simulation = simulateBet(stake, odds, horse.winProbability, 500, 0);
@@ -26,16 +29,17 @@ export function SimulationPanel({ row }: { row: HorseRow | null }) {
         Mise (€)
         <input
           className="h-10 w-full rounded-xl border border-border bg-surface px-3 text-sm text-fg outline-none"
+          inputMode="decimal"
           min={1}
-          onChange={(e) => setStake(Math.max(1, Number(e.target.value) || 1))}
+          onChange={(e) => setStakeInput(e.target.value)}
           type="number"
-          value={stake}
+          value={stakeInput}
         />
       </label>
       <div className="mt-3 grid grid-cols-2 gap-2">
-        <Stat label="Espérance" value={`${simulation.expectedValue} €`} />
-        <Stat label="Mise de Kelly" value={`${simulation.kellyStake} €`} />
-        <Stat label="Edge" value={`${simulation.marketEdge} %`} />
+        <Stat label="Espérance" value={formatEuros(simulation.expectedValue)} />
+        <Stat label="Mise de Kelly" value={formatEuros(simulation.kellyStake)} />
+        <Stat label="Edge" value={formatPct(simulation.marketEdge, 1, true)} />
         <Stat label="Lecture" value={simulation.recommendation} accent={simulation.marketEdge > 0} />
       </div>
       <p className="mt-3 text-[11px] leading-5 text-muted">

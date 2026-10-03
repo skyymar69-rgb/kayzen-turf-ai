@@ -19,12 +19,12 @@ import {
   Zap,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { DisciplinePill, TierBadge, titleCase } from "@/components/badges";
+import { DisciplinePill, ReadingBadge, titleCase } from "@/components/badges";
 import { FollowedHorsesPanel } from "@/components/followed-horses-panel";
 import { useFavorites } from "@/hooks/use-favorites";
 import { usePdfJour } from "@/hooks/use-pdf-jour";
 import { probableArrival, raceToContext } from "@/lib/bet-recommendations";
-import { formatMeters, formatOdds, hasOdds, oddsSortValue } from "@/lib/format";
+import { formatMeters, formatOdds, formatPct, hasOdds, oddsSortValue } from "@/lib/format";
 import { minutesActuellesParis, minutesDepuisHeure } from "@/lib/paris-time";
 import { PROFILE_LABELS, READING_LABELS } from "@/lib/profiles";
 import { buildSelection } from "@/lib/selection";
@@ -58,11 +58,11 @@ type RaceMeeting = {
 const DAY_ORDER: RaceAnalysis["relativeDay"][] = ["yesterday", "today", "tomorrow"];
 
 const BET_BADGE: Record<string, string> = {
-  QUINTE_PLUS: "bg-red-500 text-white",
-  QUARTE_PLUS: "bg-sky-500 text-white",
+  QUINTE_PLUS: "bg-red-700 text-white",
+  QUARTE_PLUS: "bg-sky-700 text-white",
   PICK5:       "bg-yellow-300 text-red-700",
-  MULTI:       "bg-pink-600 text-white",
-  TRIO:        "bg-orange-400 text-white",
+  MULTI:       "bg-pink-700 text-white",
+  TRIO:        "bg-orange-700 text-white",
 };
 
 const DISCIPLINES = ["Tous", "Plat", "Trot", "Obstacle"] as const;
@@ -98,7 +98,12 @@ export function Dashboard({ races, performance = null }: DashboardProps) {
       ? [...base].sort((a, b) => b.score - a.score)
       : base;
   }, [meetings, disciplineFilter, meetingSort]);
-  const timelineRace = useMemo(() => selectTimelineRace(dayRaces, currentMinute), [currentMinute, dayRaces]);
+  // Hier et demain ne se lisent pas à l'heure actuelle : la course « active »
+  // de demain est la première de la journée, pas celle qui suit 15 h.
+  const timelineRace = useMemo(
+    () => selectTimelineRace(dayRaces, dayFilter === "today" ? currentMinute : -1),
+    [currentMinute, dayRaces, dayFilter],
+  );
   /* `dayRaces` est trié par réunion puis numéro de course ; la ligne du temps
      se lit par heure de départ. Trié une fois, réutilisé pour la plage
      affichée en en-tête — qui reprenait jusqu'ici le premier et le dernier
@@ -135,6 +140,9 @@ export function Dashboard({ races, performance = null }: DashboardProps) {
 
   const normalizedQuery = query.trim().toLowerCase();
   const visibleRaces = selectedMeeting?.races.filter((r) => {
+    // Le filtre discipline écartait les réunions sans la discipline, mais
+    // laissait passer les courses des autres disciplines d'une réunion mixte.
+    if (disciplineFilter !== "Tous" && r.discipline !== disciplineFilter) return false;
     if (valueBetsOnly && !r.horses.some((h) => h.valueIndex > 10)) return false;
     if (!normalizedQuery) return true;
     return `${r.programCode} ${r.name} ${r.specialty} ${r.startTime}`.toLowerCase().includes(normalizedQuery);
@@ -198,19 +206,25 @@ export function Dashboard({ races, performance = null }: DashboardProps) {
           <div className="mx-auto mb-5 grid h-16 w-16 place-items-center rounded-2xl border border-border bg-surface-sub">
             <Flag className="text-accent" size={30} />
           </div>
-          <h1 className="font-display text-2xl font-bold text-fg">Aucun programme</h1>
+          <h1 className="font-display text-2xl font-bold text-fg">
+            {disciplineFilter !== "Tous" ? `Aucune course de ${disciplineFilter.toLowerCase()}` : "Aucun programme"}
+          </h1>
           <p className="mt-2 text-sm leading-6 text-muted">
-            Aucune course française disponible sur cette date.<br />
-            Les données sont mises à jour chaque matin.
+            {disciplineFilter !== "Tous"
+              ? `Pas de course de ${disciplineFilter.toLowerCase()} ${formatRelativeDay(dayFilter).toLowerCase()} dans notre programme.`
+              : `Aucune course française n'est encore disponible pour ${formatRelativeDay(dayFilter).toLowerCase()}. Le programme est importé chaque matin.`}
           </p>
-          <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
-            <button
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-cta px-5 py-2.5 text-sm font-semibold text-cta-text transition hover:bg-cta-hi"
-              onClick={() => selectDay("today")}
-              type="button"
-            >
-              Voir aujourd’hui
-            </button>
+          <div className="mt-6 flex flex-wrap justify-center gap-2" role="group" aria-label="Changer de jour">
+            {DAY_ORDER.filter((d) => d !== dayFilter || disciplineFilter !== "Tous").map((d) => (
+              <button
+                key={d}
+                className="inline-flex min-h-10 items-center justify-center rounded-xl bg-cta px-4 text-sm font-semibold text-cta-text transition hover:bg-cta-hi"
+                onClick={() => selectDay(d)}
+                type="button"
+              >
+                {d === dayFilter ? "Toutes disciplines" : formatRelativeDay(d)}
+              </button>
+            ))}
             <Link
               href="/pronostics"
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-border px-5 py-2.5 text-sm font-semibold text-fg transition hover:bg-surface-sub"
@@ -340,7 +354,7 @@ export function Dashboard({ races, performance = null }: DashboardProps) {
                 {/* Colonne courses */}
                 <div className="kz-scroll min-w-0 max-h-[420px] overflow-y-auto lg:max-h-[440px]">
                   {visibleRaces.length === 0 ? (
-                    <p className="px-5 py-8 text-center text-sm text-white/40">Aucune course disponible.</p>
+                    <p className="px-5 py-8 text-center text-sm text-white/70">Aucune course ne correspond à ces filtres.</p>
                   ) : (
                     <div className="divide-y divide-white/8">
                       {visibleRaces.map((race) => {
@@ -371,9 +385,9 @@ export function Dashboard({ races, performance = null }: DashboardProps) {
                               <div className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-400">
                                 <span>{race.startTime}</span>
                                 <span>·</span>
-                                <span>{titleCase(race.specialty)}</span>
+                                <span>{race.specialty || race.discipline}</span>
                                 <span>·</span>
-                                <span>{race.horses.length} partants</span>
+                                <span className="whitespace-nowrap">{race.horses.length} partants</span>
                               </div>
                             </div>
 
@@ -384,7 +398,7 @@ export function Dashboard({ races, performance = null }: DashboardProps) {
                                 signal.startsWith("Base fiable") ? "text-green-400" :
                                 signal.startsWith("Outsider") ? "text-yellow-400" :
                                 signal === "À éviter" || signal.startsWith("Favori fragile") ? "text-red-400" :
-                                signal === "Signal faible" ? "text-slate-500" :
+                                signal === "Signal faible" ? "text-slate-400" :
                                 "text-slate-300"
                               }`}>{signal}</span>
                               <StatusChip status={status} dark />
@@ -429,22 +443,22 @@ export function Dashboard({ races, performance = null }: DashboardProps) {
                   || (race.relativeDay === "today" && minutesFromStartTime(race.startTime) < currentMinute);
                 const isNow   = status.includes("imminent");
                 const isValue = race.horses.some((h) => h.valueIndex > 10);
-                const discCls = race.discipline === "Trot" ? "bg-sky-500" : race.discipline === "Obstacle" ? "bg-orange-500" : "bg-violet-500";
+                const discCls = race.discipline === "Trot" ? "bg-sky-700" : race.discipline === "Obstacle" ? "bg-orange-700" : "bg-violet-700";
                 return (
                   <Link
                     key={race.id}
                     href={`/races/${encodeURIComponent(race.id)}`}
                     className={`group flex shrink-0 flex-col gap-1 rounded-xl border px-3 py-2.5 text-center transition min-w-[90px] ${
                       isNow   ? "border-cta/50 bg-cta/10 ring-1 ring-cta/30" :
-                      isPast  ? "border-border bg-surface-sub opacity-60" :
+                      isPast  ? "border-border bg-surface-sub" :
                                "border-border bg-surface hover:border-accent/40 hover:bg-accent-lo"
                     }`}
                   >
-                    <span className="font-mono text-[11px] font-bold text-muted">{race.startTime}</span>
+                    <span className={`font-mono text-[11px] font-bold text-muted ${isPast ? "line-through" : ""}`}>{race.startTime}</span>
                     <span className={`mx-auto rounded px-1.5 py-0.5 text-[10px] font-bold text-white ${discCls}`}>{race.programCode}</span>
                     <span className="truncate text-[10px] text-muted max-w-[80px]">{titleCase(race.name).split(" ")[0]}</span>
                     {isNow  && <span className="h-1 w-1 rounded-full bg-cta mx-auto animate-pulse" />}
-                    {isValue && !isNow && <span className="text-[9px] font-bold text-amber-600">Value</span>}
+                    {isValue && !isNow && <span className="text-[11px] font-bold text-warn">Value</span>}
                   </Link>
                 );
               })}
@@ -465,7 +479,7 @@ export function Dashboard({ races, performance = null }: DashboardProps) {
                 className="group flex flex-col gap-4 overflow-hidden rounded-2xl border border-accent/30 bg-accent-lo p-5 shadow-sm transition hover:border-accent/60 hover:bg-accent-lo sm:flex-row sm:items-center"
               >
                 <div className="flex shrink-0 items-center gap-3">
-                  <div className="grid h-12 w-12 place-items-center rounded-xl bg-accent font-mono text-lg font-bold text-white shadow">
+                  <div className="grid h-12 w-12 place-items-center rounded-xl bg-accent font-mono text-lg font-bold text-accent-fg shadow">
                     <Star size={22} />
                   </div>
                   <div>
@@ -481,7 +495,7 @@ export function Dashboard({ races, performance = null }: DashboardProps) {
                 </div>
                 <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
                   {top3.map((h, i) => (
-                    <span key={h.id} className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-bold ${i === 0 ? "bg-accent text-white" : "bg-surface border border-border text-fg"}`}>
+                    <span key={h.id} className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-bold ${i === 0 ? "bg-accent text-accent-fg" : "bg-surface border border-border text-fg"}`}>
                       <span className="font-mono">#{h.number}</span> {h.horse.split(" ")[0]}
                     </span>
                   ))}
@@ -500,10 +514,10 @@ export function Dashboard({ races, performance = null }: DashboardProps) {
         <section aria-label="Indicateurs du jour" className="mb-4 grid gap-3 sm:grid-cols-3">
           <InsightCard
             icon={<TrendingUp size={18} />}
-            label="Qualité programme"
+            label="Courses lisibles"
             tone="green"
-            value={`${dayInsights.programScore}/100`}
-            detail={`${dayInsights.valueRaces} course${dayInsights.valueRaces > 1 ? "s" : ""} à signal positif`}
+            value={`${dayInsights.readable} sur ${dayRaces.length}`}
+            detail="Une base nette se dégage du peloton"
           />
           <InsightCard
             icon={<BellRing size={18} />}
@@ -516,10 +530,10 @@ export function Dashboard({ races, performance = null }: DashboardProps) {
           />
           <InsightCard
             icon={<Gauge size={18} />}
-            label="Lecture marché"
+            label="Courses incertaines"
             tone="dark"
-            value={dayInsights.marketMood}
-            detail={`${dayInsights.avoidRaces} à éviter · ${dayInsights.focusRaces} focus`}
+            value={`${dayInsights.open} ouverte${dayInsights.open > 1 ? "s" : ""} · ${dayInsights.traps} piège${dayInsights.traps > 1 ? "s" : ""}`}
+            detail="Sans base solide : prudence sur les tickets"
           />
         </section>
 
@@ -545,10 +559,10 @@ export function Dashboard({ races, performance = null }: DashboardProps) {
                     className="group flex flex-col gap-3 bg-surface p-5 transition hover:bg-surface-sub"
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <span className="grid h-7 w-7 place-items-center rounded-lg bg-accent font-mono text-xs font-bold text-white">
+                      <span className="grid h-7 w-7 place-items-center rounded-lg bg-accent font-mono text-xs font-bold text-accent-fg">
                         {i + 1}
                       </span>
-                      <TierBadge tier={race.bettingTier} />
+                      <ReadingBadge horses={race.horses} />
                     </div>
                     <div>
                       <p className="font-mono text-xs font-bold text-muted">{race.programCode} · {race.startTime}</p>
@@ -557,12 +571,12 @@ export function Dashboard({ races, performance = null }: DashboardProps) {
                     </div>
                     <div className="mt-auto grid grid-cols-3 gap-2">
                       <MiniMetric label="Signal"    value={signalsFor(race).signal} />
-                      <MiniMetric label="Consensus" value={`${race.modelConsensus}%`} />
-                      <MiniMetric label="Risque"    value={formatRisk(race.riskLevel)} />
+                      <MiniMetric label="Partants"  value={String(race.horses.length)} />
+                      <MiniMetric label="Départ"    value={race.startTime} />
                     </div>
                     {best && best.valueIndex > 10 && (
                       <p className="rounded-lg bg-accent-lo px-2.5 py-1.5 text-xs font-bold text-accent-text">
-                        Value bet #{best.number} · edge +{best.valueIndex}
+                        Value bet n° {best.number} · espérance {formatPct(best.valueIndex, 0, true)}
                       </p>
                     )}
                   </Link>
@@ -622,40 +636,40 @@ export function Dashboard({ races, performance = null }: DashboardProps) {
                     aria-pressed={active}
                     className={`relative flex min-w-[180px] flex-col gap-1 border-r border-border px-4 py-3 text-left transition sm:min-w-[210px] ${
                       active
-                        ? "bg-accent text-white"
+                        ? "bg-accent text-accent-fg"
                         : "bg-surface text-fg hover:bg-surface-sub"
                     }`}
                     onClick={() => setSelectedMeetingKey(meeting.key)}
                     type="button"
                   >
                     <div className="flex items-center gap-2">
-                      <span className={`text-2xl font-display font-bold ${active ? "text-white" : "text-fg"}`}>
+                      <span className={`text-2xl font-display font-bold ${active ? "text-accent-fg" : "text-fg"}`}>
                         R{meeting.reunionNumber}
                       </span>
                       <DifficultyPip difficulty={meeting.difficulty} active={active} />
                     </div>
-                    <span className={`text-sm font-semibold leading-tight ${active ? "text-white" : "text-fg"}`}>
+                    <span className={`text-sm font-semibold leading-tight ${active ? "text-accent-fg" : "text-fg"}`}>
                       {titleCase(meeting.racecourse)}
                     </span>
-                    <span className={`text-xs ${active ? "text-white/70" : "text-muted"}`}>
+                    <span className={`text-xs ${active ? "text-accent-fg/75" : "text-muted"}`}>
                       {meeting.races.length} course{meeting.races.length > 1 ? "s" : ""} · score {meeting.score}
                     </span>
                     <div className="mt-1 flex flex-wrap gap-1">
                       {meeting.highlights.slice(0, 2).map((h) => (
-                        <span key={h} className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${active ? "bg-white/20 text-white" : "bg-accent-lo text-accent-text"}`}>
+                        <span key={h} className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${active ? "bg-accent-fg/15 text-accent-fg" : "bg-accent-lo text-accent-text"}`}>
                           {h}
                         </span>
                       ))}
                       {(() => {
                         const vbCount = meeting.races.filter((r) => r.horses.some((h) => h.valueIndex > 10)).length;
                         return vbCount > 0 ? (
-                          <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${active ? "bg-amber-400/30 text-amber-200" : "bg-amber-100 text-amber-700"}`}>
+                          <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${active ? "bg-accent-fg/15 text-accent-fg" : "bg-warn-lo text-warn"}`}>
                             {vbCount} value
                           </span>
                         ) : null;
                       })()}
                     </div>
-                    {active && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/40" />}
+                    {active && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent-fg/40" />}
                   </button>
                 );
               })}
@@ -671,7 +685,7 @@ export function Dashboard({ races, performance = null }: DashboardProps) {
                   <button
                     key={d}
                     aria-pressed={disciplineFilter === d}
-                    className={`px-3 py-1.5 transition ${disciplineFilter === d ? "bg-accent text-white" : "text-muted hover:bg-surface"}`}
+                    className={`px-3 py-1.5 transition ${disciplineFilter === d ? "bg-accent text-accent-fg" : "text-muted hover:bg-surface"}`}
                     onClick={() => { setDisciplineFilter(d); setSelectedMeetingKey(""); }}
                     type="button"
                   >
@@ -681,7 +695,7 @@ export function Dashboard({ races, performance = null }: DashboardProps) {
               </div>
               <button
                 aria-pressed={valueBetsOnly}
-                className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold transition ${valueBetsOnly ? "border-amber-400 bg-amber-400/10 text-amber-700" : "border-border bg-surface text-muted hover:border-amber-400/50 hover:text-amber-700"}`}
+                className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold transition ${valueBetsOnly ? "border-warn bg-warn-lo text-warn" : "border-border bg-surface text-muted hover:border-warn/50 hover:text-warn"}`}
                 onClick={() => setValueBetsOnly((v) => !v)}
                 type="button"
               >
@@ -703,7 +717,7 @@ export function Dashboard({ races, performance = null }: DashboardProps) {
               {query && (
                 <button
                   aria-label="Effacer la recherche"
-                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted/20 text-muted transition hover:bg-accent/20 hover:text-accent-text"
+                  className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted/20 text-muted transition hover:bg-accent/20 hover:text-accent-text"
                   onClick={clearQuery}
                   type="button"
                 >
@@ -816,11 +830,11 @@ export function Dashboard({ races, performance = null }: DashboardProps) {
                             onClick={(e) => { e.preventDefault(); toggleFav(race.id); }}
                             type="button"
                           >
-                            <Star size={13} className={favs.has(race.id) ? "fill-amber-400 text-amber-400" : "text-muted"} />
+                            <Star size={13} className={favs.has(race.id) ? "fill-amber-500 text-amber-700 dark:fill-amber-400 dark:text-amber-400" : "text-muted"} />
                           </button>
                           <Link
                             href={`/races/${encodeURIComponent(race.id)}`}
-                            className="inline-flex items-center gap-1.5 rounded-xl border border-accent bg-surface px-3.5 py-2 text-xs font-bold text-accent-text transition hover:bg-accent hover:text-white"
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-accent bg-surface px-3.5 py-2 text-xs font-bold text-accent-text transition hover:bg-accent hover:text-accent-fg"
                           >
                             Analyser <ArrowRight size={12} />
                           </Link>
@@ -873,7 +887,7 @@ export function Dashboard({ races, performance = null }: DashboardProps) {
                         onClick={(e) => { e.preventDefault(); toggleFav(race.id); }}
                         type="button"
                       >
-                        <Star size={13} className={favs.has(race.id) ? "fill-amber-400 text-amber-400" : "text-muted"} />
+                        <Star size={13} className={favs.has(race.id) ? "fill-amber-500 text-amber-700 dark:fill-amber-400 dark:text-amber-400" : "text-muted"} />
                       </button>
                       <Link
                         href={`/races/${encodeURIComponent(race.id)}`}
@@ -993,7 +1007,7 @@ export function Dashboard({ races, performance = null }: DashboardProps) {
                       </div>
                       <SmMetric label="Bases"      value={verdict.bases.length ? verdict.bases.join(", ") : "Aucune"} />
                       <SmMetric label="Cachés"     value={verdict.hidden.length ? verdict.hidden.join(", ") : "Aucun"} />
-                      <SmMetric label="Discipline" value={selectedRace.specialty} />
+                      <SmMetric label="Discipline" value={[selectedRace.discipline, selectedRace.specialty].filter(Boolean).join(" · ")} />
                       <SmMetric label="Partants"   value={String(selectedRace.horses.length)} />
                     </>
                   );
@@ -1018,7 +1032,7 @@ export function Dashboard({ races, performance = null }: DashboardProps) {
           const maxCount  = Math.max(...counts.map((c) => c.count), 1);
           const valueBetRaces = dayRaces.filter((r) => r.horses.some((h) => h.valueIndex > 10));
           return (
-            <section className="mt-4 grid gap-4 lg:grid-cols-2" aria-label="Profils du jour et value bets">
+            <section className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-2" aria-label="Profils du jour et value bets">
               <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Profils · {dayRaces.reduce((t, r) => t + r.horses.length, 0)} partants</p>
                 <h2 className="mt-0.5 font-display text-lg font-bold text-fg">Lecture du programme</h2>
@@ -1029,7 +1043,7 @@ export function Dashboard({ races, performance = null }: DashboardProps) {
                       <div className="flex w-full items-end overflow-hidden rounded-t-md bg-border" style={{ height: 64 }}>
                         <div className="w-full rounded-t-md bg-accent/70 transition-all" style={{ height: `${Math.round((count / maxCount) * 100)}%` }} />
                       </div>
-                      <span className="text-[9px] text-muted">{PROFILE_LABELS[profile]}</span>
+                      <span className="text-[11px] text-muted">{PROFILE_LABELS[profile]}</span>
                     </div>
                   ))}
                 </div>
@@ -1086,9 +1100,9 @@ export function Dashboard({ races, performance = null }: DashboardProps) {
           <div className="grid gap-px bg-border sm:grid-cols-2 lg:grid-cols-4">
             {[
               { icon: <Trophy size={20} />,    label: "Notre n° 1 gagne",    value: performance?.rank1WinRate != null ? `${Math.round(performance.rank1WinRate * 100)} %` : "—", hint: "Part des courses où le premier de notre classement a gagné" },
-              { icon: <BarChart3 size={20} />, label: "ROI net du n° 1",     value: performance?.rank1Roi != null ? `${performance.rank1Roi > 0 ? "+" : "−"}${Math.abs(performance.rank1Roi * 100).toFixed(1).replace(".", ",")} %` : "—", hint: performance ? `Simple gagnant, rapports officiels PMU, sur ${new Intl.NumberFormat("fr-FR").format(performance.rank1Bets)} paris` : "Calcul en cours" },
+              { icon: <BarChart3 size={20} />, label: "ROI net du n° 1",     value: performance?.rank1Roi != null ? formatPct(performance.rank1Roi * 100, 1, true) : "—", hint: performance ? `Simple gagnant, rapports officiels PMU, sur ${new Intl.NumberFormat("fr-FR").format(performance.rank1Bets)} paris` : "Calcul en cours" },
               { icon: <Brain size={20} />,     label: "Top 3 trouvés",       value: performance ? `${performance.top3HitsPerRace.toFixed(2).replace(".", ",")} / 3` : "—", hint: performance ? `En moyenne, sur ${new Intl.NumberFormat("fr-FR").format(performance.racesEvaluated)} courses mesurées` : "Calcul en cours" },
-              { icon: <Zap size={20} />,       label: "Dernier calcul",      value: performance ? new Date(performance.generatedAt).toLocaleDateString("fr-FR") : "—", hint: "Le suivi complet est publié sur la page Suivi" },
+              { icon: <Zap size={20} />,       label: "Dernier calcul",      value: performance ? new Date(performance.generatedAt).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" }) : "—", hint: "Le suivi complet est publié sur la page Suivi" },
             ].map(({ icon, label, value, hint }) => (
               <div key={label} className="flex gap-4 bg-surface px-5 py-5">
                 <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent-lo text-accent-text">
@@ -1129,7 +1143,7 @@ function PdfDownloadButton({ date }: { date: string }) {
       disabled={chargement}
       onClick={() => telecharger(date)}
       type="button"
-      className="inline-flex items-center gap-2 rounded-xl border border-accent/40 bg-accent-lo px-4 py-2.5 text-sm font-semibold text-accent-text transition hover:bg-accent hover:text-white disabled:opacity-60"
+      className="inline-flex items-center gap-2 rounded-xl border border-accent/40 bg-accent-lo px-4 py-2.5 text-sm font-semibold text-accent-text transition hover:bg-accent hover:text-accent-fg disabled:opacity-60"
     >
       {chargement
         ? <><Loader2 aria-hidden="true" size={15} className="animate-spin" /> Génération…</>
@@ -1181,9 +1195,9 @@ function SmMetric({ label, value }: { label: string; value: string }) {
 }
 
 function DifficultyPip({ difficulty, active }: { difficulty: RaceMeeting["difficulty"]; active: boolean }) {
-  const cls = active ? "bg-white/30 text-white" :
+  const cls = active ? "bg-accent-fg/15 text-accent-fg" :
     difficulty === "Facile"   ? "bg-accent-lo text-accent-text" :
-    difficulty === "Complexe" ? "bg-red-50 text-red-600" :
+    difficulty === "Complexe" ? "bg-danger/10 text-danger" :
                                 "bg-surface-sub text-muted";
   return <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${cls}`}>{difficulty}</span>;
 }
@@ -1244,18 +1258,18 @@ function groupRacesByMeeting(races: RaceAnalysis[]): RaceMeeting[] {
 
 function buildDayInsights(races: RaceAnalysis[]) {
   const valueRaces = races.filter((r) => r.horses.some((h) => h.valueIndex > 10)).length;
-  const focusRaces = races.filter((r) => r.bettingTier === "Focus").length;
-  const avoidRaces = races.filter((r) => r.bettingTier === "Avoid" || r.riskLevel === "Speculatif").length;
   const topRaces   = races.slice().sort((a, b) => racePriorityScore(b) - racePriorityScore(a)).slice(0, 3);
   const bestRace   = topRaces[0];
-  // Score qualité programme [0-100] — pondère les courses value et focus, pénalise les spéculatives
-  const programScore = Math.min(100, Math.max(0, Math.round(
-    (valueRaces * 8 + focusRaces * 5 - avoidRaces * 4 + races.length * 2) * 100 / Math.max(races.length * 15, 1)
-  )));
+  // Lecture réelle de chaque course (profils), et non plus les champs
+  // « tier / risque / consensus » que l'import déduisait du nombre de partants.
+  const readings = races.map((r) => buildSelection(r.horses).verdict.reading);
+  const count = (reading: string) => readings.filter((x) => x === reading).length;
   return {
-    avoidRaces, focusRaces, valueRaces, topRaces, programScore,
+    valueRaces, topRaces,
+    readable: count("lisible"),
+    open:     count("ouverte"),
+    traps:    count("piege"),
     bestAlert:    bestRace ? priorityLabel(bestRace) : "En attente",
-    marketMood:   avoidRaces > focusRaces ? "Sélectif" : valueRaces >= 3 ? "Opportuniste" : "Stable",
     nextPriority: bestRace,
   };
 }
@@ -1266,7 +1280,6 @@ function racePriorityScore(race: RaceAnalysis) {
 }
 function priorityLabel(race: RaceAnalysis) {
   if (race.horses.some((h) => h.valueIndex > 14)) return "Value bet forte";
-  if (race.modelConsensus >= 72) return "Base solide";
   if (race.raceQualityScore >= 75) return "Course prioritaire";
   return "Surveillance";
 }
@@ -1302,22 +1315,14 @@ function raceOpportunity(race: RaceAnalysis) {
   // Outsider avec value
   const outsider = arrival.find((h) => h.valueIndex >= 10 && hasOdds(h.odds) && h.odds >= 7);
 
-  if (race.bettingTier === "Avoid" || (race.riskLevel === "Speculatif" && race.marketVolatility > 25))
-    return "À éviter";
   if (favIsFragile)
     return `Favori fragile #${fav.number}`;
   if (best.valueIndex > 18)
     return `Value forte #${best.number}`;
   if (best.valueIndex > 12)
-    return `Value #${best.number} (+${best.valueIndex})`;
-  if (race.modelConsensus >= 75)
-    return `Base fiable #${best.number}`;
+    return `Value n° ${best.number} (${formatPct(best.valueIndex, 0, true)})`;
   if (outsider)
     return `Outsider #${outsider.number} (${formatOdds(outsider.odds)})`;
-  if (race.raceQualityScore >= 72)
-    return `Course solide`;
-  if (race.riskLevel === "Speculatif")
-    return "Course ouverte";
   if (best.top3Probability >= 35)
     return `À surveiller #${best.number}`;
   return "Signal faible";
@@ -1339,10 +1344,9 @@ function raceStatus(race: RaceAnalysis, currentMinute: number) {
   if (start - currentMinute <= 30)   return `Départ imminent ${race.startTime}`;
   return `Départ à ${race.startTime}`;
 }
-/** Affiche une probabilité % — retourne "—" si invalide, sinon "XX.X%" */
+/** Probabilité à la française : « 12,3 % », ou « — » si absente. */
 function fmtProb(v: number | null | undefined): string {
-  if (v === null || v === undefined || (typeof v === "number" && isNaN(v))) return "—";
-  return `${v}%`;
+  return formatPct(v, 1);
 }
 /**
  * Une heure de départ illisible renvoyait NaN, et toute comparaison avec NaN
@@ -1388,14 +1392,9 @@ function dateForDay(races: RaceAnalysis[], day: RaceAnalysis["relativeDay"]) {
 }
 function raceHighlights(offers: BetOffer[]) {
   const out: { label: string; className: string }[] = [];
-  if (offers.some((o) => o.type === "QUINTE_PLUS"))                             out.push({ label: "Quinte+",         className: BET_BADGE.QUINTE_PLUS });
+  if (offers.some((o) => o.type === "QUINTE_PLUS"))                             out.push({ label: "Quinté+",         className: BET_BADGE.QUINTE_PLUS });
   if (offers.some((o) => o.type === "QUARTE_PLUS" && o.audience === "REGIONAL")) out.push({ label: "Quarté régional", className: BET_BADGE.QUARTE_PLUS });
   if (offers.some((o) => o.type === "PICK5"))                                   out.push({ label: "Pick 5",           className: BET_BADGE.PICK5 });
   return out;
-}
-function formatRisk(r: RaceAnalysis["riskLevel"]) {
-  if (r === "Equilibre")  return "Équilibré";
-  if (r === "Speculatif") return "Spéculatif";
-  return r;
 }
 function unique(arr: string[]) { return Array.from(new Set(arr.filter(Boolean))); }

@@ -26,7 +26,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const limite = limiterDebit(`race-refresh:${adresseAppelant(request)}`, 6, 60_000);
   if (!limite.autorise) return reponseTropDeRequetes(limite);
 
-  const parsed = schemaIdCourse.safeParse(decodeURIComponent((await params).id));
+  let id: string;
+  try {
+    id = decodeURIComponent((await params).id);
+  } catch {
+    return NextResponse.json({ error: "Identifiant de course invalide" }, { status: 400, headers: NO_STORE });
+  }
+  const parsed = schemaIdCourse.safeParse(id);
   if (!parsed.success) return NextResponse.json({ error: "Identifiant de course invalide" }, { status: 400, headers: NO_STORE });
   if (!hasDatabase()) return NextResponse.json({ error: "Données indisponibles" }, { status: 503, headers: NO_STORE });
 
@@ -47,7 +53,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   try {
     const outcome = await refreshRace(raceId, { minutesToStart, minIntervalSeconds: 30 });
-    revalidatePath(`/races/${raceId}`);
+    // Ne régénérer la page que si le PMU a réellement été relu : sinon chaque
+    // visiteur ouvert dans les dix dernières minutes forçait un rendu complet
+    // par minute, au moment même de l'affluence.
+    if (outcome.status === "refreshed") revalidatePath(`/races/${raceId}`);
     return NextResponse.json({ ...outcome, refreshedAt: new Date().toISOString() }, { headers: NO_STORE });
   } catch (cause) {
     console.error("POST /api/races/%s/refresh", raceId, cause instanceof Error ? cause.message : cause);

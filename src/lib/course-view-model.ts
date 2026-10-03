@@ -1,4 +1,4 @@
-import { moneyFlow, oddsMovement, type Flow, type MarketHistory, type Movement } from "@/lib/market";
+import { compareMarketSupport, moneyFlow, oddsMovement, type Flow, type MarketHistory, type Movement } from "@/lib/market";
 import type { CalibratedHorse } from "@/lib/probability";
 import type { Profile, RaceVerdict } from "@/lib/profiles";
 import { buildSelection } from "@/lib/selection";
@@ -28,6 +28,8 @@ export type HorseRow = {
 
 export type CourseViewModel = {
   rows: HorseRow[];
+  /** Les mêmes lignes, du plus joué au plus délaissé (onglet MVT). */
+  marketRows: HorseRow[];
   verdict: RaceVerdict;
   byProfile: Record<Profile, HorseRow[]>;
   strongMoney: HorseRow[];
@@ -67,6 +69,7 @@ export function buildCourseViewModel(race: RaceAnalysis, history: MarketHistory)
 
   return {
     rows,
+    marketRows: [...rows].sort(compareMarketSupport),
     verdict: selection.verdict,
     byProfile,
     strongMoney: rows.filter((r) => r.flow.strong).sort((a, b) => (b.flow.delta15 ?? 0) - (a.flow.delta15 ?? 0)),

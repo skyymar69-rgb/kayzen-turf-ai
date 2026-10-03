@@ -43,7 +43,7 @@ describe("classifyField", () => {
     assert.equal(verdict.reading, "lisible");
     assert.deepEqual(verdict.bases, [1]);
     assert.deepEqual(verdict.hidden, [3]);
-    assert.match(verdict.sentence, /base : n° 1/);
+    assert.match(verdict.sentence, /Base : n° 1/);
     assert.match(verdict.sentence, /caché à 14\/1 \(n° 3\)/);
   });
 

@@ -1,3 +1,4 @@
+import { formatOdds } from "@/lib/format";
 import { placePositionsFor } from "@/lib/bet-recommendations";
 import { simulateTopOrders, ticketProbability } from "@/lib/probability";
 import type { RaceSelection } from "@/lib/selection";
@@ -47,7 +48,7 @@ export function strategyTicket(selection: RaceSelection, strategy: Strategy): St
       numbers: [pick.horse.number],
       probability: ticketProbability(orders, [idx(pick.horse.number)], places, false),
       signalKey: places > 1 ? "rank1-sp" : "rank1-sg",
-      rationale: `Le premier de la sélection doit finir dans les ${places} premiers.`,
+      rationale: places > 1 ? `Le premier de la sélection doit finir dans les ${places} premiers.` : "Le premier de la sélection doit gagner.",
     };
   }
 
@@ -75,6 +76,6 @@ export function strategyTicket(selection: RaceSelection, strategy: Strategy): St
     numbers: [outsider.horse.number],
     probability: ticketProbability(orders, [idx(outsider.horse.number)], places, false),
     signalKey: outsider.profile === "cache" ? "cache-sp" : outsider.profile === "outsider" ? "outsider-sp" : null,
-    rationale: `Le cheval à cote de 8/1 ou plus le mieux classé (${outsider.horse.odds.toFixed(1)}/1), dans les ${places} premiers.`,
+    rationale: `Le cheval à cote de 8/1 ou plus le mieux classé (cote ${formatOdds(outsider.horse.odds)}), ${places > 1 ? `dans les ${places} premiers` : "gagnant"}.`,
   };
 }

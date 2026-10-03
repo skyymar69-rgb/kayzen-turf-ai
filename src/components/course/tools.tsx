@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { AlertTriangle, Check, Copy, Share2 } from "lucide-react";
 import { useClipboard, type EtatCopie } from "@/hooks/use-clipboard";
 import { buildBetRecommendations, type XTicket } from "@/lib/bet-recommendations";
+import { formatEuros } from "@/lib/format";
 import type { BetOffer } from "@/lib/types";
 
 /**
@@ -15,19 +16,19 @@ import type { BetOffer } from "@/lib/types";
 type TicketMode = "agressif" | "equilibre" | "securise";
 
 const BET_COLORS: Record<string, string> = {
-  SIMPLE_GAGNANT:  "bg-cyan-500",
-  SIMPLE_PLACE:    "bg-cyan-500",
-  COUPLE_GAGNANT:  "bg-orange-500",
-  COUPLE_PLACE:    "bg-orange-500",
-  COUPLE_ORDRE:    "bg-orange-500",
-  DEUX_SUR_QUATRE: "bg-purple-600",
-  TRIO:            "bg-amber-500",
-  TRIO_ORDRE:      "bg-amber-500",
-  MULTI:           "bg-pink-600",
+  SIMPLE_GAGNANT:  "bg-cyan-700",
+  SIMPLE_PLACE:    "bg-cyan-700",
+  COUPLE_GAGNANT:  "bg-orange-700",
+  COUPLE_PLACE:    "bg-orange-700",
+  COUPLE_ORDRE:    "bg-orange-700",
+  DEUX_SUR_QUATRE: "bg-purple-700",
+  TRIO:            "bg-amber-700",
+  TRIO_ORDRE:      "bg-amber-700",
+  MULTI:           "bg-pink-700",
   SUPER_QUATRE:    "bg-slate-600",
-  QUARTE_PLUS:     "bg-sky-600",
-  QUINTE_PLUS:     "bg-red-500",
-  PICK5:           "bg-lime-600",
+  QUARTE_PLUS:     "bg-sky-700",
+  QUINTE_PLUS:     "bg-red-700",
+  PICK5:           "bg-lime-700",
 };
 
 function TicketCombinationsPanel({ recommendations }: { recommendations: ReturnType<typeof buildBetRecommendations> }) {
@@ -134,7 +135,7 @@ function XTicketsSection({ xTickets }: { xTickets: XTicket[] }) {
 function XTicketCard({ ticket: t }: { ticket: XTicket }) {
   const { etat, copier } = useClipboard();
 
-  const confColor = t.confidence >= 65 ? "text-emerald-700" : t.confidence >= 45 ? "text-amber-700" : "text-muted";
+  const confColor = t.confidence >= 65 ? "text-accent-text" : t.confidence >= 45 ? "text-warn" : "text-muted";
 
   return (
     <div className="rounded-xl border border-border bg-surface-sub p-3">
@@ -146,7 +147,7 @@ function XTicketCard({ ticket: t }: { ticket: XTicket }) {
       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted">
         <span>{t.combinations} combinaison{t.combinations > 1 ? "s" : ""}</span>
         <span>·</span>
-        <span>~{t.costEuros} €</span>
+        <span>~{formatEuros(t.costEuros)}</span>
         <span>·</span>
         <span className={`font-bold ${confColor}`}>Conf. {t.confidence}/99</span>
       </div>
@@ -159,7 +160,7 @@ function TicketCard({ label, ticket, confidence, strategy }: {
 }) {
   const { etat, copier } = useClipboard();
 
-  const confColor = confidence >= 65 ? "text-emerald-700" : confidence >= 45 ? "text-amber-700" : "text-muted";
+  const confColor = confidence >= 65 ? "text-accent-text" : confidence >= 45 ? "text-warn" : "text-muted";
 
   return (
     <div className="rounded-xl border border-border bg-surface-sub p-3">
@@ -205,7 +206,7 @@ export function ShareButton({ programCode, name }: { programCode: string; name: 
       type="button"
     >
       {etat === "copie" ? (
-        <Check aria-hidden="true" className="text-emerald-700" size={13} />
+        <Check aria-hidden="true" className="text-accent-text" size={13} />
       ) : etat === "echec" ? (
         <AlertTriangle aria-hidden="true" className="text-danger" size={13} />
       ) : (
@@ -227,6 +228,9 @@ function buildTicketPlan(recommendations: ReturnType<typeof buildBetRecommendati
   });
   const limited = filtered.slice().sort((a, b) => b.confidence - a.confidence).slice(0, mode === "agressif" ? 4 : 3);
   const total   = limited.reduce((s, i) => s + ticketWeight(i.strategy, mode), 0) || 1;
+  // Un budget vide, nul ou négatif ramené au minimum : sinon chaque ticket
+  // gardait sa mise plancher de 1 € et la somme dépassait le budget saisi.
+  budget = Math.min(10_000, Math.max(5, Number.isFinite(budget) ? budget : 5));
   return limited.map((item) => ({ ...item, stake: Math.max(1, Math.round((budget * ticketWeight(item.strategy, mode)) / total)) }));
 }
 
@@ -250,7 +254,7 @@ function visibleBetBadges(offers: BetOffer[]) {
 
 function shortBetLabel(offer: BetOffer) {
   const labels: Record<string, string> = {
-    SIMPLE_GAGNANT: "Simple", SIMPLE_PLACE: "Simple", COUPLE_GAGNANT: "Couple", COUPLE_PLACE: "Couple",
+    SIMPLE_GAGNANT: "Simple", SIMPLE_PLACE: "Simple", COUPLE_GAGNANT: "Couplé", COUPLE_PLACE: "Couplé",
     DEUX_SUR_QUATRE: "2 sur 4", TRIO: "Trio", MULTI: "Multi", TIERCE: "Tiercé",
     QUARTE_PLUS: "Quarté+", QUINTE_PLUS: "Quinté+", PICK5: "Pick5",
   };
@@ -258,7 +262,7 @@ function shortBetLabel(offer: BetOffer) {
 }
 
 export function formatLongDate(date: string) {
-  return new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" }).format(new Date(`${date}T12:00:00`));
+  return new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date(`${date}T12:00:00`));
 }
 
 function formatStrategyLabel(s: string) { if (s === "Speculatif") return "Spéculatif"; return s; }
@@ -301,7 +305,7 @@ function BoutonCopier({
       type="button"
     >
       {etat === "copie" ? (
-        <Check aria-hidden="true" className="text-emerald-700" size={taille} />
+        <Check aria-hidden="true" className="text-accent-text" size={taille} />
       ) : etat === "echec" ? (
         <AlertTriangle aria-hidden="true" className="text-danger" size={taille} />
       ) : (
@@ -319,7 +323,7 @@ export function BetBadges({ offers }: { offers: BetOffer[] }) {
   return (
     <div className="mt-3 flex flex-wrap gap-2">
       {visibleBetBadges(offers).map((bet) => (
-        <span key={`${bet.type}-${bet.audience ?? "N"}`} className={`rounded-full px-3 py-1 text-xs font-bold text-white ${BET_COLORS[bet.type] ?? "bg-accent"}`}>
+        <span key={`${bet.type}-${bet.audience ?? "N"}`} className={`rounded-full px-3 py-1 text-xs font-bold text-white ${BET_COLORS[bet.type] ?? "bg-emerald-800"}`}>
           {shortBetLabel(bet)}
         </span>
       ))}
@@ -374,7 +378,7 @@ export function TicketTools({
                 <button
                   key={mode}
                   aria-pressed={ticketMode === mode}
-                  className={`min-h-9 px-4 transition ${ticketMode === mode ? "bg-accent text-white" : "text-muted hover:bg-surface"}`}
+                  className={`min-h-9 px-4 transition ${ticketMode === mode ? "bg-accent text-accent-fg" : "text-muted hover:bg-surface"}`}
                   onClick={() => setTicketMode(mode)}
                   type="button"
                 >

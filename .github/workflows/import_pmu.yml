@@ -47,6 +47,11 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+        # Les secrets de la base ne sont pas exposés aux scripts d'installation
+        # des quelque 500 dépendances : une seule compromise suffirait sinon à
+        # exfiltrer l'accès complet à la base.
+        env:
+          DATABASE_URL: ""
 
       - name: Apply database schema
         run: npm run db:schema

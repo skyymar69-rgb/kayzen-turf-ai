@@ -120,7 +120,7 @@ async function departTargets(): Promise<Target[]> {
        from races r
        join entries e on e.race_id = r.id
        join horses h on h.id = e.horse_id
-       join push_subscriptions s on e.horse_id = any(s.horse_ids)
+       join push_subscriptions s on s.horse_ids @> array[e.horse_id]
        left join racecourses rc on rc.id = r.racecourse_id
        left join lateral (
          select p.payload from prediction_snapshots p where p.race_id = r.id order by p.captured_at desc limit 1
@@ -150,7 +150,7 @@ async function scratchTargets(raceId: string, horseIds: string[]): Promise<Targe
             null::jsonb as payload
        from races r
        join horses h on h.id = any($2::text[])
-       join push_subscriptions s on h.id = any(s.horse_ids)
+       join push_subscriptions s on s.horse_ids @> array[h.id]
        left join racecourses rc on rc.id = r.racecourse_id
       where r.id = $1
         and not exists (

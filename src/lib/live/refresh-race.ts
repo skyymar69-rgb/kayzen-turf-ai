@@ -61,19 +61,33 @@ export async function refreshRace(
   const participantsUrl = pmuRaceUrl(raceId, "/participants");
   if (!participantsUrl) return { status: "skipped", reason: "unknown-race" };
 
-  const locked = await sql.query(
-    `update races set odds_refreshed_at = now()
-      where id = $1
-        and (odds_refreshed_at is null or odds_refreshed_at < now() - make_interval(secs => $2))
-      returning id`,
+  const locked = (await sql.query(
+    `with previous as (select odds_refreshed_at from races where id = $1)
+     update races set odds_refreshed_at = now()
+       from previous
+      where races.id = $1
+        and (races.odds_refreshed_at is null or races.odds_refreshed_at < now() - make_interval(secs => $2))
+      returning previous.odds_refreshed_at as previous`,
     [raceId, minIntervalSeconds],
-  );
+  )) as Array<{ previous: string | null }>;
   if (locked.length === 0) return { status: "skipped", reason: "recent" };
 
-  const payload = await fetchPmuJson<{ participants?: PmuParticipant[] }>(participantsUrl);
-  const participants = payload?.participants ?? [];
-  const running = participants.filter((p) => !p.statut || p.statut === "PARTANT");
-  if (running.length === 0) return { status: "skipped", reason: "no-runners" };
+  // `odds_refreshed_at` sert de verrou ET d'âge de la cote affiché. Si le PMU
+  // ne répond pas, la date reprend sa valeur : la page ne doit jamais annoncer
+  // des cotes « relevées à l'instant » qui n'ont pas été relues.
+  const release = () => sql.query(`update races set odds_refreshed_at = $2 where id = $1`, [raceId, locked[0]!.previous]);
+  let running: PmuParticipant[];
+  try {
+    const payload = await fetchPmuJson<{ participants?: PmuParticipant[] }>(participantsUrl);
+    running = (payload?.participants ?? []).filter((p) => !p.statut || p.statut === "PARTANT");
+  } catch (error) {
+    await release();
+    throw error;
+  }
+  if (running.length === 0) {
+    await release();
+    return { status: "skipped", reason: "no-runners" };
+  }
 
   // Les pools n'existent qu'une fois les paris ouverts : leur absence est normale.
   let pools = new Map<number, { win: number | null; place: number | null; quinte: number | null }>();

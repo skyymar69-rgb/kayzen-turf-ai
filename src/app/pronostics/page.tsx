@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { ArrowRight, Clock3, Flag, TrendingUp } from "lucide-react";
 import { AiDisclosure } from "@/components/ai-disclosure";
-import { DisciplinePill, TierBadge, titleCase } from "@/components/badges";
+import { DisciplinePill, ReadingBadge, titleCase } from "@/components/badges";
 import { buildBetRecommendations, probableArrival, raceToContext } from "@/lib/bet-recommendations";
+import { formatMeters, formatPct } from "@/lib/format";
 import { getRaces } from "@/lib/race-repository";
 
 // TTFB mesuré à 4,6 s : buildBetRecommendations et buildXTickets étaient
@@ -58,8 +59,8 @@ export default async function PronosticsPage() {
           {quinteRaces > 0 && (
             <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-border pt-4 text-xs text-muted">
               <span className="font-semibold text-fg">Paris phares :</span>
-              <span className="rounded-full bg-red-500 px-2 py-0.5 text-white font-bold">Quinte+</span>
-              <span className="rounded-full bg-sky-500 px-2 py-0.5 text-white font-bold">Quarté+</span>
+              <span className="rounded-full bg-red-700 px-2 py-0.5 text-white font-bold">Quinté+</span>
+              <span className="rounded-full bg-sky-700 px-2 py-0.5 text-white font-bold">Quarté+</span>
               <span className="rounded-full bg-yellow-300 px-2 py-0.5 text-red-700 font-bold">Pick 5</span>
             </div>
           )}
@@ -101,8 +102,8 @@ export default async function PronosticsPage() {
                     <span className="h-3.5 w-px bg-border-strong" />
                     <span className="text-sm text-muted">{titleCase(race.racecourse)}</span>
                     <div className="ml-auto flex gap-1.5">
-                      {hasQuinte && <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white">Quinte+</span>}
-                      {hasQuarte && <span className="rounded-full bg-sky-500 px-2 py-0.5 text-[10px] font-bold text-white">Quarté</span>}
+                      {hasQuinte && <span className="rounded-full bg-red-700 px-2 py-0.5 text-[10px] font-bold text-white">Quinté+</span>}
+                      {hasQuarte && <span className="rounded-full bg-sky-700 px-2 py-0.5 text-[10px] font-bold text-white">Quarté</span>}
                       {hasPick5  && <span className="rounded-full bg-yellow-300 px-2 py-0.5 text-[10px] font-bold text-red-700">Pick 5</span>}
                       <DisciplinePill discipline={race.discipline} />
                     </div>
@@ -113,14 +114,10 @@ export default async function PronosticsPage() {
                     {/* Race info */}
                     <div>
                       <h2 className="font-display text-xl font-bold text-fg">{titleCase(race.name)}</h2>
-                      <p className="mt-1 text-sm text-muted">{race.specialty} · {race.distance ? `${race.distance} m` : ""} · {race.horses.length} partants</p>
+                      <p className="mt-1 text-sm text-muted">{[race.specialty || race.discipline, formatMeters(race.distance), `${race.horses.length} partants`].filter(Boolean).join(" · ")}</p>
 
                       <div className="mt-3 flex flex-wrap gap-2">
-                        <TierBadge tier={race.bettingTier} />
-                        <RiskBadge risk={race.riskLevel} />
-                        <span className="rounded-full border border-border px-2.5 py-0.5 text-xs font-medium text-muted">
-                          Consensus {race.modelConsensus}%
-                        </span>
+                        <ReadingBadge horses={race.horses} />
                       </div>
                     </div>
 
@@ -137,7 +134,7 @@ export default async function PronosticsPage() {
                       />
                       <RecapBox
                         label="Value bet"
-                        value={valueBet ? `#${valueBet.number} +${valueBet.valueIndex}` : "—"}
+                        value={valueBet ? `n° ${valueBet.number} · ${formatPct(valueBet.valueIndex, 0, true)}` : "—"}
                         accent={!!valueBet}
                       />
                     </div>
@@ -145,7 +142,7 @@ export default async function PronosticsPage() {
                     {/* CTA */}
                     <Link
                       href={`/races/${encodeURIComponent(race.id)}`}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-bold text-white transition hover:bg-accent-hi"
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-bold text-accent-fg transition hover:bg-accent-hi"
                     >
                       Analyse <ArrowRight size={14} />
                     </Link>
@@ -209,10 +206,4 @@ function RecapBox({ label, value, mono, accent }: { label: string; value: string
       </p>
     </div>
   );
-}
-
-function RiskBadge({ risk }: { risk: string }) {
-  if (risk === "Speculatif") return <span className="rounded-full border border-red-200 bg-red-50 px-2.5 py-0.5 text-[10px] font-bold text-red-700">Spéculatif</span>;
-  if (risk === "Prudent")    return <span className="rounded-full border border-green-200 bg-green-50 px-2.5 py-0.5 text-[10px] font-bold text-green-700">Prudent</span>;
-  return <span className="rounded-full border border-border bg-surface-sub px-2.5 py-0.5 text-[10px] font-bold text-muted">Équilibré</span>;
 }

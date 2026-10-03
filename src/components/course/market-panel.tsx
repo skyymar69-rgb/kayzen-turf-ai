@@ -1,6 +1,6 @@
 import { LineChart } from "lucide-react";
 import type { HorseRow } from "@/lib/course-view-model";
-import { formatOdds } from "@/lib/format";
+import { formatOdds, formatPct } from "@/lib/format";
 import type { MarketHistory } from "@/lib/market";
 import { Card, Eyebrow, pct, signedPct, signedPts } from "@/components/course/shared";
 
@@ -72,7 +72,7 @@ export function MarketPanel({ row, history }: { row: HorseRow | null; history: M
           </p>
         </div>
         {oddsPoints.length >= 2 ? (
-          <Chart points={oddsPoints} reference={row.movement.reference} format={(v) => v.toFixed(1)} />
+          <Chart points={oddsPoints} reference={row.movement.reference} format={(v) => formatOdds(v)} />
         ) : (
           <p className="mt-2 text-xs text-muted">Pas encore assez de relevés pour tracer la cote.</p>
         )}
@@ -86,7 +86,7 @@ export function MarketPanel({ row, history }: { row: HorseRow | null; history: M
           </p>
         </div>
         {poolPoints.length >= 2 ? (
-          <Chart points={poolPoints} format={(v) => `${v.toFixed(1)}%`} />
+          <Chart points={poolPoints} format={(v) => formatPct(v, 1)} />
         ) : (
           <p className="mt-2 text-xs text-muted">Les parts des mises ne sont publiées que le jour de la course, une fois les paris ouverts.</p>
         )}

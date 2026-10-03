@@ -71,12 +71,11 @@ export function HorseSheet({ race, row }: { race: RaceAnalysis; row: HorseRow | 
           </p>
           {row.horse.horseId && (
             <button
-              aria-pressed={followed.has(row.horse.horseId)}
               className="mt-2 inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-border bg-surface-sub px-2.5 text-xs font-semibold text-fg transition hover:border-accent"
               onClick={() => toggle({ id: row.horse.horseId!, name: row.horse.horse })}
               type="button"
             >
-              <Star aria-hidden="true" className={followed.has(row.horse.horseId) ? "fill-amber-400 text-amber-400" : "text-muted"} size={13} />
+              <Star aria-hidden="true" className={followed.has(row.horse.horseId) ? "fill-amber-500 text-amber-700 dark:fill-amber-400 dark:text-amber-400" : "text-muted"} size={13} />
               {followed.has(row.horse.horseId) ? "Cheval suivi" : "Suivre ce cheval"}
             </button>
           )}

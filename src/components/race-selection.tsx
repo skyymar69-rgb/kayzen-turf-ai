@@ -57,12 +57,12 @@ export function RaceSelectionPanel({
                 {top3.map((s) => s.horse.number).join(" – ")}
               </span>
               {complements.length > 0 && (
-                <span className="font-mono text-2xl font-bold leading-none tracking-tight text-accent-text/55">
+                <span className="font-mono text-2xl font-bold leading-none tracking-tight text-accent-text/80">
                   – {complements.map((s) => s.horse.number).join(" – ")}
                 </span>
               )}
             </div>
-            <p className="mt-2 text-xs text-accent-text/80">
+            <p className="mt-2 text-xs text-accent-text">
               <span className="font-bold">Top 3</span> en gras — les trois plus fortes probabilités
               {complements.length > 0 && <> · les {complements.length} suivants complètent les tickets larges</>}
             </p>
@@ -71,14 +71,13 @@ export function RaceSelectionPanel({
           <div className="w-full max-w-sm rounded-xl border border-border bg-surface px-4 py-3 sm:w-auto">
             <div className="flex items-center justify-between gap-3">
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Ticket</p>
-              <div role="radiogroup" aria-label="Stratégie" className="flex overflow-hidden rounded-lg border border-border text-[11px] font-bold">
+              <div role="group" aria-label="Stratégie" className="flex overflow-hidden rounded-lg border border-border text-[11px] font-bold">
                 {(Object.keys(STRATEGY_LABELS) as Strategy[]).map((s) => (
                   <button
                     key={s}
-                    aria-checked={strategy === s}
-                    className={`px-2.5 py-1 transition ${strategy === s ? "bg-accent text-white" : "text-muted hover:bg-surface-sub"}`}
+                    aria-pressed={strategy === s}
+                    className={`min-h-7 px-2.5 py-1 transition ${strategy === s ? "bg-accent text-accent-fg" : "text-muted hover:bg-surface-sub"}`}
                     onClick={() => setStrategy(s)}
-                    role="radio"
                     type="button"
                   >
                     {STRATEGY_LABELS[s]}
@@ -125,7 +124,7 @@ function SelectionRow({ entry, selected, onSelect }: { entry: SelectedHorse; sel
         onClick={() => onSelect(horse.number)}
         type="button"
       >
-        <span className={`flex size-9 shrink-0 items-center justify-center rounded-xl font-mono text-base font-bold ${inTop3 ? "bg-accent text-white" : "bg-surface-sub text-muted"}`}>
+        <span className={`flex size-9 shrink-0 items-center justify-center rounded-xl font-mono text-base font-bold ${inTop3 ? "bg-accent text-accent-fg" : "bg-surface-sub text-muted"}`}>
           {rank}
         </span>
         <span className="min-w-0 flex-1">

@@ -58,7 +58,18 @@ export function stagesFor(minutesToStart: number): Array<"H-60" | "H-15" | "H-2"
 }
 
 export async function freezePrediction(raceId: string, minutesToStart: number): Promise<string[]> {
-  const stages = stagesFor(minutesToStart);
+  const sql = getSql();
+  let stages = stagesFor(minutesToStart);
+  // H-60 et H-15 ne s'écrivent qu'une fois : inutile de relire toute la course
+  // (deux requêtes et le calcul complet) à chaque passage de la boucle.
+  const fixed = stages.filter((s) => s !== "H-2");
+  if (fixed.length > 0) {
+    const done = (await sql.query(
+      `select stage from prediction_snapshots where race_id = $1 and stage = any($2::text[])`,
+      [raceId, fixed],
+    )) as Array<{ stage: string }>;
+    stages = stages.filter((s) => !done.some((d) => d.stage === s));
+  }
   if (stages.length === 0) return [];
 
   const race = await getRaceById(raceId);
@@ -66,7 +77,6 @@ export async function freezePrediction(raceId: string, minutesToStart: number): 
 
   const payload = JSON.stringify(buildFrozenPayload(race));
   const minutes = Math.round(minutesToStart);
-  const sql = getSql();
   const written: string[] = [];
 
   for (const stage of stages) {

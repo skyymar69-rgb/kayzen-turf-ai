@@ -24,7 +24,7 @@ type Tile = {
 };
 
 const READING_STYLES = {
-  lisible: "bg-accent text-white",
+  lisible: "bg-accent text-accent-fg",
   ouverte: "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200",
   piege: "bg-danger/10 text-danger",
 } as const;
@@ -76,7 +76,7 @@ export function VerdictBanner({
                     aria-label={`Voir la fiche du n° ${row.horse.number}, ${row.horse.horse}`}
                     aria-pressed={selectedNumber === row.horse.number}
                     className={`h-9 min-w-9 rounded-lg px-2 font-mono text-base font-bold transition ${
-                      selectedNumber === row.horse.number ? "bg-accent text-white" : "bg-surface-sub text-fg hover:bg-accent-lo hover:text-accent-text"
+                      selectedNumber === row.horse.number ? "bg-accent text-accent-fg" : "bg-surface-sub text-fg hover:bg-accent-lo hover:text-accent-text"
                     }`}
                     onClick={() => onSelect(row.horse.number)}
                     type="button"
@@ -90,7 +90,7 @@ export function VerdictBanner({
             )}
             <p className="mt-auto text-[11px] leading-4 text-muted">
               {tile.key === "money"
-                ? "Part des mises PMU en hausse de 2 pts ou plus sur 15 min. Pas encore mesuré."
+                ? "Part des mises PMU en hausse de 2 pts ou plus sur 15 min. Rendement historique : relevés encore trop récents pour le mesurer."
                 : tile.signal && tile.signal.bets > 0
                   ? <>Historique {tile.hint} : <span className={tile.signal.roi >= 0 ? "font-bold text-accent-text" : "font-bold text-danger"}>{roiLine(tile.signal.roi, tile.signal.bets)}</span></>
                   : "Historique non encore mesuré."}

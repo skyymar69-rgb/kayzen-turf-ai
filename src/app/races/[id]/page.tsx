@@ -3,7 +3,7 @@ import { cache } from "react";
 import { notFound } from "next/navigation";
 import { CourseDetail } from "@/components/course-detail";
 import { JsonLd } from "@/components/json-ld";
-import { formatMeters } from "@/lib/format";
+import { formatMeters, properName } from "@/lib/format";
 import { getLatestTrackRecord, getRaceById, getRaceMarketHistory } from "@/lib/race-repository";
 import { buildSelection } from "@/lib/selection";
 import { SITE_URL } from "@/lib/site";
@@ -31,7 +31,7 @@ export const revalidate = 60;
  * chaque visite paie deux fois la requête base. React déduplique l'appel sur la
  * durée d'un rendu.
  */
-const loadRace = cache((id: string) => getRaceById(id));
+const loadRace = cache((id: string | null) => getRaceById(id));
 
 const dateLongue = new Intl.DateTimeFormat("fr-FR", {
   day: "numeric",
@@ -63,9 +63,18 @@ function decalageParis(raceDate: string) {
  * Google les voyait comme du contenu dupliqué et n'en indexait qu'une poignée.
  * Chaque course porte désormais ses propres balises et son canonique.
  */
+/** Une URL mal encodée (« %E0 ») ne doit pas lever une erreur 500 : c'est une course introuvable. */
+function safeDecode(id: string): string | null {
+  try {
+    return decodeURIComponent(id);
+  } catch {
+    return null;
+  }
+}
+
 export async function generateMetadata({ params }: RacePageProps): Promise<Metadata> {
   const { id } = await params;
-  const race = await loadRace(decodeURIComponent(id));
+  const race = await loadRace(safeDecode(id));
 
   if (!race) {
     return {
@@ -75,12 +84,12 @@ export async function generateMetadata({ params }: RacePageProps): Promise<Metad
   }
 
   const chemin = `/races/${encodeURIComponent(race.id)}`;
-  const titre = `${race.programCode} ${race.name} — ${race.racecourse}`;
+  const titre = `${race.programCode} ${properName(race.name)} — ${properName(race.racecourse)}`;
   // `race.horses[0]` était le premier numéro du tableau, pas le favori du
   // modèle : la description annonçait un « favori » qui n'en était pas un.
   const favori = buildSelection(race.horses).base?.horse ?? race.horses[0];
   const description =
-    `Pronostic IA de la ${race.programCode} ${race.name} à ${race.racecourse}, ` +
+    `Pronostic IA de la ${race.programCode} ${properName(race.name)} à ${properName(race.racecourse)}, ` +
     `le ${formatDate(race.raceDate)} à ${race.startTime} — ${race.discipline}, ${formatMeters(race.distance)}, ` +
     `${race.horses.length} partants.` +
     (favori ? ` Favori du modèle : ${favori.number} ${favori.horse}.` : "") +
@@ -120,7 +129,7 @@ export async function generateMetadata({ params }: RacePageProps): Promise<Metad
 
 export default async function RacePage({ params }: RacePageProps) {
   const { id } = await params;
-  const race = await loadRace(decodeURIComponent(id));
+  const race = await loadRace(safeDecode(id));
 
   if (!race) notFound();
 
@@ -138,7 +147,7 @@ export default async function RacePage({ params }: RacePageProps) {
     sport: `Course hippique — ${race.discipline}`,
     location: {
       "@type": "Place",
-      name: race.racecourse,
+      name: properName(race.racecourse),
       address: { "@type": "PostalAddress", addressCountry: race.sourceCountry },
     },
     competitor: race.horses.slice(0, 6).map((horse) => ({

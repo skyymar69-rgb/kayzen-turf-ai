@@ -99,7 +99,7 @@ export function LiveStatus({
         . La cote finale n&apos;est connue qu&apos;après le départ.
       </p>
       <button
-        className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-accent px-3 text-xs font-bold text-white transition hover:bg-accent-hi disabled:cursor-not-allowed disabled:opacity-50"
+        className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-accent px-3 text-xs font-bold text-accent-fg transition hover:bg-accent-hi disabled:cursor-not-allowed disabled:opacity-50"
         disabled={!open || state === "loading"}
         onClick={refresh}
         title={open ? "Relire le PMU maintenant" : `Disponible dans les ${WINDOW_MINUTES} dernières minutes avant le départ`}

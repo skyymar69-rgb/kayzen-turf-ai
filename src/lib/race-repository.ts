@@ -100,6 +100,17 @@ type EntryRow = {
   trainer_wins: number | null;
 };
 
+/**
+ * Spécialité telle qu'on l'écrit. L'import PMU livre « Attele » et « Monte »
+ * sans accent, et répète la discipline pour le plat et l'obstacle : l'en-tête
+ * des courses affichait « Plat · Plat ». Chaîne vide quand elle n'apporte rien.
+ */
+function specialtyLabel(specialty: string | null, discipline: string): string {
+  const labels: Record<string, string> = { Attele: "Attelé", Monte: "Monté" };
+  const value = specialty ? (labels[specialty] ?? specialty) : "";
+  return value === discipline ? "" : value;
+}
+
 export async function getRaces(filters?: { date?: string | null; day?: string | null }) {
   const filterDate = filters?.date ?? (filters?.day ? dateForRelativeDay(filters.day) : null);
   const yesterdayDate = dateForRelativeDay("yesterday");
@@ -342,7 +353,7 @@ function mapRace(row: RaceRow, entries: EntryRow[]): RaceAnalysis {
     racecourse: row.racecourse,
     startTime: row.start_time,
     discipline: row.discipline,
-    specialty: row.specialty ?? row.discipline,
+    specialty: specialtyLabel(row.specialty, row.discipline),
     distance: row.distance,
     going: row.going,
     weather: row.weather,

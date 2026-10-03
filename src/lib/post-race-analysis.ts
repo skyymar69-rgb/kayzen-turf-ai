@@ -22,9 +22,9 @@ export function buildPostRaceAnalysis(race: RaceAnalysis): PostRaceAnalysis {
         confidenceScore: 0,
       },
       verdict: "En attente",
-      summary: "Resultat officiel non encore disponible. L'analyse post-course sera calculee des que l'arrivée est importee.",
+      summary: "L'arrivée officielle n'est pas encore publiée : le bilan sera calculé dès son import.",
       lessons: [],
-      nextModelActions: ["Attendre l'arrivée officielle PMU puis comparer prediction, tickets proposés et resultat."],
+      nextModelActions: ["Attendre l'arrivée officielle PMU puis comparer pronostic, tickets proposés et résultat."],
     };
   }
 
@@ -83,7 +83,7 @@ function scoreReview(winnerHit: boolean, top3Hits: number, top5Hits: number, ave
 }
 
 function summaryFor(
-  race: RaceAnalysis,
+  _race: RaceAnalysis,
   actual: HorsePrediction[],
   predicted: HorsePrediction[],
   verdict: PostRaceAnalysis["verdict"],
@@ -92,17 +92,16 @@ function summaryFor(
 ) {
   const winner = actual[0];
   const predictedWinner = predicted[0];
-  const discipline = race.discipline;
 
   if (verdict === "Bon signal") {
-    return `${race.programCode} [${discipline}]: lecture solide. Le modèle place ${top3Hits}/3 dans le Top 3 et ${top5Hits}/5 dans le Top 5.`;
+    return `Lecture solide : ${top3Hits} de nos 3 premiers finissent dans le Top 3, ${top5Hits} de nos 5 premiers dans le Top 5.`;
   }
 
   if (winner && predictedWinner && winner.number !== predictedWinner.number) {
-    return `${race.programCode} [${discipline}]: le gagnant reel #${winner.number} ${winner.horse} devance notre base #${predictedWinner.number} ${predictedWinner.horse}. Signal sous-estimé a analyser.`;
+    return `Le gagnant, le n° ${winner.number} ${winner.horse}, devance notre premier choix, le n° ${predictedWinner.number} ${predictedWinner.horse}. ${top3Hits} de nos 3 premiers finissent dans le Top 3.`;
   }
 
-  return `${race.programCode} [${discipline}]: resultat partiellement conforme, ordre exact insuffisant pour les paris ordre.`;
+  return `Résultat en partie conforme : ${top3Hits} de nos 3 premiers dans le Top 3, mais l'ordre exact n'est pas trouvé.`;
 }
 
 function lessonsFor(race: RaceAnalysis, actual: HorsePrediction[], predicted: HorsePrediction[]) {
@@ -129,17 +128,17 @@ function lessonsFor(race: RaceAnalysis, actual: HorsePrediction[], predicted: Ho
   }
 
   if (predictedWinner.finishPosition && predictedWinner.finishPosition > 3) {
-    lessons.push(`[${discipline}] Notre base #${predictedWinner.number} finit ${predictedWinner.finishPosition}e: reduire la confiance des profils similaires.`);
+    lessons.push(`[${discipline}] Notre base #${predictedWinner.number} finit ${predictedWinner.finishPosition}e: réduire la confiance des profils similaires.`);
   }
 
   if (favorite && favorite.finishPosition && favorite.finishPosition > 3) {
     const favoriteRisk = explainPredictionScore(favorite, predicted, context).favoriteFailureRisk;
-    lessons.push(`[${discipline}] Favori #${favorite.number} hors Top 3: risque favori fragile mesuré a ${favoriteRisk}/60 — renforcer cette pénalité si le profil se répète.`);
+    lessons.push(`[${discipline}] Favori #${favorite.number} hors Top 3: risque favori fragile mesuré à ${favoriteRisk}/60 — renforcer cette pénalité si le profil se répète.`);
   }
 
   if (longshot && longshot.finishPosition && longshot.finishPosition <= 3) {
     const longshotSignal = explainPredictionScore(longshot, predicted, context).top3UpsetScore;
-    lessons.push(`[${discipline}] Tocard surveillé #${longshot.number} dans les trois premiers: signal outsider Top 3 mesuré a ${longshotSignal}/70 — à remonter dans les tickets larges.`);
+    lessons.push(`[${discipline}] Tocard surveillé #${longshot.number} dans les trois premiers: signal outsider Top 3 mesuré à ${longshotSignal}/70 — à remonter dans les tickets larges.`);
   }
 
   if (discipline === "Obstacle" && !winner.music?.match(/[1-9]/)) {
@@ -161,16 +160,16 @@ function nextActionsFor(actual: HorsePrediction[], predicted: HorsePrediction[],
   const winner = actual[0];
   const predictedWinner = predicted[0];
   const actions = [
-    "Enregistrer l'écart prediction/resultat dans le jeu d'apprentissage quotidien.",
+    "Enregistrer l'écart pronostic/résultat dans le jeu d'apprentissage quotidien.",
     "Recalculer les poids par discipline sur les courses terminées avant le prochain batch modèle.",
   ];
 
   if (verdict === "Erreur modèle") {
-    actions.push("Baisser l'agressivite des tickets ordre sur ce profil tant que la calibration n'est pas corrigee.");
+    actions.push("Baisser l'agressivité des tickets ordre sur ce profil tant que la calibration n'est pas corrigée.");
   }
 
   if (winner && predictedWinner && winner.number !== predictedWinner.number) {
-    actions.push(`Comparer les facteurs de #${winner.number} et #${predictedWinner.number}: forme recente, cote observée, aptitude piste/distance/discipline.`);
+    actions.push(`Comparer les facteurs de #${winner.number} et #${predictedWinner.number}: forme récente, cote observée, aptitude piste/distance/discipline.`);
   }
 
   return actions;

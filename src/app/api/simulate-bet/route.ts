@@ -22,7 +22,9 @@ const schemaSimulation = z.object({
   odds: z.coerce.number().finite().gt(1).lte(10_000).default(5),
   winProbability: z.coerce.number().finite().gt(0).lte(100).default(20),
   bankroll: z.coerce.number().finite().gt(0).lte(10_000_000).default(500),
-  drawdown: z.coerce.number().finite().gte(0).lte(1).default(0),
+  // En pourcentage (0 à 100), comme l'attend `getDrawdownMultiplier` : la
+  // borne 0-1 laissait le multiplicateur à 1 quelle que soit la baisse.
+  drawdown: z.coerce.number().finite().gte(0).lte(100).default(0),
 });
 
 export async function POST(request: Request) {

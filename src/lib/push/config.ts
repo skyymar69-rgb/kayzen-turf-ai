@@ -14,7 +14,7 @@ export const VAPID_PUBLIC_KEY =
 export const DEPART_ALERT_MINUTES = 30;
 
 /** Chevaux suivis au plus par navigateur : borne la ligne et la requête d'envoi. */
-export const MAX_FOLLOWED_HORSES = 200;
+export const MAX_FOLLOWED_HORSES = 100;
 
 /**
  * Services de push des navigateurs. La boucle d'envoi contacte l'adresse

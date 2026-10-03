@@ -32,6 +32,9 @@
   --accent-hi:     #003528;
   --accent-lo:     #daeee2;
   --accent-text:   #004a38;
+  /* Texte posé SUR l'accent : blanc en clair, quasi noir en sombre — le blanc
+     sur le vert clair du thème sombre ne faisait que 2,1:1. */
+  --accent-fg:     #ffffff;
   --cta:           #1eb854;
   --cta-hi:        #189a47;
   /* Blanc sur le vert CTA ne donnait que 2,61:1, sous le minimum WCAG de 4,5:1
@@ -43,7 +46,8 @@
      quasi invisible en thème clair. */
   --focus:         #0b6b31;
   --danger:        #be123c;
-  --warn:          #b45309;
+  /* #b45309 tombait à 4,1-4,4:1 sur surface-sub et accent-lo. */
+  --warn:          #92400e;
   --warn-lo:       #fffbeb;
 
   /* amélioration #10 — transition durée + easing cohérents */
@@ -59,13 +63,15 @@
   --surface:       #1c3325;
   --surface-sub:   #243e2e;
   --surface-inv:   #0e2318;
-  --muted:         #7fa88c;
+  /* #7fa88c : 4,37:1 sur surface-sub, sous le seuil de 4,5:1. */
+  --muted:         #8fb89b;
   --border:        rgba(226, 237, 229, 0.14);
   --border-strong: rgba(226, 237, 229, 0.28);
   --accent:        #3dca7a;
   --accent-hi:     #5dd690;
   --accent-lo:     #0a2416;
   --accent-text:   #6ed99a;
+  --accent-fg:     #0c1a10;
   --cta:           #2dd468;
   --cta-hi:        #1eb854;
   --cta-text:      #0c1a10;
@@ -93,6 +99,7 @@
   --color-accent-hi:    var(--accent-hi);
   --color-accent-lo:    var(--accent-lo);
   --color-accent-text:  var(--accent-text);
+  --color-accent-fg:    var(--accent-fg);
   --color-cta:          var(--cta);
   --color-cta-hi:       var(--cta-hi);
   --color-cta-text:     var(--cta-text);
@@ -103,50 +110,59 @@
 }
 
 /* ─── Base ───────────────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; }
+/* Dans `@layer base`, jamais hors couche : en Tailwind 4, une règle hors couche
+   l'emporte sur TOUS les utilitaires (`@layer utilities`), quelle que soit sa
+   spécificité. `a { color: inherit }` et `button { font: inherit }` posés ici
+   hors couche annulaient ainsi les `text-*`, `font-*` et `leading-*` de chaque
+   lien et de chaque bouton du site (le CTA « Commencer » tombait à 1,6:1 de
+   contraste en thème sombre, les onglets en 16 px normal au lieu de 14 px
+   gras), et le rayon de 3 px du focus déformait les boutons arrondis. */
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
 
-html {
-  background: var(--bg);
-  scroll-behavior: smooth;
-  /* amélioration #28 — évite le saut de layout quand la scrollbar apparaît */
-  scrollbar-gutter: stable;
-}
+  html {
+    background: var(--bg);
+    scroll-behavior: smooth;
+    /* amélioration #28 — évite le saut de layout quand la scrollbar apparaît */
+    scrollbar-gutter: stable;
+  }
 
-body {
-  min-height: 100vh;
-  margin: 0;
-  background: var(--bg);
-  color: var(--fg);
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
-  /* amélioration #6 — transition douce au changement de thème */
-  transition: background-color 200ms ease, color 200ms ease;
-}
+  body {
+    min-height: 100vh;
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    /* amélioration #6 — transition douce au changement de thème */
+    transition: background-color 200ms ease, color 200ms ease;
+  }
 
-/* amélioration #5 — text-balance sur les titres */
-h1, h2, h3, h4 { text-wrap: balance; }
+  /* amélioration #5 — text-balance sur les titres */
+  h1, h2, h3, h4 { text-wrap: balance; }
 
-button, input, select, textarea { font: inherit; }
-a { color: inherit; }
-table { font-variant-numeric: tabular-nums; }
-img, svg { display: block; }
+  button, input, select, textarea { font: inherit; }
+  a { color: inherit; }
+  table { font-variant-numeric: tabular-nums; }
+  img, svg { display: block; }
 
-/* amélioration #7 — hr plus propre */
-hr {
-  border: none;
-  border-top: 1px solid var(--border);
-  margin: 0;
-}
+  /* amélioration #7 — hr plus propre */
+  hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 0;
+  }
 
-/* ─── Focus ──────────────────────────────────────────────────────── */
-button, a, input, select, textarea { outline-offset: 3px; }
-button:focus-visible,
-a:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
-  outline: 3px solid var(--focus);
-  border-radius: 3px;
+  /* ─── Focus ─────────────────────────────────────────────────────── */
+  button, a, input, select, textarea, [tabindex] { outline-offset: 3px; }
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 3px solid var(--focus);
+  }
 }
 
 /* ─── Skip link ──────────────────────────────────────────────────── */

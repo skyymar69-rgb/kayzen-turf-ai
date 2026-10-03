@@ -22,7 +22,7 @@ export function PushAlertsToggle({ horseIds }: { horseIds: string[] }) {
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 sm:ml-auto sm:justify-end">
       {(status === "off" || (status === "pending")) && (
         <button
-          className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-accent-hi disabled:opacity-60"
+          className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-accent-fg transition hover:bg-accent-hi disabled:opacity-60"
           disabled={status === "pending"}
           onClick={enable}
           type="button"

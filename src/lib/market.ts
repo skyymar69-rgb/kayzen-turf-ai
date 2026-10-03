@@ -29,6 +29,10 @@ export const FLOW_WINDOW_MIN = 15;
 export const FLOW_ACCEL_WINDOW_MIN = 5;
 /** Seuil de la tuile « Argent fort » : +2 points de part du pool en 15 minutes. */
 export const STRONG_MONEY_PTS = 2;
+/** Sous ±0,5 point en 15 min, la part des mises est tenue pour stable. */
+export const FLOW_TREND_PTS = 0.5;
+/** Accélération : +1 point ou plus sur les 5 dernières minutes. */
+export const FLOW_ACCEL_PTS = 1;
 
 export type Movement = {
   reference: number | null;
@@ -87,4 +91,21 @@ export function moneyFlow(pools: PoolSnapshot[], number: number): Flow {
   const delta15 = before15 === null ? null : share - before15;
   const delta5 = before5 === null ? null : share - before5;
   return { share, delta15, delta5, strong: delta15 !== null && delta15 >= STRONG_MONEY_PTS };
+}
+
+/**
+ * Ordre du marché, du plus soutenu au plus délaissé : la baisse de cote depuis
+ * le matin d'abord, puis la hausse de la part des mises sur 15 min pour
+ * départager. Les chevaux sans historique ferment la marche.
+ */
+export function compareMarketSupport(
+  a: { movement: Movement; flow: Flow },
+  b: { movement: Movement; flow: Flow },
+): number {
+  const ca = a.movement.changePct;
+  const cb = b.movement.changePct;
+  if (ca !== null && cb !== null && ca !== cb) return ca - cb;
+  if (ca === null && cb !== null) return 1;
+  if (cb === null && ca !== null) return -1;
+  return (b.flow.delta15 ?? -Infinity) - (a.flow.delta15 ?? -Infinity);
 }

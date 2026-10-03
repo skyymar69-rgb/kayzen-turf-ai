@@ -14,7 +14,7 @@ import { VerdictBanner } from "@/components/course/verdict-banner";
 import { RaceSelectionPanel } from "@/components/race-selection";
 import { buildBetRecommendations, buildXTickets, raceToContext } from "@/lib/bet-recommendations";
 import { buildCourseViewModel } from "@/lib/course-view-model";
-import { formatMeters } from "@/lib/format";
+import { formatMeters, properName } from "@/lib/format";
 import type { MarketHistory } from "@/lib/market";
 import { buildPostRaceAnalysis } from "@/lib/post-race-analysis";
 import type { SignalRecord } from "@/lib/race-repository";
@@ -74,9 +74,9 @@ export function CourseDetail({ race, history = EMPTY_HISTORY, signals = [] }: Co
             <ArrowLeft size={14} /> Accueil
           </Link>
           <span aria-hidden="true" className="text-muted/40">/</span>
-          <span className="text-sm text-muted">R{race.reunionNumber} — {race.racecourse.charAt(0).toUpperCase() + race.racecourse.slice(1).toLowerCase()}</span>
+          <span className="text-sm text-muted">R{race.reunionNumber} — {properName(race.racecourse)}</span>
           <span aria-hidden="true" className="text-muted/40">/</span>
-          <span className="text-sm font-semibold text-fg">{race.programCode} — {race.name.charAt(0).toUpperCase() + race.name.slice(1).toLowerCase()}</span>
+          <span className="text-sm font-semibold text-fg">{race.programCode} — {properName(race.name)}</span>
         </nav>
 
         <header className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
@@ -85,13 +85,13 @@ export function CourseDetail({ race, history = EMPTY_HISTORY, signals = [] }: Co
               <div>
                 <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
                   <span className="font-bold text-fg">{race.discipline}</span>
-                  <span>·</span><span>{race.specialty}</span>
+                  {race.specialty && <><span>·</span><span>{race.specialty}</span></>}
                   <span>·</span><span>{formatMeters(race.distance)}</span>
                   <span>·</span><span>{race.horses.length} partants</span>
                   {race.going && <><span>·</span><span>{race.going}</span></>}
                 </div>
                 <h1 className="mt-1 font-display text-xl font-bold text-fg sm:text-2xl">
-                  {race.racecourse} — {formatLongDate(race.raceDate)}
+                  {properName(race.racecourse)} — {formatLongDate(race.raceDate)}
                 </h1>
               </div>
               <div className="flex flex-wrap items-center gap-3">
@@ -129,7 +129,7 @@ export function CourseDetail({ race, history = EMPTY_HISTORY, signals = [] }: Co
         <div className="mt-0 grid gap-x-4 xl:grid-cols-[minmax(0,1fr)_360px]">
           <div className="min-w-0">
             <RaceSelectionPanel onSelect={select} selectedNumber={selectedRow?.horse.number ?? null} selection={selection} signals={signalMap} />
-            <FieldTable onSelect={select} race={race} selectedNumber={selectedRow?.horse.number ?? null} vm={vm} />
+            <FieldTable onSelect={select} race={race} selectedNumber={selectedRow?.horse.number ?? null} signals={signalMap} vm={vm} />
             <div id="fiche-cheval" className="scroll-mt-4">
               <HorseSheet race={race} row={selectedRow} />
             </div>

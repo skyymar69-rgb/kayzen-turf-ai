@@ -52,7 +52,7 @@ export function SiteFooter() {
               <p className="flex flex-wrap items-center gap-2 font-semibold">
                 {/* Le service s'adresse exclusivement aux majeurs : les paris hippiques
                     sont interdits aux mineurs (code de la sécurité intérieure, art. L. 320-8). */}
-                <span className="grid size-6 shrink-0 place-items-center rounded-full border border-amber-300/60 text-[10px] font-bold text-amber-200">
+                <span className="grid size-8 shrink-0 place-items-center rounded-full border border-amber-300/60 text-xs font-bold text-amber-200">
                   18+
                 </span>
                 Interdit aux mineurs — jouez responsable

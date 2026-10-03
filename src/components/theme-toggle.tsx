@@ -59,7 +59,9 @@ export function ThemeToggle() {
 
   return (
     <button
-      aria-label={sombre ? "Activer le mode clair" : "Activer le mode sombre"}
+      // Libellé fixe avec aria-pressed : « Mode sombre, enfoncé » se comprend ;
+      // « Activer le mode clair, enfoncé » se contredisait.
+      aria-label="Mode sombre"
       aria-pressed={sombre}
       className="inline-flex size-9 items-center justify-center rounded-lg border border-white/30 bg-white/12 text-slate-100 transition hover:bg-white/20 hover:text-white"
       onClick={basculer}

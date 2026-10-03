@@ -1,24 +1,33 @@
 "use client";
 
 import { useState, type KeyboardEvent, type ReactNode } from "react";
-import { ArrowDownRight, ArrowRight, ArrowUpRight, Star } from "lucide-react";
+import { ArrowDownRight, ArrowRight, ArrowUpRight, Star, Zap } from "lucide-react";
 import { useFollowedHorses } from "@/hooks/use-followed-horses";
 import type { CourseViewModel, HorseRow } from "@/lib/course-view-model";
 import { formatOdds } from "@/lib/format";
-import { MVT_NOISE_PCT } from "@/lib/market";
+import { FLOW_ACCEL_PTS, FLOW_TREND_PTS, MVT_NOISE_PCT } from "@/lib/market";
+import type { SignalRecord } from "@/lib/race-repository";
 import type { RaceAnalysis } from "@/lib/types";
 import { MusicSparkline } from "@/components/course/music-sparkline";
-import { ProfileBadge, pct, signedPct, signedPts } from "@/components/course/shared";
+import { ProfileBadge, pct, roiLine, signedPct, signedPts } from "@/components/course/shared";
 
 /**
- * LE TABLEAU — un seul, cinq lectures du même peloton.
+ * LE TABLEAU — un seul, quatre lectures du même peloton.
  *
- * Toutes les vues gardent l'ordre du classement : changer d'onglet change les
- * colonnes, jamais le rang. Une ligne se sélectionne au clic ou au clavier et
- * pilote la fiche cheval et le panneau marché.
+ * Les vues gardent l'ordre du classement IA, sauf l'onglet MVT : c'est le
+ * classement du marché, du cheval le plus joué au plus délaissé, avec l'argent
+ * (part des mises, variation sur 15 min, accélération sur 5 min). Une ligne se
+ * sélectionne au clic ou au clavier et pilote la fiche cheval et le panneau
+ * marché.
  */
 
 const TABS = ["Classement IA", "MVT", "Cotes & Marché", "Forme"] as const;
+const TAB_LABELS: Record<(typeof TABS)[number], string> = {
+  "Classement IA": "Classement IA",
+  MVT: "MVT & argent",
+  "Cotes & Marché": "Cotes & Marché",
+  Forme: "Forme",
+};
 type Tab = (typeof TABS)[number];
 
 function tabId(tab: Tab) {
@@ -30,9 +39,11 @@ export function FieldTable({
   vm,
   selectedNumber,
   onSelect,
+  signals,
 }: {
   race: RaceAnalysis;
   vm: CourseViewModel;
+  signals?: Map<string, SignalRecord>;
   selectedNumber: number | null;
   onSelect: (number: number) => void;
 }) {
@@ -49,6 +60,9 @@ export function FieldTable({
   }
 
   const columns = COLUMNS[tab](race);
+  const marketView = tab === "MVT";
+  const rows = marketView ? vm.marketRows : vm.rows;
+  const mvtSignal = signals?.get("mvt-joue-sg");
 
   return (
     <section className="mt-4 overflow-hidden rounded-2xl border border-border bg-surface shadow-sm" aria-label="Partants">
@@ -65,18 +79,20 @@ export function FieldTable({
             tabIndex={tab === t ? 0 : -1}
             type="button"
           >
-            {t}
+            {TAB_LABELS[t]}
             {tab === t && <span className="absolute inset-x-4 bottom-0 h-0.5 rounded-full bg-accent" />}
           </button>
         ))}
       </div>
 
       <div id="tableau-partants" role="tabpanel" aria-labelledby={tabId(tab)} className="overflow-x-auto">
-        <table className="w-full min-w-[720px] border-collapse text-left text-sm">
+        <table className={`w-full border-collapse text-left text-sm ${marketView ? "min-w-[880px]" : "min-w-[720px]"}`}>
           <caption className="sr-only">{CAPTIONS[tab]}</caption>
           <thead>
             <tr className="border-b border-border text-[10px] font-bold uppercase tracking-widest text-muted">
-              <th scope="col" className="w-10 px-3 py-3">Rg</th>
+              <th scope="col" className="w-10 px-3 py-3" title={marketView ? "Rang sur le marché : du plus joué au plus délaissé" : "Rang au classement IA"}>
+                Rg
+              </th>
               <th scope="col" className="px-3 py-3">Cheval</th>
               {columns.map((c) => (
                 <th key={c.label} scope="col" className={`px-3 py-3 ${c.align === "right" ? "text-right" : ""}`} title={c.title}>
@@ -86,41 +102,46 @@ export function FieldTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {vm.rows.map((row) => {
+            {rows.map((row, index) => {
               const selected = selectedNumber === row.horse.number;
+              const position = marketView ? index + 1 : row.rank;
               return (
                 <tr
                   key={row.horse.id}
-                  aria-label={`${row.horse.horse}, numéro ${row.horse.number}`}
-                  aria-pressed={selected}
-                  className={`cursor-pointer transition hover:bg-accent-lo/60 ${selected ? "bg-accent-lo" : row.rank <= 3 ? "bg-surface" : "bg-surface-sub/40"}`}
+                  className={`cursor-pointer transition hover:bg-accent-lo/60 ${selected ? "bg-accent-lo" : position <= 3 ? "bg-surface" : "bg-surface-sub/40"}`}
                   onClick={() => onSelect(row.horse.number)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      onSelect(row.horse.number);
-                    }
-                  }}
-                  role="button"
-                  tabIndex={0}
                 >
                   <td className="px-3 py-2.5">
-                    <span className={`grid size-7 place-items-center rounded-lg font-mono text-xs font-bold ${row.rank <= 3 ? "bg-accent text-white" : "bg-surface-sub text-muted"}`}>
-                      {row.rank}
+                    <span className={`grid size-7 place-items-center rounded-lg font-mono text-xs font-bold ${position <= 3 ? "bg-accent text-accent-fg" : "bg-surface-sub text-muted"}`}>
+                      {position}
                     </span>
                   </td>
                   <th scope="row" className="px-3 py-2.5 font-normal">
                     <div className="flex min-w-[200px] items-center gap-2">
-                      <span className="font-mono font-bold text-fg">{row.horse.number}</span>
-                      <span className="truncate font-semibold text-fg">{row.horse.horse}</span>
+                      {/* Le bouton porte la sélection au clavier et au lecteur
+                          d'écran ; la ligne entière reste cliquable à la souris.
+                          Un <tr role="button"> effaçait la sémantique du tableau. */}
+                      <button
+                        aria-label={`Voir la fiche du n° ${row.horse.number}, ${row.horse.horse}`}
+                        aria-pressed={selected}
+                        className="flex min-w-0 items-center gap-2 rounded text-left"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSelect(row.horse.number);
+                        }}
+                        type="button"
+                      >
+                        <span className="font-mono font-bold text-fg">{row.horse.number}</span>
+                        <span className="truncate font-semibold text-fg">{row.horse.horse}</span>
+                      </button>
                       {row.horse.horseId && followed.has(row.horse.horseId) && (
-                        <Star aria-label="Cheval suivi" className="shrink-0 fill-amber-400 text-amber-400" size={13} />
+                        <Star aria-label="Cheval suivi" className="shrink-0 fill-amber-500 text-amber-700 dark:fill-amber-400 dark:text-amber-400" size={13} />
                       )}
                       <ProfileBadge profile={row.profile} />
                     </div>
                   </th>
                   {columns.map((c) => (
-                    <td key={c.label} className={`px-3 py-2.5 ${c.align === "right" ? "text-right font-mono" : ""}`}>
+                    <td key={c.label} className={`px-3 py-2.5 ${c.align === "right" ? "whitespace-nowrap text-right font-mono" : ""}`}>
                       {c.render(row)}
                     </td>
                   ))}
@@ -130,7 +151,16 @@ export function FieldTable({
           </tbody>
         </table>
       </div>
-      <p className="border-t border-border px-4 py-3 text-[11px] leading-5 text-muted">{FOOTNOTES[tab]}</p>
+      <p className="border-t border-border px-4 py-3 text-[11px] leading-5 text-muted">
+        {FOOTNOTES[tab]}
+        {marketView && mvtSignal && mvtSignal.bets > 0 && (
+          <>
+            {" "}Historique du cheval le plus joué, en simple gagnant :{" "}
+            <span className={mvtSignal.roi >= 0 ? "font-bold text-accent-text" : "font-bold text-danger"}>{roiLine(mvtSignal.roi, mvtSignal.bets)}</span>
+            {mvtSignal.roi < 0 ? " — suivre l'argent ne suffit pas à battre le prélèvement du PMU." : "."}
+          </>
+        )}
+      </p>
     </section>
   );
 }
@@ -139,7 +169,7 @@ type Column = { label: string; title?: string; align?: "right"; render: (row: Ho
 
 const CAPTIONS: Record<Tab, string> = {
   "Classement IA": "Classement : probabilité de l'IA sans cote, probabilité du marché, écart et probabilité retenue",
-  MVT: "Mouvement des cotes depuis la cote du matin",
+  MVT: "Classement du marché, du cheval le plus joué au plus délaissé : mouvement de cote depuis le matin et part des mises",
   "Cotes & Marché": "Cotes, cote juste, espérance et parts des enjeux PMU",
   Forme: "Forme récente, gains et entourage",
 };
@@ -147,7 +177,7 @@ const CAPTIONS: Record<Tab, string> = {
 const FOOTNOTES: Record<Tab, string> = {
   "Classement IA":
     "IA : probabilité de victoire estimée sans jamais voir la cote (forme, gains, entourage). Marché : cote PMU, marge du PMU retirée. Retenue : marché corrigé à 10 % par l'IA — c'est elle qui fait le classement.",
-  MVT: `Référence : premier relevé du jour de la course. Une variation sous ±${MVT_NOISE_PCT} % est tenue pour du bruit. Une cote qui baisse signifie que le cheval est joué.`,
+  MVT: `Classement du marché, du plus joué au plus délaissé. Cote du matin : premier relevé du jour ; une variation sous ±${MVT_NOISE_PCT} % est tenue pour du bruit, une cote qui baisse signifie que le cheval est joué. Argent : part du cheval dans le pool simple gagnant du PMU, sa variation sur 15 min (flèche au-delà de ±${String(FLOW_TREND_PTS).replace(".", ",")} pt) et l'accélération sur 5 min (éclair à +${FLOW_ACCEL_PTS} pt). Le PMU ne publie pas les mises individuelles : une part qui monte dit que le cheval est joué, pas par qui.`,
   "Cotes & Marché":
     "Espérance : gain moyen d'un pari gagnant de 1 € à la cote affichée, selon la probabilité retenue — le prélèvement du PMU la rend presque toujours négative. Part des mises : part du cheval dans le pool simple gagnant du PMU, et sa variation sur 15 min.",
   Forme: "Courbe : huit dernières courses, la plus récente à droite (dans le texte de la musique, elle est à gauche). Réussite : part des victoires du jockey/driver et de l'entraîneur sur notre historique.",
@@ -170,6 +200,32 @@ function MoveCell({ row }: { row: HorseRow }) {
     <span className={`inline-flex items-center gap-1 font-sans text-xs font-bold ${cls}`}>
       <Icon aria-hidden="true" size={14} />
       {label}
+    </span>
+  );
+}
+
+function FlowCell({ row }: { row: HorseRow }) {
+  const d = row.flow.delta15;
+  if (d === null) return <span className="text-muted">—</span>;
+  const up = d >= FLOW_TREND_PTS;
+  const down = d <= -FLOW_TREND_PTS;
+  const Icon = up ? ArrowUpRight : down ? ArrowDownRight : ArrowRight;
+  return (
+    <span className={`inline-flex items-center justify-end gap-1 ${row.flow.strong ? "font-bold text-accent-text" : up ? "text-accent-text" : down ? "text-danger" : "text-muted"}`}>
+      <Icon aria-hidden="true" size={13} />
+      {signedPts(d)}
+    </span>
+  );
+}
+
+function AccelCell({ row }: { row: HorseRow }) {
+  const d = row.flow.delta5;
+  if (d === null) return <span className="text-muted">—</span>;
+  const accelerating = d >= FLOW_ACCEL_PTS;
+  return (
+    <span className={`inline-flex items-center justify-end gap-1 ${accelerating ? "font-bold text-accent-text" : "text-muted"}`}>
+      {accelerating && <Zap aria-label="Accélération" className="fill-current" size={12} />}
+      {signedPts(d)}
     </span>
   );
 }
@@ -201,6 +257,10 @@ const COLUMNS: Record<Tab, (race: RaceAnalysis) => Column[]> = {
       ),
     },
     { label: "Tendance", render: (r) => <MoveCell row={r} /> },
+    { label: "Part des mises", title: "Part du cheval dans le pool simple gagnant du PMU", align: "right", render: (r) => pct(r.flow.share, 1) },
+    { label: "Argent 15 min", title: "Variation de la part des mises sur 15 min", align: "right", render: (r) => <FlowCell row={r} /> },
+    { label: "5 min", title: "Accélération : variation sur les 5 dernières minutes", align: "right", render: (r) => <AccelCell row={r} /> },
+    { label: "Rg IA", title: "Rang au classement IA", align: "right", render: (r) => r.rank },
   ],
   "Cotes & Marché": () => [
     { label: "Cote", align: "right", render: (r) => formatOdds(r.horse.odds, 1) },

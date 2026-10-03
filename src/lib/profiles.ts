@@ -187,7 +187,9 @@ export function raceVerdict(field: ProfileInput[], profiled = classifyField(fiel
   const hidden = profiled.filter((p) => p.profile === "cache").map((p) => p.number);
   const values = profiled.filter((p) => p.profile === "value").map((p) => p.number);
 
-  const parts: string[] = [READING_LABELS[reading]];
+  // La lecture (« Course lisible ») est déjà affichée en pastille à côté de la
+  // phrase : la répéter en tête donnait « COURSE LISIBLE / Course lisible · … ».
+  const parts: string[] = [];
   if (bases.length === 1) parts.push(`base : n° ${bases[0]}`);
   else if (bases.length > 1) parts.push(`bases : n° ${bases.join(" et ")}`);
   else parts.push("pas de base solide");
@@ -196,7 +198,8 @@ export function raceVerdict(field: ProfileInput[], profiled = classifyField(fiel
     parts.push(hidden.length === 1 ? `un caché à ${formatOddsShort(h.odds)} (n° ${h.number})` : `${hidden.length} cachés (n° ${hidden.join(", ")})`);
   }
 
-  return { reading, sentence: parts.join(" · "), bases, hidden, values };
+  const sentence = parts.join(" · ");
+  return { reading, sentence: sentence.charAt(0).toUpperCase() + sentence.slice(1), bases, hidden, values };
 }
 
 function formatOddsShort(odds: number) {

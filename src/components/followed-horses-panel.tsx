@@ -51,7 +51,7 @@ export function FollowedHorsesPanel({ races }: { races: RaceAnalysis[] }) {
   return (
     <section className="mt-4 rounded-2xl border border-border bg-surface shadow-sm" aria-labelledby="mes-chevaux">
       <div className="flex flex-wrap items-center gap-3 border-b border-border px-5 py-4">
-        <Star aria-hidden="true" className="fill-amber-400 text-amber-400" size={18} />
+        <Star aria-hidden="true" className="fill-amber-500 text-amber-700 dark:fill-amber-400 dark:text-amber-400" size={18} />
         <div>
           <h2 id="mes-chevaux" className="font-display text-lg font-bold text-fg">Mes chevaux suivis</h2>
           <p className="text-xs text-muted">{followed.size} cheval{followed.size > 1 ? "x" : ""} suivi{followed.size > 1 ? "s" : ""} · mémorisé{followed.size > 1 ? "s" : ""} dans ce navigateur</p>

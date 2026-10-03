@@ -1026,7 +1026,12 @@ function obstacleScore(
  */
 function alignOnCalibratedField(predictions: EnhancedPrediction[]): EnhancedPrediction[] {
   if (predictions.length === 0) return predictions;
-  const calibrated = calibrateField(predictions.map((p) => p.horse));
+  // Peloton déjà calibré (cas de toutes les pages, voir race-repository) : le
+  // recalibrer relancerait 20 000 tirages Monte Carlo pour un résultat identique.
+  const horses = predictions.map((p) => p.horse);
+  const calibrated = horses.every((h) => h.valueRatio !== undefined && h.marketProbability !== undefined)
+    ? (horses as ReturnType<typeof calibrateField>)
+    : calibrateField(horses);
 
   return predictions.map((pred, i) => {
     const horse = calibrated[i];

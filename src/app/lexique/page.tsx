@@ -12,8 +12,8 @@ const GLOSSARY: Array<{ term: string; definition: string; category: string }> = 
   /* Paris */
   { category: "Paris", term: "Simple Gagnant", definition: "Pari sur un cheval pour finir premier. Le plus simple et le plus liquide. Edge calculé sur prob. gagnant × cote − 1." },
   { category: "Paris", term: "Simple Placé", definition: "Pari sur un cheval pour finir dans les 3 premiers (2 premiers si ≤ 4 partants). Cote réduite, risque plus faible." },
-  { category: "Paris", term: "Couple Gagnant", definition: "Désigner les 2 premiers dans l'ordre exact. Combinaison n × (n−1) tickets possibles." },
-  { category: "Paris", term: "Couple Placé", definition: "Désigner 2 chevaux parmi les 3 premiers sans ordre imposé." },
+  { category: "Paris", term: "Couplé gagnant", definition: "Désigner les 2 premiers dans l'ordre exact. Combinaison n × (n−1) tickets possibles." },
+  { category: "Paris", term: "Couplé placé", definition: "Désigner 2 chevaux parmi les 3 premiers sans ordre imposé." },
   { category: "Paris", term: "Tiercé", definition: "Désigner les 3 premiers dans l'ordre exact. En désordre : rapport réduit." },
   { category: "Paris", term: "Quarté+", definition: "Désigner les 4 premiers dans l'ordre exact. Paris hippique emblématique du quotidien." },
   { category: "Paris", term: "Quinté+", definition: "Course phare PMU. Désigner les 5 premiers dans l'ordre exact. Rapport élevé, jackpot si non trouvé. Mise minimum 1,50 €." },
@@ -107,7 +107,7 @@ export default function LexiquePage() {
         <div className="mt-10 rounded-2xl border border-border bg-surface-sub p-5 text-center">
           <p className="text-sm text-muted">
             Un terme manque ?{" "}
-            <Link href="/contact" className="font-semibold text-accent-text hover:text-accent">
+            <Link href="/mentions-legales" className="font-semibold text-accent-text underline underline-offset-2 hover:text-accent">
               Contactez-nous
             </Link>
           </p>

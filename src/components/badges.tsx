@@ -1,3 +1,6 @@
+import { properName } from "@/lib/format";
+import { READING_LABELS, READING_RULES } from "@/lib/profiles";
+import { buildSelection } from "@/lib/selection";
 import type { RaceAnalysis } from "@/lib/types";
 
 /**
@@ -9,22 +12,34 @@ import type { RaceAnalysis } from "@/lib/types";
  * Une seule définition, la palette de l'accueil.
  */
 
-/** « PRIX DE L'ARC DE TRIOMPHE » → « Prix De L'Arc De Triomphe ». */
+/** Voir `properName` : une seule règle de casse pour tout le site. */
 export function titleCase(v: string) {
-  return v.toLowerCase().split(/(\s|-|')/)
-    .map((p) => (p.length > 1 ? p.charAt(0).toUpperCase() + p.slice(1) : p)).join("");
+  return properName(v);
 }
 
-export function TierBadge({ tier }: { tier: RaceAnalysis["bettingTier"] | string }) {
-  if (tier === "Focus") return <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold text-white">Focus</span>;
-  if (tier === "Value") return <span className="rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-bold text-amber-950">Value</span>;
-  return <span className="rounded-full bg-surface-inv px-2 py-0.5 text-[10px] font-bold text-white">Prudence</span>;
+/**
+ * Lecture de la course (lisible / ouverte / piège), tirée des profils réels.
+ * Elle remplace les pastilles Focus / Value / Prudence, que l'import déduisait
+ * du seul nombre de partants et de l'allocation : présentées comme un avis de
+ * l'IA, elles n'en étaient pas un.
+ */
+export function ReadingBadge({ horses }: { horses: RaceAnalysis["horses"] }) {
+  const reading = buildSelection(horses).verdict.reading;
+  const cls =
+    reading === "lisible" ? "bg-accent text-accent-fg" :
+    reading === "ouverte" ? "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200" :
+                            "bg-danger/10 text-danger";
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${cls}`} title={READING_RULES[reading]}>
+      {READING_LABELS[reading]}
+    </span>
+  );
 }
 
 export function DisciplinePill({ discipline }: { discipline: string }) {
   const cls =
-    discipline === "Trot"     ? "bg-sky-100 text-sky-800" :
-    discipline === "Obstacle" ? "bg-orange-100 text-orange-800" :
-                                "bg-violet-100 text-violet-800";
+    discipline === "Trot"     ? "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200" :
+    discipline === "Obstacle" ? "bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-200" :
+                                "bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200";
   return <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${cls}`}>{discipline}</span>;
 }
