@@ -203,3 +203,16 @@ export async function imminentRaces(aheadMinutes = 90, pastMinutes = 2) {
     [aheadMinutes, pastMinutes],
   )) as Array<{ id: string; minutes_to_start: number }>;
 }
+
+/** Minutes jusqu'au prochain départ connu (aujourd'hui ou demain), null si aucun. */
+export async function minutesToNextRace(): Promise<number | null> {
+  const sql = getSql();
+  const rows = (await sql.query(
+    `select min(extract(epoch from (((race_date + replace(start_time, 'h', ':')::time) at time zone 'Europe/Paris') - now())) / 60)::float8 as minutes
+       from races
+      where race_date between (now() at time zone 'Europe/Paris')::date and (now() at time zone 'Europe/Paris')::date + 1
+        and start_time ~ '^\\d{1,2}[:h]\\d{2}$'
+        and ((race_date + replace(start_time, 'h', ':')::time) at time zone 'Europe/Paris') > now()`,
+  )) as Array<{ minutes: number | null }>;
+  return finiteOrNull(rows[0]?.minutes);
+}

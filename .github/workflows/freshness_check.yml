@@ -1,13 +1,17 @@
 name: Freshness check
 
 # Alerte quotidienne : échoue (et GitHub envoie son courriel d'échec) si plus
-# de 10 % des courses du jour sont parties sans relevé de cote ni de pool dans
-# les 20 minutes précédant le départ. Voir scripts/check-freshness.mjs.
+# de 10 % des courses de la veille sont parties sans relevé de cote ni de pool
+# dans les 20 minutes précédant le départ. Voir scripts/check-freshness.mjs.
+#
+# Le contrôle porte sur la veille (heure de Paris), passé minuit : l'ancienne
+# version vérifiait « aujourd'hui » à 3 h du matin, donc zéro course, et restait
+# verte alors que 40 % des départs du 02/10 manquaient de cote fraîche.
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: "50 22 * * *"
+    - cron: "30 3 * * *"
 
 permissions:
   contents: read
@@ -31,5 +35,5 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Check odds freshness for today's races
-        run: node scripts/check-freshness.mjs
+      - name: Check odds freshness for yesterday's races
+        run: node scripts/check-freshness.mjs --date "$(TZ=Europe/Paris date -d yesterday +%F)"

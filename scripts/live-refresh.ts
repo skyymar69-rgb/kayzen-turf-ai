@@ -9,20 +9,25 @@
  * 8 passages ont réellement tourné sur 60 prévus, avec jusqu'à deux heures de
  * retard. Les courses partaient donc avec des cotes de la veille au soir.
  *
- * Une boucle longue ne dépend plus de l'heure de déclenchement : chaque passage
- * planifié démarre une boucle de près de trois heures, et le suivant prend le
- * relais (concurrency `cancel-in-progress`). Un déclenchement en retard d'une
- * heure ne laisse plus de trou.
+ * Une boucle longue ne dépend plus de l'heure de déclenchement. Même des boucles
+ * de trois heures laissaient des trous : le 03/10/2026, GitHub n'a déclenché que
+ * 5 passages sur 32 prévus, et 40 % des courses sont parties sans cote fraîche.
+ * Chaque boucle (près de six heures) relance donc elle-même la suivante en fin
+ * de job (voir .github/workflows/live_refresh.yml) ; le cron ne sert plus que
+ * de filet si la chaîne casse.
+ *
+ * Hors réunion, la boucle dort jusqu'à 90 min avant le prochain départ sans
+ * interroger la base, pour laisser Neon se mettre en veille.
  *
  * Cadence (voir src/lib/live/refresh-race.ts) : une course est interrogée au
  * plus toutes les 15 min au-delà d'une heure du départ, toutes les 4 min entre
  * H-60 et H-15, toutes les 45 s dans le dernier quart d'heure.
  *
- * Usage : npx tsx scripts/live-refresh.ts [--minutes 170] [--once]
+ * Usage : npx tsx scripts/live-refresh.ts [--minutes 330] [--once]
  */
 
 import { readFileSync } from "node:fs";
-import { imminentRaces, refreshRace } from "@/lib/live/refresh-race";
+import { imminentRaces, minutesToNextRace, refreshRace } from "@/lib/live/refresh-race";
 import { delay } from "@/lib/pmu/client";
 
 function loadLocalEnv() {
@@ -45,6 +50,7 @@ function arg(name: string): string | null {
 
 async function pass() {
   const races = await imminentRaces();
+  if (races.length === 0) return null;
   let closest = Infinity;
   for (const race of races) {
     const minutes = Number(race.minutes_to_start);
@@ -73,13 +79,23 @@ async function main() {
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required");
 
   const once = process.argv.includes("--once");
-  const deadline = Date.now() + Number(arg("minutes") ?? 170) * 60_000;
+  const deadline = Date.now() + Number(arg("minutes") ?? 330) * 60_000;
   let passes = 0;
 
   do {
     const closest = await pass();
     passes += 1;
     if (once) break;
+    if (closest === null) {
+      // Rien dans les 90 min : dormir jusqu'à l'entrée du prochain départ dans
+      // la fenêtre (au plus une heure, le programme du lendemain peut arriver).
+      const next = await minutesToNextRace();
+      const sleepMinutes = Math.min(60, Math.max(1, (next ?? 60) - 90));
+      const remaining = (deadline - Date.now()) / 60_000;
+      console.log(`[live] aucune course dans les 90 min — pause de ${Math.round(Math.min(sleepMinutes, remaining))} min`);
+      await delay(Math.max(0, Math.min(sleepMinutes, remaining)) * 60_000);
+      continue;
+    }
     // Plus le prochain départ est proche, plus on repasse vite.
     await delay(closest <= 15 ? 30_000 : 60_000);
   } while (Date.now() < deadline);
