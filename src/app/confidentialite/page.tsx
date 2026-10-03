@@ -27,7 +27,7 @@ export default function ConfidentialitePage() {
     <>
       <LegalPage
         title="Politique de confidentialité RGPD"
-        intro="Information des utilisateurs sur les traitements de données personnelles, les bases légales, les durées de conservation et les droits RGPD. Dernière mise à jour : août 2026."
+        intro="Information des utilisateurs sur les traitements de données personnelles, les bases légales, les durées de conservation et les droits RGPD. Dernière mise à jour : octobre 2026."
         sections={[
           editorSection,
           {
@@ -41,7 +41,8 @@ export default function ConfidentialitePage() {
             title: "Données réellement collectées",
             body: [
               "Consultation du site : aucun compte n'est requis et aucune donnée de navigation n'est collectée à des fins de mesure d'audience. Aucun cookie publicitaire, aucun traceur tiers et aucun outil d'analytics ne sont déposés.",
-              "Préférences locales : le thème d'affichage, le choix relatif aux cookies et les courses mises en favori sont enregistrés dans le stockage local de votre navigateur (localStorage). Ces informations ne quittent jamais votre appareil et ne sont jamais transmises à nos serveurs. Vous pouvez les effacer en vidant les données du site dans votre navigateur.",
+              "Préférences locales : le thème d'affichage, le choix relatif aux cookies, les courses mises en favori et les chevaux suivis sont enregistrés dans le stockage local de votre navigateur (localStorage). Ces informations restent sur votre appareil ; seule la liste des chevaux suivis nous est transmise, et uniquement si vous activez les alertes (voir ci-dessous). Vous pouvez les effacer en vidant les données du site dans votre navigateur.",
+              "Alertes sur les chevaux suivis (facultatif) : si vous les activez, votre navigateur crée un abonnement auprès de son service de notifications (Google, Mozilla, Apple ou Microsoft selon le navigateur). Nous enregistrons l'adresse technique de cet abonnement, ses deux clés de chiffrement et la liste des chevaux que vous suivez, rien d'autre : ni email, ni nom, ni adresse IP. Le contenu des notifications est chiffré de bout en bout ; le service de notifications du navigateur l'achemine sans pouvoir le lire.",
               "Demandes d'exercice de droits : le formulaire ci-dessous enregistre votre adresse email, la nature de votre demande et son contenu, à seule fin d'y répondre.",
               "Journaux techniques : l'hébergeur conserve des journaux de connexion (adresse IP, horodatage, URL demandée) nécessaires à la sécurité et au diagnostic. Ils ne sont pas exploités à des fins commerciales.",
             ],
@@ -50,6 +51,7 @@ export default function ConfidentialitePage() {
             title: "Finalités, bases légales et durées de conservation",
             body: [
               "Fourniture du service d'information sur les courses : intérêt légitime (art. 6.1.f). Aucune donnée personnelle n'est conservée à ce titre.",
+              "Alertes sur les chevaux suivis : consentement (art. 6.1.a), donné en cliquant sur « Me prévenir avant le départ » puis en autorisant les notifications dans le navigateur. Il se retire à tout moment avec le bouton « Couper » ou en bloquant les notifications du site : l'abonnement est alors supprimé de nos serveurs. Sans visite pendant 13 mois, il est supprimé automatiquement, de même que dès que le service de notifications le déclare expiré. Le journal des alertes envoyées, qui évite les doublons, est effacé avec l'abonnement.",
               "Traitement des demandes RGPD : obligation légale (art. 6.1.c, combiné aux art. 15 à 21). Conservation pendant l'instruction, puis archivage 3 ans à titre de preuve du traitement de la demande (art. 5.2).",
               "Sécurité, journaux techniques et prévention de la fraude : intérêt légitime (art. 6.1.f). Conservation 12 mois maximum, conformément à la recommandation de la CNIL sur les journaux applicatifs.",
               "Aucune prospection commerciale, aucun profilage publicitaire et aucune décision automatisée produisant des effets juridiques à l'égard des personnes ne sont mis en œuvre.",
@@ -61,6 +63,7 @@ export default function ConfidentialitePage() {
               "Hébergement de l'application : Vercel Inc. Les fonctions serveur sont déployées sur la région de Francfort (fra1), dans l'Union européenne. Vercel Inc. étant établie aux États-Unis, un accès distant reste possible pour l'exploitation et le support ; il est encadré par les clauses contractuelles types de la Commission européenne et par la certification EU-US Data Privacy Framework.",
               "Base de données : Neon Inc., instance hébergée à Francfort (eu-central-1), dans l'Union européenne, encadrée par les clauses contractuelles types.",
               "Données publiques des courses : les programmes, partants et cotes proviennent des services du PMU. Ce sont des données sportives publiques, sans caractère personnel au sens du RGPD.",
+              "Notifications : les alertes, si vous les activez, transitent par le service de notifications de votre navigateur (Google Firebase Cloud Messaging pour Chrome et Edge sur Android, Mozilla pour Firefox, Apple pour Safari, Microsoft pour Edge sous Windows), éventuellement hors de l'Union européenne. Leur contenu est chiffré et illisible pour ces services. Les envois partent des serveurs de GitHub Actions (GitHub Inc., États-Unis, clauses contractuelles types et Data Privacy Framework).",
               "Aucun autre sous-traitant n'intervient : ni prestataire d'emailing, ni prestataire de paiement, ni régie publicitaire, ni outil de mesure d'audience.",
             ],
           },

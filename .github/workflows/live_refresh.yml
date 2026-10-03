@@ -40,6 +40,8 @@ jobs:
     timeout-minutes: 355
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      # Clé privée des alertes push (src/lib/push/send.ts).
+      VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
       # Entrée passée par l'environnement, jamais interpolée dans `run:`.
       LOOP_MINUTES: ${{ inputs.minutes || '330' }}
     steps:

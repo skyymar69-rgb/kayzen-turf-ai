@@ -26,6 +26,8 @@ export type RefreshOutcome =
       oddsChanged: number;
       runners: number;
       scratched: number[];
+      /** Chevaux retirés, pour prévenir ceux qui les suivent. */
+      scratchedHorseIds: string[];
       snapshotRecorded: boolean;
       frozen: string[];
     };
@@ -95,12 +97,14 @@ export async function refreshRace(
   const runningNumbers = running.map((p) => Number(p.numPmu));
   const [{ presents }] = (await sql.query(`select count(*)::int as presents from entries where race_id = $1`, [raceId])) as Array<{ presents: number }>;
   let scratched: number[] = [];
+  let scratchedHorseIds: string[] = [];
   if (runningNumbers.length >= presents * 0.7) {
     const removed = (await sql.query(
-      `delete from entries where race_id = $1 and not (number = any($2::int[])) returning number`,
+      `delete from entries where race_id = $1 and not (number = any($2::int[])) returning number, horse_id`,
       [raceId, runningNumbers],
-    )) as Array<{ number: number }>;
+    )) as Array<{ number: number; horse_id: string }>;
     scratched = removed.map((r) => r.number);
+    scratchedHorseIds = removed.map((r) => r.horse_id);
   }
 
   const oddsRows = running
@@ -180,7 +184,7 @@ export async function refreshRace(
 
   const frozen = minutesToStart > 0 ? await freezePrediction(raceId, minutesToStart) : [];
 
-  return { status: "refreshed", oddsChanged, runners: running.length, scratched, snapshotRecorded, frozen };
+  return { status: "refreshed", oddsChanged, runners: running.length, scratched, scratchedHorseIds, snapshotRecorded, frozen };
 }
 
 function finiteOrNull(value: unknown): number | null {

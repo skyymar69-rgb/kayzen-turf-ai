@@ -11,7 +11,7 @@ export default function CgvPage() {
   return (
     <LegalPage
       title="Conditions générales de vente"
-      intro="Les présentes CGV structurent le futur modèle SaaS payant : abonnements, services numériques, API et offres B2B."
+      intro="PronoTurf est aujourd’hui entièrement gratuit et ne vend aucun abonnement. Les présentes CGV ne s’appliqueront qu’à une éventuelle offre payante future (API, services B2B), dont les conditions seraient présentées avant tout paiement."
       sections={[
         editorSection,
         {

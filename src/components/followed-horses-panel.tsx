@@ -9,12 +9,15 @@ import { instantDepart } from "@/lib/paris-time";
 import { buildSelection } from "@/lib/selection";
 import type { RaceAnalysis } from "@/lib/types";
 import { ProfileBadge } from "@/components/course/shared";
+import { PushAlertsToggle } from "@/components/push-alerts-toggle";
 
 /**
  * MES CHEVAUX — les engagements des chevaux suivis sur le programme chargé
  * (hier, aujourd'hui, demain), avec leur profil du moment. Une alerte s'allume
  * quand l'un d'eux part dans moins de 30 minutes. Le suivi vit dans le
- * navigateur du visiteur : aucun compte, aucune donnée transmise.
+ * navigateur du visiteur, sans compte. S'il active les alertes push, la liste
+ * est aussi transmise au serveur, rattachée à l'abonnement anonyme du
+ * navigateur (voir src/hooks/use-push-alerts.ts).
  */
 export function FollowedHorsesPanel({ races }: { races: RaceAnalysis[] }) {
   const { followed, toggle } = useFollowedHorses();
@@ -41,16 +44,19 @@ export function FollowedHorsesPanel({ races }: { races: RaceAnalysis[] }) {
       .sort((a, b) => a.start - b.start);
   }, [races, followed]);
 
+  const horseIds = useMemo(() => [...followed.keys()], [followed]);
+
   if (followed.size === 0) return null;
 
   return (
     <section className="mt-4 rounded-2xl border border-border bg-surface shadow-sm" aria-labelledby="mes-chevaux">
-      <div className="flex items-center gap-3 border-b border-border px-5 py-4">
+      <div className="flex flex-wrap items-center gap-3 border-b border-border px-5 py-4">
         <Star aria-hidden="true" className="fill-amber-400 text-amber-400" size={18} />
         <div>
           <h2 id="mes-chevaux" className="font-display text-lg font-bold text-fg">Mes chevaux suivis</h2>
           <p className="text-xs text-muted">{followed.size} cheval{followed.size > 1 ? "x" : ""} suivi{followed.size > 1 ? "s" : ""} · mémorisé{followed.size > 1 ? "s" : ""} dans ce navigateur</p>
         </div>
+        <PushAlertsToggle horseIds={horseIds} />
       </div>
 
       {engagements.length === 0 ? (

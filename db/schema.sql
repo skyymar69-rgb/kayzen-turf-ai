@@ -349,3 +349,36 @@ create table if not exists connection_stats (
   updated_at timestamptz not null default now(),
   primary key (kind, person_id)
 );
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Alertes push sur les chevaux suivis, sans compte.
+--
+-- Un abonnement = un navigateur. On ne garde que ce que le service de push
+-- exige pour livrer une notification (l'adresse de livraison et ses deux clés
+-- de chiffrement) et la liste des chevaux suivis. Aucun email, aucune adresse
+-- IP, aucun agent utilisateur. L'abonnement disparaît quand le visiteur coupe
+-- les alertes, quand le service de push le déclare expiré (404/410), ou après
+-- 13 mois sans visite (`seen_at`, rafraîchi à chaque passage sur le site).
+-- ─────────────────────────────────────────────────────────────────────────────
+create table if not exists push_subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  endpoint text not null unique,
+  p256dh text not null,
+  auth text not null,
+  horse_ids text[] not null default '{}',
+  created_at timestamptz not null default now(),
+  seen_at timestamptz not null default now()
+);
+
+create index if not exists push_subscriptions_horses_idx on push_subscriptions using gin (horse_ids);
+
+-- Une notification par abonnement, course, cheval et motif : la boucle passe
+-- toutes les 30 s, ce journal l'empêche de répéter une alerte déjà envoyée.
+create table if not exists push_deliveries (
+  subscription_id uuid not null references push_subscriptions(id) on delete cascade,
+  race_id text not null references races(id) on delete cascade,
+  horse_id text not null,
+  kind text not null check (kind in ('depart', 'non-partant')),
+  sent_at timestamptz not null default now(),
+  primary key (subscription_id, race_id, horse_id, kind)
+);

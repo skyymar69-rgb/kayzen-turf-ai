@@ -401,8 +401,8 @@ export function Dashboard({ races, performance = null }: DashboardProps) {
               {/* ── Footer hero ──────────────────────────────────────── */}
               <div className="flex items-center justify-between border-t border-white/10 px-5 py-2.5">
                 <p className="text-[10px] text-slate-400">Outil d’aide à la décision — aucun résultat ni gain garanti</p>
-                <Link href="/tarifs" className="text-[10px] font-semibold text-cta transition hover:text-cta-hi">
-                  Accès premium →
+                <Link href="/track-record" className="text-[10px] font-semibold text-cta transition hover:text-cta-hi">
+                  Résultats mesurés →
                 </Link>
               </div>
 

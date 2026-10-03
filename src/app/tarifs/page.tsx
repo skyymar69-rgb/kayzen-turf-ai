@@ -1,109 +1,27 @@
 import Link from "next/link";
-import { ArrowRight, BarChart3, Brain, Check, Mail, Shield, Sparkles, Zap } from "lucide-react";
-import { COMPANY } from "@/lib/site-config";
+import { ArrowRight, BarChart3, Brain, Check, Shield, Sparkles, Zap } from "lucide-react";
 
 export const metadata = {
-  title: "Tarifs & Offres",
-  description: "Découvrez les offres PronoTurf : accès gratuit, Starter, Premium et Pro. Analyses IA, value bets et tickets optimisés pour chaque profil de parieur.",
+  title: "Tarifs : 100 % gratuit",
+  description: "PronoTurf est gratuit : toutes les courses analysées, profils des chevaux, IA comparée au marché, suivi de performance public et alertes, sans abonnement ni publicité.",
   alternates: { canonical: "/tarifs" },
 };
 
-const PLANS = [
-  {
-    id: "gratuit",
-    name: "Gratuit",
-    price: null,
-    period: null,
-    tagline: "Commencez sans engagement",
-    color: "border-border",
-    badge: null,
-    features: [
-      "1 course analysée par jour",
-      "Ordre probable des partants",
-      "Profils des chevaux et base IA",
-      "Lecture marché simplifiée",
-      "Jeu responsable & pédagogie",
-    ],
-    cta: "Commencer gratuitement",
-    ctaHref: "/",
-    ctaStyle: "border border-border bg-surface text-fg hover:border-accent hover:text-accent-text",
-  },
-  {
-    id: "starter",
-    name: "Starter",
-    price: 19,
-    period: "mois",
-    tagline: "Pour débuter avec l'IA",
-    color: "border-border",
-    badge: null,
-    features: [
-      "3 courses analysées par jour",
-      "Bases IA et alertes prioritaires",
-      "Value bets détectés",
-      "Tickets Couple et Trio",
-      "Statistiques de base",
-      "Support email",
-    ],
-    cta: "Démarrer Starter",
-    ctaHref: "#contact",
-    ctaStyle: "border border-accent text-accent-text hover:bg-accent hover:text-white",
-  },
-  {
-    id: "premium",
-    name: "Premium",
-    price: 39,
-    period: "mois",
-    tagline: "L'expérience complète",
-    color: "border-accent",
-    badge: "Populaire",
-    features: [
-      "Accès complet toutes les courses",
-      "Tickets intelligents (Quinte+, Quarté+, Pick5)",
-      "Value bets et edge calculations",
-      "3 modes de ticket (sécurisé/équilibré/agressif)",
-      "Statistiques avancées et heatmaps",
-      "Historique des prédictions",
-      "Auto-analyse des résultats",
-      "Support prioritaire",
-    ],
-    cta: "Démarrer Premium",
-    ctaHref: "#contact",
-    ctaStyle: "bg-accent text-white hover:bg-accent-hi",
-  },
-  {
-    id: "pro",
-    name: "Pro",
-    price: 79,
-    period: "mois",
-    tagline: "Pour les stratèges avancés",
-    color: "border-border",
-    badge: null,
-    features: [
-      "Tout Premium inclus",
-      "Stratégie bankroll personnalisée",
-      "Backtesting sur données historiques",
-      "Signaux experts et alertes SMS",
-      "Accès API prioritaire",
-      "Données brutes exportables",
-      "Onboarding dédié",
-      "SLA garanti",
-    ],
-    cta: "Contacter l'équipe",
-    ctaHref: "#contact",
-    ctaStyle: "border border-border bg-surface text-fg hover:border-accent hover:text-accent-text",
-  },
-] as const;
-
-const COMPARISON_FEATURES = [
-  { label: "Courses par jour",              gratuit: "1",     starter: "3",     premium: "Toutes",  pro: "Toutes" },
-  { label: "Base IA et ordre probable",     gratuit: true,    starter: true,    premium: true,      pro: true     },
-  { label: "Value bets",                    gratuit: false,   starter: true,    premium: true,      pro: true     },
-  { label: "Tickets intelligents",          gratuit: false,   starter: "Partiel",premium: true,     pro: true     },
-  { label: "Quinte+ / Quarté+ / Pick5",     gratuit: false,   starter: false,   premium: true,      pro: true     },
-  { label: "Historique prédictions",        gratuit: false,   starter: false,   premium: true,      pro: true     },
-  { label: "Auto-analyse résultats",        gratuit: false,   starter: false,   premium: true,      pro: true     },
-  { label: "Backtesting",                   gratuit: false,   starter: false,   premium: false,     pro: true     },
-  { label: "Accès API",                     gratuit: false,   starter: false,   premium: false,     pro: true     },
+/**
+ * Octobre 2026 : le site reste gratuit. Les grilles Starter / Premium / Pro
+ * annonçaient des offres qui n'existaient pas, et aucun signal n'a montré de
+ * rendement positif mesuré (voir /track-record) : rien ne justifiait de les
+ * faire payer. La page garde son adresse, déjà indexée et liée depuis le menu.
+ */
+const INCLUDED = [
+  "Toutes les courses du programme PMU analysées, hier, aujourd'hui et demain",
+  "Classement IA, probabilités de victoire et de podium",
+  "Profils des chevaux : base, caché, value, outsider, à éviter",
+  "IA sans cote comparée au marché, mouvements de cotes et parts des enjeux",
+  "Verdict de course en une ligne et fiche détaillée de chaque cheval",
+  "Cotes relues en continu avant le départ, avec leur âge affiché",
+  "Chevaux suivis et alertes avant le départ ou en cas de non-partant",
+  "Suivi de performance public, rendement mesuré sur les rapports officiels",
 ] as const;
 
 export default function TarifsPage() {
@@ -115,118 +33,36 @@ export default function TarifsPage() {
         <section className="mb-10 text-center">
           <span className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent-lo px-3 py-1 text-xs font-bold uppercase tracking-widest text-accent-text">
             <Sparkles size={11} />
-            Offres SaaS
+            Tarifs
           </span>
           <h1 className="mt-4 font-display text-4xl font-bold text-fg sm:text-5xl">
-            Monétiser la clarté,<br className="hidden sm:block" /> pas une promesse de gain
+            PronoTurf est gratuit
           </h1>
           <p className="mt-4 mx-auto max-w-2xl text-base leading-7 text-muted">
-            PronoTurf est un outil d’aide à la décision. Nous vendons de l’analyse et de la transparence,
-            pas des certitudes. Chaque offre correspond à un niveau d’engagement dans votre pratique du turf.
+            Pas d’abonnement, pas de publicité, pas de compte à créer. PronoTurf est un outil d’aide à la
+            décision : nous publions de l’analyse et ses résultats mesurés, pas des certitudes.
           </p>
         </section>
 
-        {/* Pricing cards */}
-        <section className="mb-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Plans tarifaires">
-          {PLANS.map((plan) => (
-            <article
-              key={plan.id}
-              className={`relative flex flex-col rounded-2xl border-2 bg-surface p-6 shadow-sm ${plan.color} ${plan.badge ? "ring-2 ring-accent ring-offset-2 ring-offset-bg" : ""}`}
-            >
-              {plan.badge && (
-                <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-full bg-accent px-4 py-1 text-xs font-bold text-white">
-                  {plan.badge}
-                </span>
-              )}
-
-              <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-muted">{plan.name}</p>
-                <div className="mt-2 flex items-baseline gap-1">
-                  {plan.price ? (
-                    <>
-                      <span className="font-display text-4xl font-bold text-fg">{plan.price}</span>
-                      <span className="text-sm text-muted">€/{plan.period}</span>
-                    </>
-                  ) : (
-                    <span className="font-display text-4xl font-bold text-fg">Gratuit</span>
-                  )}
-                </div>
-                <p className="mt-1 text-sm text-muted">{plan.tagline}</p>
-              </div>
-
-              <ul className="mt-6 flex flex-1 flex-col gap-2.5">
-                {plan.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2.5 text-sm text-fg">
-                    <Check size={15} className="mt-0.5 shrink-0 text-accent" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-
-              {/* Les trois offres payantes pointaient vers `#contact`, une ancre
-                  qui n'existait nulle part : le clic ne faisait rien. Elle mène
-                  désormais à la section de contact en bas de page. */}
-              {plan.ctaHref.startsWith("/") ? (
-                <Link
-                  href={plan.ctaHref}
-                  className={`mt-8 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition ${plan.ctaStyle}`}
-                >
-                  {plan.cta} <ArrowRight size={14} />
-                </Link>
-              ) : (
-                <a
-                  href={plan.ctaHref}
-                  className={`mt-8 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition ${plan.ctaStyle}`}
-                >
-                  {plan.cta} <ArrowRight size={14} />
-                </a>
-              )}
-            </article>
-          ))}
-        </section>
-
-        {/* Tableau comparatif */}
-        <section className="mb-12 overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
-          <div className="border-b border-border px-6 py-5">
-            <h2 className="font-display text-2xl font-bold text-fg">Comparatif détaillé</h2>
-            <p className="mt-1 text-sm text-muted">Toutes les fonctionnalités selon votre offre.</p>
+        <section className="mx-auto mb-12 max-w-3xl rounded-2xl border-2 border-accent bg-surface p-6 shadow-sm sm:p-8" aria-labelledby="inclus-titre">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 id="inclus-titre" className="font-display text-2xl font-bold text-fg">Tout est inclus</h2>
+            <p className="font-display text-3xl font-bold text-fg">0 €</p>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] border-collapse text-left">
-              <caption className="sr-only">Comparaison des fonctionnalités selon l’offre</caption>
-              <thead>
-                <tr className="border-b border-border bg-surface-sub text-xs font-bold uppercase tracking-widest text-muted">
-                  <th className="px-6 py-4">Fonctionnalité</th>
-                  {PLANS.map((p) => (
-                    <th key={p.id} className={`px-4 py-4 text-center ${p.badge ? "text-accent-text" : ""}`}>
-                      {p.name}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {COMPARISON_FEATURES.map((row) => (
-                  <tr key={row.label} className="hover:bg-surface-sub">
-                    <td className="px-6 py-3.5 text-sm font-medium text-fg">{row.label}</td>
-                    {(["gratuit", "starter", "premium", "pro"] as const).map((key) => {
-                      const val = row[key];
-                      return (
-                        <td key={key} className="px-4 py-3.5 text-center">
-                          {typeof val === "boolean" ? (
-                            val
-                              ? <Check size={16} className="mx-auto text-accent" />
-                              : <span className="mx-auto block h-0.5 w-4 rounded bg-border-strong" />
-                          ) : (
-                            <span className={`text-sm font-semibold ${key === "premium" ? "text-accent-text" : "text-fg"}`}>{val}</span>
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ul className="mt-6 grid gap-2.5 sm:grid-cols-2">
+            {INCLUDED.map((f) => (
+              <li key={f} className="flex items-start gap-2.5 text-sm text-fg">
+                <Check size={15} className="mt-0.5 shrink-0 text-accent" />
+                {f}
+              </li>
+            ))}
+          </ul>
+          <Link
+            href="/"
+            className="mt-8 inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-bold text-white transition hover:bg-accent-hi"
+          >
+            Voir le programme du jour <ArrowRight size={14} />
+          </Link>
         </section>
 
         {/* Garanties */}
@@ -263,30 +99,6 @@ export default function TarifsPage() {
                 </a>.
               </p>
             </div>
-          </div>
-        </section>
-
-        {/* Contact — cible des boutons Starter / Premium / Pro */}
-        <section
-          aria-labelledby="contact-titre"
-          className="mt-8 scroll-mt-24 rounded-2xl border border-border bg-surface p-6 shadow-sm sm:p-8"
-          id="contact"
-        >
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-muted">Contact</p>
-              <h2 id="contact-titre" className="mt-1 font-display text-2xl font-bold text-fg">Ouvrir une offre payante</h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-                Les offres Starter, Premium et Pro sont ouvertes sur demande : écrivez-nous en précisant
-                l’offre souhaitée, nous revenons vers vous avec les modalités d’accès.
-              </p>
-            </div>
-            <a
-              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-bold text-white transition hover:bg-accent-hi"
-              href={`mailto:${COMPANY.email}?subject=${encodeURIComponent("PronoTurf — demande d’offre")}`}
-            >
-              <Mail size={15} /> {COMPANY.email}
-            </a>
           </div>
         </section>
 

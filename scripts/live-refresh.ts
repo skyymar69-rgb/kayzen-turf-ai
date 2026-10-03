@@ -29,6 +29,7 @@
 import { readFileSync } from "node:fs";
 import { imminentRaces, minutesToNextRace, refreshRace } from "@/lib/live/refresh-race";
 import { delay } from "@/lib/pmu/client";
+import { purgeStaleSubscriptions, pushConfigured, sendPushAlerts } from "@/lib/push/send";
 
 function loadLocalEnv() {
   try {
@@ -52,12 +53,19 @@ async function pass() {
   const races = await imminentRaces();
   if (races.length === 0) return null;
   let closest = Infinity;
+  const scratched: Array<{ raceId: string; horses: Array<{ horseId: string; number: number }> }> = [];
   for (const race of races) {
     const minutes = Number(race.minutes_to_start);
     closest = Math.min(closest, Math.max(minutes, 0));
     try {
       const outcome = await refreshRace(race.id, { minutesToStart: minutes });
       if (outcome.status === "refreshed") {
+        if (outcome.scratchedHorseIds.length > 0) {
+          scratched.push({
+            raceId: race.id,
+            horses: outcome.scratchedHorseIds.map((horseId, i) => ({ horseId, number: outcome.scratched[i]! })),
+          });
+        }
         const parts = [
           `${outcome.oddsChanged}/${outcome.runners} cotes modifiées`,
           outcome.snapshotRecorded ? "relevé historisé" : null,
@@ -71,6 +79,12 @@ async function pass() {
     }
     await delay(250);
   }
+  try {
+    const { sent } = await sendPushAlerts(scratched);
+    if (sent > 0) console.log(`[push] ${sent} alerte${sent > 1 ? "s" : ""} envoyée${sent > 1 ? "s" : ""}`);
+  } catch (error) {
+    console.warn(`[push] alertes non envoyées : ${(error as Error).message}`);
+  }
   return closest;
 }
 
@@ -79,6 +93,8 @@ async function main() {
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required");
 
   const once = process.argv.includes("--once");
+  if (!pushConfigured()) console.log("[push] VAPID_PRIVATE_KEY absente : alertes désactivées");
+  else console.log(`[push] ${await purgeStaleSubscriptions()} abonnement(s) expiré(s) supprimé(s)`);
   const deadline = Date.now() + Number(arg("minutes") ?? 330) * 60_000;
   let passes = 0;
 
