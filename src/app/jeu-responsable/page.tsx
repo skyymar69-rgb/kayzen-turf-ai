@@ -39,7 +39,7 @@ export default function JeuResponsablePage() {
             </div>
             <div>
               <h1 className="font-display text-2xl font-bold text-fg">Jeu responsable</h1>
-              <p className="text-sm text-muted">PronoTurf s’engage pour un jeu sain et maîtrisé.</p>
+              <p className="text-sm text-muted">Kayzen Turf s’engage pour un jeu sain et maîtrisé.</p>
             </div>
           </div>
         </div>
@@ -119,7 +119,7 @@ export default function JeuResponsablePage() {
         </div>
 
         <p className="mt-8 text-center text-xs text-muted">
-          PronoTurf — Éditeur soumis à la réglementation ANJ.{" "}
+          Kayzen Turf — Éditeur soumis à la réglementation ANJ.{" "}
           <Link href="/mentions-legales" className="text-accent-text hover:text-accent">Mentions légales</Link>
         </p>
 

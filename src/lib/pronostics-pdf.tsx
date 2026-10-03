@@ -181,9 +181,9 @@ export function PronosticsPDF({ races, date }: { races: RaceAnalysis[]; date: st
 
   return (
     <Document
-      title={`PronoTurf — Pronostics PMU ${date}`}
-      author="PronoTurf"
-      creator="PronoTurf"
+      title={`Kayzen Turf — Pronostics PMU ${date}`}
+      author="Kayzen Turf"
+      creator="Kayzen Turf"
       producer="@react-pdf/renderer"
     >
       <Page size="A4" style={s.page}>
@@ -195,7 +195,7 @@ export function PronosticsPDF({ races, date }: { races: RaceAnalysis[]; date: st
                 ne s'y applique pas, et le composant n'accepte pas de prop `alt`. */}
             {/* eslint-disable-next-line jsx-a11y/alt-text */}
             <Image src={MARQUE_DATA_URI} style={s.hdrMarque} />
-            <Text style={s.hdrTitle}>PronoTurf</Text>
+            <Text style={s.hdrTitle}>Kayzen Turf</Text>
             <Text style={s.hdrSub}>  PRONOSTICS PMU — {date}</Text>
           </View>
           <Text style={s.hdrRight} render={({ pageNumber, totalPages }) => `p. ${pageNumber}/${totalPages}`} />
@@ -254,7 +254,7 @@ export function PronosticsPDF({ races, date }: { races: RaceAnalysis[]; date: st
         {/* Fixed footer */}
         <View style={s.ftr} fixed>
           <Text style={s.ftrTxt}>
-            PronoTurf — Outil d’aide à la décision uniquement. Les jeux d’argent comportent des risques.
+            Kayzen Turf — Outil d’aide à la décision uniquement. Les jeux d’argent comportent des risques.
           </Text>
           <Text style={s.ftrTxt}>{date}</Text>
         </View>

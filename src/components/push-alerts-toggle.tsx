@@ -13,7 +13,7 @@ export function PushAlertsToggle({ horseIds }: { horseIds: string[] }) {
 
   let note: React.ReactNode = null;
   if (status === "denied") note = "Notifications bloquées : autorisez-les dans les réglages du site de votre navigateur.";
-  else if (status === "ios-install") note = "Sur iPhone et iPad : Partager puis « Sur l'écran d'accueil », ouvrez PronoTurf depuis l'icône, puis activez les alertes.";
+  else if (status === "ios-install") note = "Sur iPhone et iPad : Partager puis « Sur l'écran d'accueil », ouvrez Kayzen Turf depuis l'icône, puis activez les alertes.";
   else if (status === "unsupported") note = "Ce navigateur ne gère pas les notifications.";
   else if (status === "on") note = "Alerte 30 min avant le départ et en cas de non-partant, sur cet appareil.";
   else if (status === "off") note = "Une notification 30 min avant le départ et si le cheval est déclaré non-partant. Sans compte ni email.";

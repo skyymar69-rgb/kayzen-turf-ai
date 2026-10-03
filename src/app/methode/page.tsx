@@ -10,9 +10,9 @@ import { PROFILES_VERSION, PROFILE_LABELS, PROFILE_RULES, READING_LABELS, READIN
 import { ProfileBadge } from "@/components/course/shared";
 
 export const metadata: Metadata = {
-  title: "Méthode — comment PronoTurf calcule ses pronostics",
+  title: "Méthode — comment Kayzen Turf calcule ses pronostics",
   description:
-    "Les règles publiées de PronoTurf : probabilité du marché, avis de l'IA sans cote, profils des chevaux (Base, Caché, Value, Outsider, Tocard, À éviter), MVT et parts des mises PMU.",
+    "Les règles publiées de Kayzen Turf : probabilité du marché, avis de l'IA sans cote, profils des chevaux (Base, Caché, Value, Outsider, Tocard, À éviter), MVT et parts des mises PMU.",
   alternates: { canonical: "/methode" },
 };
 

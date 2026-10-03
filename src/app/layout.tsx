@@ -15,8 +15,8 @@ export const metadata: Metadata = {
   // canonicals et les images Open Graph des pages filles restaient absents.
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "PronoTurf — Pronostics PMU assistés par IA",
-    template: "%s — PronoTurf",
+    default: "Kayzen Turf — Pronostics PMU assistés par IA",
+    template: "%s — Kayzen Turf",
   },
   description:
     "Analysez les courses PMU avec l'intelligence artificielle : probabilités, value bets, tickets optimisés et suivi de performance. Hier, aujourd'hui, demain.",
@@ -27,15 +27,15 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "fr_FR",
-    siteName: "PronoTurf",
+    siteName: "Kayzen Turf",
     url: "/",
-    title: "PronoTurf — Pronostics PMU assistés par IA",
+    title: "Kayzen Turf — Pronostics PMU assistés par IA",
     description:
       "Analysez les courses PMU avec l'intelligence artificielle : probabilités, value bets, tickets optimisés et suivi de performance.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "PronoTurf — Pronostics PMU assistés par IA",
+    title: "Kayzen Turf — Pronostics PMU assistés par IA",
     description:
       "Analysez les courses PMU avec l'intelligence artificielle : probabilités, value bets, tickets optimisés et suivi de performance.",
   },
@@ -72,7 +72,7 @@ const jsonLd = {
       "@type": "WebSite",
       "@id": `${SITE_URL}/#website`,
       url: `${SITE_URL}/`,
-      name: "PronoTurf",
+      name: "Kayzen Turf",
       description: "Plateforme d'aide à la décision pour pronostics hippiques PMU assistée par IA.",
       inLanguage: "fr-FR",
       potentialAction: {
@@ -84,7 +84,7 @@ const jsonLd = {
     {
       "@type": "Organization",
       "@id": `${SITE_URL}/#organization`,
-      name: "PronoTurf",
+      name: "Kayzen Turf",
       // `url` pointait sur le site de l'éditeur : l'entité décrite n'était donc
       // pas celle que le `@id` désigne, et Google ne pouvait pas rattacher le
       // logo au site. L'éditeur reste identifié dans les mentions légales.
@@ -149,7 +149,7 @@ export default function RootLayout({
             à partir de src/app/manifest.ts. */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="PronoTurf" />
+        <meta name="apple-mobile-web-app-title" content="Kayzen Turf" />
         {/* Next dérive <link rel="icon"> et l'apple-touch-icon 180 px de
             src/app/{favicon.ico,icon.png,apple-icon.png}. Restent les tailles
             qu'aucune convention de fichier ne couvre : les deux formats d'iPad,

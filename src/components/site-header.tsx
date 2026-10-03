@@ -90,7 +90,7 @@ export function SiteHeader() {
         <Link
           href="/"
           className="flex shrink-0 items-center gap-3 py-3.5 transition-opacity hover:opacity-80"
-          aria-label="PronoTurf — accueil"
+          aria-label="Kayzen Turf — accueil"
         >
           {/* `alt=""` : le lien porte déjà son intitulé accessible, répéter la
               marque ferait lire deux fois la même chose au lecteur d'écran.
@@ -98,7 +98,7 @@ export function SiteHeader() {
               pages — la laisser en chargement différé la ferait apparaître après
               le premier rendu. */}
           <Image
-            src="/brand/pronoturf-mark.png"
+            src="/brand/kayzen-turf-mark.png"
             alt=""
             width={62}
             height={36}
@@ -107,7 +107,7 @@ export function SiteHeader() {
           />
           {/* amélioration #15 — logo texte masqué quand scrolled sur mobile */}
           <span className={`hidden flex-col sm:flex transition-opacity duration-200 ${scrolled ? "opacity-80" : ""}`}>
-            <span className="font-display text-base font-bold leading-tight tracking-tight text-white">PronoTurf</span>
+            <span className="font-display text-base font-bold leading-tight tracking-tight text-white">Kayzen Turf</span>
             <span className="text-[11px] font-medium uppercase tracking-widest text-white/70">Prédictions · Analyses · Suivi</span>
           </span>
         </Link>

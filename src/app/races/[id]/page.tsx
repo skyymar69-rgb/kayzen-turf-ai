@@ -104,7 +104,7 @@ export async function generateMetadata({ params }: RacePageProps): Promise<Metad
     url: "/opengraph-image",
     width: 1200,
     height: 630,
-    alt: "PronoTurf — pronostics PMU assistés par IA",
+    alt: "Kayzen Turf — pronostics PMU assistés par IA",
   };
 
   return {
@@ -114,13 +114,13 @@ export async function generateMetadata({ params }: RacePageProps): Promise<Metad
     openGraph: {
       type: "article",
       url: chemin,
-      title: `${titre} — PronoTurf`,
+      title: `${titre} — Kayzen Turf`,
       description,
       images: [image],
     },
     twitter: {
       card: "summary_large_image",
-      title: `${titre} — PronoTurf`,
+      title: `${titre} — Kayzen Turf`,
       description,
       images: [image],
     },

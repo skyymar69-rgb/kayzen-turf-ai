@@ -32,9 +32,9 @@ export function SiteFooter() {
           {/* Brand block */}
           <div>
             <div className="flex items-center gap-3">
-              <Image src="/brand/pronoturf-mark.png" alt="" width={69} height={40} className="h-10 w-auto shrink-0" />
+              <Image src="/brand/kayzen-turf-mark.png" alt="" width={69} height={40} className="h-10 w-auto shrink-0" />
               <div>
-                <p className="font-display text-base font-bold leading-tight text-white">PronoTurf</p>
+                <p className="font-display text-base font-bold leading-tight text-white">Kayzen Turf</p>
                 <p className="text-[11px] font-medium uppercase tracking-widest text-white/75">Prédictions · Analyses · Suivi</p>
               </div>
             </div>

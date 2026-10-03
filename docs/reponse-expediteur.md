@@ -6,7 +6,7 @@ production depuis le 02-03/10/2026.
 
 ---
 
-**Objet :** Vos suggestions pour PronoTurf : ce qui est en ligne
+**Objet :** Vos suggestions pour Kayzen Turf : ce qui est en ligne
 
 Bonjour,
 
@@ -39,5 +39,5 @@ Vos remarques sur ces nouveautés nous seraient précieuses : accepteriez-vous d
 les essayer et de nous dire ce qui manque ?
 
 Cordialement,
-Tarek Belhadj — PronoTurf
+Tarek Belhadj — Kayzen Turf
 https://kayzen-turf-ai.vercel.app

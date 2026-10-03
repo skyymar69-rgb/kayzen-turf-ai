@@ -32,7 +32,7 @@ base pour décider, et pour briefer un conseil si besoin.
   une partie substantielle de la base. C'est le cas d'une collecte continue
   de toutes les courses.
 
-## Lecture pour PronoTurf
+## Lecture pour Kayzen Turf
 
 | Point | Évaluation |
 | --- | --- |
@@ -67,7 +67,7 @@ Faites :
 4. **Écrire au PMU** (direction juridique ou partenariats) pour demander une
    autorisation, et le faire obligatoirement avant l'API B2B prévue dans trois
    mois, et avant toute affiliation.
-5. **Plan B** : garder séparées les données propres à PronoTurf (modèle,
+5. **Plan B** : garder séparées les données propres à Kayzen Turf (modèle,
    analyses, pronostics gelés) et les données brutes du PMU, pour pouvoir
    changer de source.
 

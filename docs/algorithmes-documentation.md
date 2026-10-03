@@ -1,14 +1,14 @@
-# Documentation Technique — Algorithmes de Prédiction PronoTurf
+# Documentation Technique — Algorithmes de Prédiction Kayzen Turf
 
 **Document :** Référence Technique Complète  
 **Version :** 1.0.0  
 **Date :** 07 mai 2026  
-**Confidentialité :** Usage interne — Équipe PronoTurf  
+**Confidentialité :** Usage interne — Équipe Kayzen Turf  
 **Objet :** Architecture des algorithmes, fonctionnement détaillé, analyse des prédictions J−1
 
 ---
 
-> *"PronoTurf vise à être le meilleur outil de prédiction mondial de courses hippiques. Ce document est le socle de cette ambition : comprendre parfaitement nos algorithmes, leurs forces, leurs failles, et la feuille de route pour y remédier."*
+> *"Kayzen Turf vise à être le meilleur outil de prédiction mondial de courses hippiques. Ce document est le socle de cette ambition : comprendre parfaitement nos algorithmes, leurs forces, leurs failles, et la feuille de route pour y remédier."*
 
 ---
 
@@ -821,5 +821,5 @@ Le modèle actuel est **fonctionnel sur le Plat** mais présente des **lacunes s
 
 ---
 
-*Document généré par PronoTurf — Équipe Modélisation — 07 mai 2026*  
+*Document généré par Kayzen Turf — Équipe Modélisation — 07 mai 2026*  
 *Version suivante prévue après implémentation Sprint 1 — Semaine du 12 mai 2026*

@@ -6,7 +6,7 @@ import { getLatestTrackRecord, type SignalRecord } from "@/lib/race-repository";
 export const metadata: Metadata = {
   title: "Suivi de performance — réussite et ROI de chaque signal",
   description:
-    "Le rendement réel de chaque signal PronoTurf, calculé sur les rapports officiels PMU, net du prélèvement, avec la période, le nombre de paris et la marge d'erreur — même quand il est négatif.",
+    "Le rendement réel de chaque signal Kayzen Turf, calculé sur les rapports officiels PMU, net du prélèvement, avec la période, le nombre de paris et la marge d'erreur — même quand il est négatif.",
   alternates: { canonical: "/track-record" },
 };
 

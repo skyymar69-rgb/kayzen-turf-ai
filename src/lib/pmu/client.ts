@@ -5,7 +5,7 @@
  */
 
 export const PMU_BASE = "https://offline.turfinfo.api.pmu.fr/rest/client/7/programme";
-const USER_AGENT = "PronoTurf/1.0 contact:github.com/skyymar69-rgb/kayzen-turf-ai";
+const USER_AGENT = "KayzenTurf/1.0 contact:github.com/skyymar69-rgb/kayzen-turf-ai";
 
 const FETCH_ATTEMPTS = 3;
 const RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);

@@ -2,7 +2,7 @@
 
 **Version :** 1.0.0  
 **Date :** 07 mai 2026  
-**Auteur :** PronoTurf — Équipe Modélisation  
+**Auteur :** Kayzen Turf — Équipe Modélisation  
 **Statut :** Spécification technique — En attente d'implémentation  
 **Priorité :** Critique  
 
@@ -12,7 +12,7 @@
 
 L'algorithme de prédiction actuel (`prediction-math.ts`) est **discipline-aveugle** : il applique un jeu de poids identique aux courses de Plat, de Trot et d'Obstacle. Cette absence de spécialisation est la limite structurelle la plus importante du modèle. Les trois disciplines sont des sports fondamentalement différents, avec des facteurs déterminants distincts, des distributions de probabilités distinctes, et des dynamiques de marché distinctes.
 
-Ce PR définit la refonte complète vers **trois algorithmes indépendants**, chacun nourri par l'ensemble exhaustif des facteurs pertinents à sa discipline. L'objectif est de positionner PronoTurf comme **le meilleur outil de prédiction mondial de courses hippiques**.
+Ce PR définit la refonte complète vers **trois algorithmes indépendants**, chacun nourri par l'ensemble exhaustif des facteurs pertinents à sa discipline. L'objectif est de positionner Kayzen Turf comme **le meilleur outil de prédiction mondial de courses hippiques**.
 
 ---
 

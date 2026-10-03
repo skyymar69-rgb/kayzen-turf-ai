@@ -933,7 +933,7 @@ export function Dashboard({ races, performance = null }: DashboardProps) {
               {/* Table desktop */}
               <div className="hidden overflow-x-auto sm:block">
                 <table className="w-full border-collapse text-left">
-                  <caption className="sr-only">Top 5 partants PronoTurf</caption>
+                  <caption className="sr-only">Top 5 partants Kayzen Turf</caption>
                   <thead>
                     <tr className="border-b border-border bg-surface-sub text-xs font-bold uppercase tracking-widest text-muted">
                       <th className="px-5 py-3" scope="col">N°</th>

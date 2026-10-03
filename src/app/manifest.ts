@@ -12,8 +12,8 @@ import type { MetadataRoute } from "next";
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "PronoTurf",
-    short_name: "PronoTurf",
+    name: "Kayzen Turf",
+    short_name: "Kayzen Turf",
     description: "Pronostics hippiques PMU assistés par IA — analyses, value bets, tickets Quinté+",
     start_url: "/",
     scope: "/",

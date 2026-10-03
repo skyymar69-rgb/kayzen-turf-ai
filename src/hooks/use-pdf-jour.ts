@@ -37,7 +37,7 @@ export function usePdfJour() {
 
       const lien = document.createElement("a");
       lien.href = url;
-      lien.download = `pronoturf-pronostics-${date}.pdf`;
+      lien.download = `kayzen-turf-pronostics-${date}.pdf`;
       // Firefox exige que l'ancre soit dans le document pour honorer le clic.
       document.body.appendChild(lien);
       lien.click();

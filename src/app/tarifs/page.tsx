@@ -3,7 +3,7 @@ import { ArrowRight, BarChart3, Brain, Check, Shield, Sparkles, Zap } from "luci
 
 export const metadata = {
   title: "Tarifs : 100 % gratuit",
-  description: "PronoTurf est gratuit : toutes les courses analysées, profils des chevaux, IA comparée au marché, suivi de performance public et alertes, sans abonnement ni publicité.",
+  description: "Kayzen Turf est gratuit : toutes les courses analysées, profils des chevaux, IA comparée au marché, suivi de performance public et alertes, sans abonnement ni publicité.",
   alternates: { canonical: "/tarifs" },
 };
 
@@ -36,10 +36,10 @@ export default function TarifsPage() {
             Tarifs
           </span>
           <h1 className="mt-4 font-display text-4xl font-bold text-fg sm:text-5xl">
-            PronoTurf est gratuit
+            Kayzen Turf est gratuit
           </h1>
           <p className="mt-4 mx-auto max-w-2xl text-base leading-7 text-muted">
-            Pas d’abonnement, pas de publicité, pas de compte à créer. PronoTurf est un outil d’aide à la
+            Pas d’abonnement, pas de publicité, pas de compte à créer. Kayzen Turf est un outil d’aide à la
             décision : nous publions de l’analyse et ses résultats mesurés, pas des certitudes.
           </p>
         </section>
@@ -91,7 +91,7 @@ export default function TarifsPage() {
               <h2 className="font-semibold text-fg">Jeu responsable</h2>
               <p className="mt-2 text-sm leading-6 text-fg">
                 Les jeux d’argent comportent des risques : endettement, isolement, dépendance.
-                Aucun pronostic, aussi précis soit-il, ne garantit un gain. PronoTurf est un outil
+                Aucun pronostic, aussi précis soit-il, ne garantit un gain. Kayzen Turf est un outil
                 d’aide à la décision et non un système de gains assurés. Si le jeu devient un problème,
                 contactez{" "}
                 <a href="https://www.joueurs-info-service.fr" rel="noopener noreferrer" target="_blank" className="font-semibold text-warn underline underline-offset-4">

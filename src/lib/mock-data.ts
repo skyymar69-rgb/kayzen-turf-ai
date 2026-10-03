@@ -19,7 +19,7 @@ const DEMO_TOMORROW = decalerJour(DEMO_TODAY, 1);
 
 export const raceAnalysis: RaceAnalysis = {
   id: `R1C3-${DEMO_TODAY}`,
-  name: "Prix PronoTurf Data",
+  name: "Prix Kayzen Turf Data",
   raceDate: DEMO_TODAY,
   oddsAvailable: true,
   relativeDay: "today",

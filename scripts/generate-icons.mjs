@@ -1,20 +1,13 @@
 /**
  * Dérive toute l'identité visuelle du site d'un seul fichier source :
- * `assets/brand/pronoturf-source.png`, le logo PronoTurf tel que livré.
+ * `assets/brand/kayzen-turf-mark.png`, la marque Kayzen Turf (cheval, jockey
+ * et flèche ascendante) détourée sur fond transparent, sans lettrage.
  *
- * La source est un rendu de présentation : 2816 × 1536, opaque, logo posé sur un
- * mur sombre texturé. Elle n'est donc utilisable ni en en-tête (le thème clair
- * afficherait un rectangle noir) ni en favicon (le lettrage disparaît sous
- * 64 px). Ce script en extrait deux briques réutilisables — le lockup complet et
- * la marque seule, tous deux détourés — puis en décline les icônes.
- *
- * Détourage. Le fond et le logo se séparent proprement sur deux axes mesurés sur
- * la source : le fond est désaturé et sombre (S ≤ 12, V ≤ 50), les aplats du
- * logo sont saturés (S ≥ 60) et le lettrage est blanc pur (V = 255). L'alpha est
- * la combinaison continue des deux critères, ce qui conserve l'antialiasing des
- * contours au lieu de le hacher. Les pixels de bord sont ensuite dépré-multipliés
- * du fond d'origine : sans cette étape, un liseré sombre cerne le logo dès qu'on
- * le pose sur un fond clair.
+ * Le nom du site n'est jamais incrusté dans une image : il est écrit en HTML à
+ * côté de la marque (en-tête, pied de page), dans le PDF et dans l'image Open
+ * Graph. Changer de nom ne demande donc aucune nouvelle image. (Octobre 2026 :
+ * l'ancienne source était un rendu de présentation portant le lettrage
+ * « KAYZEN TURF », abandonné avec ce nom.)
  *
  * Le script est idempotent : `npm run brand:icons` régénère tout.
  *
@@ -26,153 +19,11 @@ import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 
 const racine = join(dirname(fileURLToPath(import.meta.url)), "..");
-const SOURCE = join(racine, "assets/brand/pronoturf-source.png");
+const SOURCE = join(racine, "assets/brand/kayzen-turf-mark.png");
 
 /** Fond des tuiles d'icône — `theme_color` du manifeste, pour que la couleur de
  *  la barre système d'Android prolonge l'icône au lieu de trancher avec. */
 const FOND_TUILE = { r: 0x0c, g: 0x23, b: 0x18, alpha: 1 };
-
-/** Fond de la source, estimé au voisinage du logo. Sert au dépré-multipliage. */
-const FOND_SOURCE = [22, 25, 30];
-
-// ── Détourage ───────────────────────────────────────────────────────────────
-
-/**
- * Alpha continu, sur deux critères mesurés sur la source : les aplats du logo
- * sont saturés (S ≥ 60) et le lettrage est blanc pur (V = 255), alors que le mur
- * reste désaturé (S ≤ 25, bruit de texture compris) et sombre (V ≤ 116, vignette
- * de l'angle haut-droit comprise). Les deux seuils passent au-dessus du maximum
- * du fond : un seuil plus bas retenait 10 % du mur comme s'il était du logo.
- */
-function opacite(r, g, b) {
-  const max = Math.max(r, g, b);
-  const saturation = max - Math.min(r, g, b);
-  const parSaturation = (saturation - 30) / 25;
-  const parLuminosite = (max - 150) / 60;
-  return Math.max(0, Math.min(1, Math.max(parSaturation, parLuminosite)));
-}
-
-/**
- * Rend opaques les pixels enfermés dans l'illustration.
- *
- * Les ombres les plus sombres du cheval (un bleu nuit presque noir) tombent sous
- * le seuil de saturation et se détouraient en trous. On ne peut pas les
- * rattraper par le seuil sans reprendre le mur avec ; on les distingue par la
- * topologie : le fond est le seul vide qui touche le bord. Tout vide qu'un
- * remplissage par diffusion depuis le bord n'atteint pas est un trou intérieur,
- * et redevient opaque.
- *
- * L'opération est bornée à la bande du cheval. Appliquée au lettrage, elle
- * boucherait les contre-formes des lettres : les « O » de PRONOTURF ressortaient
- * en pastilles pleines, et les panses du P et du R en aplats sombres.
- */
-function boucherTrous(alpha, width, { haut, bas }) {
-  const exterieur = new Uint8Array(width * (bas - haut + 1));
-  const pile = [];
-
-  const empiler = (x, y) => {
-    const index = (y - haut) * width + x;
-    if (exterieur[index] || alpha[y * width + x] > 128) return;
-    exterieur[index] = 1;
-    pile.push(index);
-  };
-
-  for (let x = 0; x < width; x += 1) {
-    empiler(x, haut);
-    empiler(x, bas);
-  }
-  for (let y = haut; y <= bas; y += 1) {
-    empiler(0, y);
-    empiler(width - 1, y);
-  }
-
-  while (pile.length > 0) {
-    const index = pile.pop();
-    const x = index % width;
-    const y = (index - x) / width + haut;
-    if (x > 0) empiler(x - 1, y);
-    if (x < width - 1) empiler(x + 1, y);
-    if (y > haut) empiler(x, y - 1);
-    if (y < bas) empiler(x, y + 1);
-  }
-
-  for (let index = 0; index < exterieur.length; index += 1) {
-    if (!exterieur[index]) alpha[haut * width + index] = 255;
-  }
-}
-
-async function lireSource() {
-  const { data, info } = await sharp(SOURCE).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-  const { width, height, channels } = info;
-  const alpha = new Uint8Array(width * height);
-
-  for (let index = 0, pixel = 0; index < data.length; index += channels, pixel += 1) {
-    alpha[pixel] = Math.round(opacite(data[index], data[index + 1], data[index + 2]) * 255);
-  }
-
-  return { data, alpha, width, height, channels };
-}
-
-/** Assemble le RGBA final une fois l'alpha arrêté. */
-function composer({ data, alpha, width, height, channels }) {
-  const sortie = Buffer.alloc(width * height * 4);
-  for (let pixel = 0; pixel < alpha.length; pixel += 1) {
-    const source = pixel * channels;
-    const destination = pixel * 4;
-    const opacite255 = alpha[pixel];
-
-    // Dépré-multipliage : un pixel de contour est un mélange (couleur du logo,
-    // fond sombre). Le rendre tel quel sur un fond clair laisserait le fond
-    // d'origine transparaître en liseré ; on retire sa contribution.
-    for (let canal = 0; canal < 3; canal += 1) {
-      const brut = data[source + canal];
-      const restitue =
-        opacite255 > 1 ? (brut - (1 - opacite255 / 255) * FOND_SOURCE[canal]) / (opacite255 / 255) : 0;
-      sortie[destination + canal] = Math.max(0, Math.min(255, Math.round(restitue)));
-    }
-    sortie[destination + 3] = opacite255;
-  }
-
-  return { buffer: sortie, width, height };
-}
-
-/**
- * Sépare la marque (cheval + flèche) du lettrage.
- *
- * Le lockup est un empilement vertical : les deux blocs sont séparés par une
- * bande de lignes entièrement transparentes. On cherche la plus large de ces
- * bandes plutôt qu'un ratio en dur, pour que le script survive à une source
- * recadrée différemment.
- */
-function separerBlocs({ alpha, width, height }) {
-  const plein = new Array(height);
-  for (let y = 0; y < height; y += 1) {
-    let somme = 0;
-    for (let x = 0; x < width; x += 1) somme += alpha[y * width + x];
-    plein[y] = somme / (width * 255) > 0.004;
-  }
-
-  const premier = plein.indexOf(true);
-  const dernier = plein.lastIndexOf(true);
-
-  let meilleurDebut = -1;
-  let meilleureLongueur = 0;
-  let debut = -1;
-  for (let y = premier; y <= dernier; y += 1) {
-    if (!plein[y]) {
-      if (debut === -1) debut = y;
-    } else if (debut !== -1) {
-      if (y - debut > meilleureLongueur) {
-        meilleureLongueur = y - debut;
-        meilleurDebut = debut;
-      }
-      debut = -1;
-    }
-  }
-
-  if (meilleurDebut === -1) throw new Error("aucune séparation marque / lettrage trouvée");
-  return { hautLockup: premier, basMarque: meilleurDebut, basLockup: dernier };
-}
 
 /**
  * Recadre sur les pixels non transparents.
@@ -279,28 +130,16 @@ async function ecrire(chemin, contenu) {
   console.log(`  ${chemin.padEnd(38)} ${dimensions} ${(contenu.length / 1024).toFixed(1)} ko`);
 }
 
-const source = await lireSource();
-const { hautLockup, basMarque, basLockup } = separerBlocs(source);
-boucherTrous(source.alpha, source.width, { haut: hautLockup, bas: basMarque });
-const detoure = composer(source);
-
-console.log(`Source  : assets/brand/pronoturf-source.png (${source.width}×${source.height})`);
-console.log(`Marque  : lignes ${hautLockup} → ${basMarque}`);
-console.log(`Lockup  : lignes ${hautLockup} → ${basLockup}
+const { data, info } = await sharp(SOURCE).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+console.log(`Source  : assets/brand/kayzen-turf-mark.png (${info.width}×${info.height})
 `);
 
-// Lockup complet, détouré — usage marketing, PDF, partage.
-const lockup = recadrer(detoure, { top: hautLockup, bottom: basLockup });
-
-// Marque seule — c'est elle, et non le lockup, qui alimente toutes les icônes :
-// le lettrage devient illisible sous 64 px et ne survit pas au masque circulaire
-// d'Android.
-const marque = await recadrer(detoure, { top: hautLockup, bottom: basMarque }).png().toBuffer();
+// La marque, recadrée au plus près, alimente toutes les icônes.
+const marque = await recadrer({ buffer: data, width: info.width, height: info.height }).png().toBuffer();
 const { width: LARGEUR_MARQUE, height: HAUTEUR_MARQUE } = await sharp(marque).metadata();
 
 console.log("Briques réutilisables");
-await ecrire("public/brand/pronoturf-lockup.png", await lockup.resize({ width: 1600 }).png({ compressionLevel: 9 }).toBuffer());
-await ecrire("public/brand/pronoturf-mark.png", await sharp(marque).resize({ width: 1024 }).png({ compressionLevel: 9 }).toBuffer());
+await ecrire("public/brand/kayzen-turf-mark.png", await sharp(marque).resize({ width: 1024 }).png({ compressionLevel: 9 }).toBuffer());
 
 /**
  * Glyphe de repli pour 16 px : la flèche ascendante seule.
@@ -365,8 +204,8 @@ console.log("\nEmbarque");
 const embarquee = await sharp(marque).resize({ width: 160 }).png({ compressionLevel: 9 }).toBuffer();
 const moduleMarque = [
   "/**",
-  " * Marque PronoTurf en data URI - GENERE, ne pas modifier a la main.",
-  " * Source : assets/brand/pronoturf-source.png, via `npm run brand:icons`.",
+  " * Marque Kayzen Turf en data URI - GENERE, ne pas modifier a la main.",
+  " * Source : assets/brand/kayzen-turf-mark.png, via `npm run brand:icons`.",
   " *",
   " * Destine aux rendus serveur qui ne peuvent pas charger une URL du site :",
   " * le PDF des pronostics et l\'image Open Graph.",

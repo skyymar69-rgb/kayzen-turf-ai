@@ -6,7 +6,7 @@ import { MARQUE_DATA_URI, MARQUE_RATIO } from "@/lib/brand-mark";
  * s'affichait en carte texte nue. Next sert ce rendu pour `og:image` et
  * `twitter:image` sur toutes les pages qui n'en déclarent pas de plus précise.
  */
-export const alt = "PronoTurf — pronostics PMU assistés par IA";
+export const alt = "Kayzen Turf — pronostics PMU assistés par IA";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -40,7 +40,7 @@ export default async function OpengraphImage() {
               color: "#7fd9a2",
             }}
           >
-            PronoTurf
+            Kayzen Turf
           </div>
         </div>
 

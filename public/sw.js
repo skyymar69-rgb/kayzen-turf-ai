@@ -1,5 +1,5 @@
 /*
- * Service worker PronoTurf : affiche les alertes push sur les chevaux suivis
+ * Service worker Kayzen Turf : affiche les alertes push sur les chevaux suivis
  * et ouvre la course au clic. Il ne met rien en cache et n'intercepte aucune
  * requête : le site reste servi exactement comme sans lui.
  */
@@ -12,10 +12,10 @@ self.addEventListener("push", (event) => {
   try {
     data = event.data ? event.data.json() : {};
   } catch {
-    data = { title: "PronoTurf", body: event.data ? event.data.text() : "" };
+    data = { title: "Kayzen Turf", body: event.data ? event.data.text() : "" };
   }
   event.waitUntil(
-    self.registration.showNotification(data.title || "PronoTurf", {
+    self.registration.showNotification(data.title || "Kayzen Turf", {
       body: data.body || "",
       tag: data.tag,
       icon: "/icon-192.png",

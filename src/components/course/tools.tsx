@@ -181,7 +181,7 @@ export function ShareButton({ programCode, name }: { programCode: string; name: 
   const { etat, copier } = useClipboard();
 
   async function handleShare() {
-    const text = `${programCode} — ${name} | Pronostics PronoTurf`;
+    const text = `${programCode} — ${name} | Pronostics Kayzen Turf`;
     const url = window.location.href;
 
     if (typeof navigator.share === "function") {
