@@ -1,11 +1,70 @@
 /*
- * Service worker Kayzen Turf : affiche les alertes push sur les chevaux suivis
- * et ouvre la course au clic. Il ne met rien en cache et n'intercepte aucune
- * requête : le site reste servi exactement comme sans lui.
+ * Service worker Kayzen Turf.
+ *
+ * 1. Alertes push sur les chevaux suivis ; le clic ouvre la course.
+ * 2. Consultation hors ligne : pour les seules navigations (pages HTML) du
+ *    site, le réseau passe TOUJOURS en premier. La dernière copie reçue des
+ *    pages de pronostics est gardée et resservie si le réseau manque, avec la
+ *    page /hors-ligne en dernier recours. Aucune API, aucune image, aucun
+ *    script n'est mis en cache : une cote périmée ne peut pas se faire passer
+ *    pour une cote fraîche, et le bandeau « hors ligne » le signale.
  */
 
-self.addEventListener("install", () => self.skipWaiting());
-self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
+const PAGES_CACHE = "kayzen-pages-v1";
+const OFFLINE_URL = "/hors-ligne";
+const MAX_PAGES = 30;
+/** Pages gardées pour la consultation hors ligne. */
+const CACHEABLE = [/^\/$/, /^\/pronostics$/, /^\/direct$/, /^\/races\/[^/]+$/, /^\/methode$/, /^\/lexique$/];
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches
+      .open(PAGES_CACHE)
+      .then((cache) => cache.add(new Request(OFFLINE_URL, { cache: "reload" })))
+      .catch(() => undefined)
+      .then(() => self.skipWaiting()),
+  );
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((k) => k.startsWith("kayzen-pages-") && k !== PAGES_CACHE).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim()),
+  );
+});
+
+async function trimCache(cache) {
+  const keys = await cache.keys();
+  const pages = keys.filter((r) => new URL(r.url).pathname !== OFFLINE_URL);
+  for (const old of pages.slice(0, Math.max(0, pages.length - MAX_PAGES))) await cache.delete(old);
+}
+
+self.addEventListener("fetch", (event) => {
+  const request = event.request;
+  if (request.mode !== "navigate" || request.method !== "GET") return;
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
+  const cacheable = CACHEABLE.some((re) => re.test(url.pathname));
+
+  event.respondWith(
+    (async () => {
+      try {
+        const response = await fetch(request);
+        if (cacheable && response.ok && response.type === "basic") {
+          const cache = await caches.open(PAGES_CACHE);
+          await cache.put(url.pathname + url.search, response.clone());
+          await trimCache(cache);
+        }
+        return response;
+      } catch {
+        const cache = await caches.open(PAGES_CACHE);
+        return (cacheable && (await cache.match(url.pathname + url.search))) || (await cache.match(OFFLINE_URL)) || Response.error();
+      }
+    })(),
+  );
+});
 
 self.addEventListener("push", (event) => {
   let data = {};

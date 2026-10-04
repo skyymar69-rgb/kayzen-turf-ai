@@ -5,6 +5,7 @@ import { DemoBanner } from "@/components/demo-banner";
 import { JsonLd } from "@/components/json-ld";
 import { MobileNav } from "@/components/mobile-nav";
 import { PushFollowSync } from "@/components/push-follow-sync";
+import { PwaSupport } from "@/components/pwa-support";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { estModeDemonstration } from "@/lib/race-repository";
@@ -177,6 +178,7 @@ export default function RootLayout({
         <MobileNav />
         <CookieBanner />
         <PushFollowSync />
+        <PwaSupport />
         <BackToTop />
       </body>
     </html>
