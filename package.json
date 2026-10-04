@@ -20,7 +20,8 @@
     "data:refresh:live": "tsx scripts/live-refresh.ts",
     "db:health": "node scripts/db-health.mjs",
     "model:evaluate": "node scripts/evaluate-model.mjs",
-    "model:freshness": "node scripts/evaluate-freshness.mjs"
+    "model:freshness": "node scripts/evaluate-freshness.mjs",
+    "model:confrontation": "tsx scripts/evaluate-confrontation.ts"
   },
   "dependencies": {
     "@fontsource/inter": "^5.2.8",
