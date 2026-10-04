@@ -1,36 +1,18 @@
 import { Sparkles } from "lucide-react";
 import { titleCase } from "@/components/badges";
+export { ReadingPill } from "@/components/badges";
 import { formatPct } from "@/lib/format";
-import { READING_LABELS, READING_RULES, type RaceReading } from "@/lib/profiles";
 import type { FavoriIa, PronosticRace } from "@/lib/pronostics-filters";
 
 /**
  * Petites pièces communes aux cartes, à la vue compacte et à la navigation.
  */
 
-const READING_STYLES: Record<RaceReading, string> = {
-  lisible: "bg-accent text-accent-fg",
-  ouverte: "bg-warn-lo text-warn",
-  piege: "bg-danger/10 text-danger",
-};
-
-/**
- * Même lecture que `ReadingBadge`, mais calculée une fois côté serveur : le
- * navigateur ne reçoit pas le peloton complet pour la refaire.
- */
-export function ReadingPill({ reading }: { reading: RaceReading }) {
-  return (
-    <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-bold ${READING_STYLES[reading]}`} title={READING_RULES[reading]}>
-      {READING_LABELS[reading]}
-    </span>
-  );
-}
-
 /** Point de couleur de discipline ; le nom reste lisible pour les lecteurs d'écran. */
 const DOT_STYLES: Record<string, string> = {
-  Plat: "bg-disc-plat",
-  Trot: "bg-disc-trot",
-  Obstacle: "bg-disc-obst",
+  Plat: "bg-disc-plat-fg",
+  Trot: "bg-disc-trot-fg",
+  Obstacle: "bg-disc-obst-fg",
 };
 
 export function DisciplineDot({ discipline }: { discipline: string }) {

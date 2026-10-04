@@ -42,7 +42,7 @@ export function raceStatus(race: StatusInput, now: Date = new Date()): RaceStatu
 }
 
 /** Arrivée officielle, dans l'ordre (numéros), vide tant qu'elle n'est pas publiée. */
-export function officialArrival(race: Pick<RaceAnalysis, "horses">): number[] {
+export function officialArrival(race: { horses: Array<{ number: number; finishPosition?: number | null }> }): number[] {
   return race.horses
     .filter((h) => h.finishPosition != null && h.finishPosition > 0)
     .sort((a, b) => a.finishPosition! - b.finishPosition!)
@@ -50,7 +50,9 @@ export function officialArrival(race: Pick<RaceAnalysis, "horses">): number[] {
 }
 
 /** Ordre chronologique : heure, puis réunion, puis course. */
-export function compareRaceTime(a: RaceAnalysis, b: RaceAnalysis): number {
+type TimeKey = Pick<RaceAnalysis, "raceDate" | "startTime" | "reunionNumber" | "courseNumber">;
+
+export function compareRaceTime(a: TimeKey, b: TimeKey): number {
   return a.raceDate.localeCompare(b.raceDate) || a.startTime.localeCompare(b.startTime) || a.reunionNumber - b.reunionNumber || a.courseNumber - b.courseNumber;
 }
 
@@ -60,7 +62,7 @@ export function raceAnchor(race: Pick<RaceAnalysis, "reunionNumber" | "courseNum
 }
 
 /** Prochaine course pas encore partie, dans l'ordre chronologique. */
-export function nextRace<T extends RaceAnalysis>(races: T[], now: Date = new Date()): T | null {
+export function nextRace<T extends TimeKey & StatusInput>(races: T[], now: Date = new Date()): T | null {
   return [...races].sort(compareRaceTime).find((r) => {
     const s = raceStatus(r, now);
     return s === "a-venir" || s === "imminente";

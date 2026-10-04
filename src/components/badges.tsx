@@ -1,5 +1,5 @@
 import { properName } from "@/lib/format";
-import { READING_LABELS, READING_RULES } from "@/lib/profiles";
+import { READING_LABELS, READING_RULES, type RaceReading } from "@/lib/profiles";
 import { BET_HIGHLIGHT_LABELS, RACE_STATUS_LABELS, type BetHighlight, type RaceStatus } from "@/lib/race-status";
 import { buildSelection } from "@/lib/selection";
 import type { RaceAnalysis } from "@/lib/types";
@@ -25,7 +25,11 @@ export function titleCase(v: string) {
  * l'IA, elles n'en étaient pas un.
  */
 export function ReadingBadge({ horses }: { horses: RaceAnalysis["horses"] }) {
-  const reading = buildSelection(horses).verdict.reading;
+  return <ReadingPill reading={buildSelection(horses).verdict.reading} />;
+}
+
+/** Même pastille, à partir d'une lecture déjà calculée (côté serveur par exemple). */
+export function ReadingPill({ reading }: { reading: RaceReading }) {
   const cls =
     reading === "lisible" ? "bg-accent text-accent-fg" :
     reading === "ouverte" ? "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200" :
