@@ -54,6 +54,7 @@ const SIGNALS: SignalDef[] = [
   { key: "conf-ia-sp", label: "Favori IA", betType: "SP", description: "Simple placé sur chaque cheval nettement plus haut chez l'IA que sur le marché" },
   { key: "conf-marche-sg", label: "Favori marché", betType: "SG", description: "Simple gagnant sur chaque cheval nettement plus soutenu par le marché que par l'IA" },
   { key: "argent-entrant-sg", label: "Argent entrant", betType: "SG", description: "Simple gagnant sur chaque cheval qui gagne 2 points de part des mises en 15 minutes" },
+  { key: "argent-sortant-sg", label: "Argent sortant", betType: "SG", description: "Contrôle : simple gagnant sur chaque cheval qui perd 2 points de part des mises en 15 minutes" },
   { key: "smart-money-sg", label: "Smart money", betType: "SG", description: "Simple gagnant quand l'argent entre ou accélère, que la cote baisse et que l'IA est favorable ou d'accord" },
   { key: "favori-marche-sg", label: "Favori du marché", betType: "SG", description: "Référence : simple gagnant sur la plus petite cote" },
   { key: "tous-sg", label: "Tous les partants", betType: "SG", description: "Référence : 1 € gagnant sur chaque partant — le coût du prélèvement" },

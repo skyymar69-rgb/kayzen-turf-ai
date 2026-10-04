@@ -23,11 +23,20 @@ export type EntreeChangelog = {
 export const CHANGELOG: readonly EntreeChangelog[] = [
   {
     date: "2026-10-04",
-    titre: "Transparence sur l'état du service",
+    titre: "Navigation rapide, page Direct, alertes enrichies et application installable",
     changements: [
       {
         categorie: "Ajouté",
         elements: [
+          "Pronostics : barre latérale de navigation par réunion (tiroir sur mobile), filtres, recherche, tri, vue compacte, jour précédent ou suivant, raccourcis clavier et bandeau « prochaine course ».",
+          "Page Direct : les courses des 30 prochaines minutes, compte à rebours compris.",
+          "Page course : sommaire, course précédente / suivante et carte de la réunion, comparateur de chevaux, cotes de tous les partants sur un graphique, nuage IA × marché, « ce qui a changé depuis votre visite », définitions au survol, partage du ticket en image, arrivée et rapports en tête une fois la course courue.",
+          "Accueil : ligne du temps avec curseur « maintenant », vos chevaux suivis du jour, résumé du jour, bilan d'hier, aperçu d'une course au survol et blocs personnalisables.",
+          "Alertes sur vos chevaux suivis : smart money, cheval délaissé et arrivée ; historique sur la page « Mes alertes ».",
+          "Suivi de performance : courbe de rendement cumulé par signal et graphique de calibration.",
+          "Export CSV de l'historique des cotes et des parts de mises d'une course.",
+          "Application installable et consultation hors ligne des pages déjà ouvertes.",
+          "Barre de navigation basse sur mobile.",
           "Page « État du service » : âge des dernières cotes, date du dernier import du programme, couverture des cotes sur les courses du jour et date du dernier rapport de performance.",
           "Page « Nouveautés », que vous lisez.",
           "Confrontation IA × marché sur chaque course, et lecture des mouvements d'argent (MVT) dans le tableau des partants.",

@@ -6,6 +6,8 @@ import { COMPANY } from "@/lib/site-config";
 const PRODUCT_LINKS = [
   { href: "/",                      label: "Programme du jour" },
   { href: "/pronostics",            label: "Pronostics PMU" },
+  { href: "/direct",                label: "Direct" },
+  { href: "/alertes",               label: "Mes alertes" },
   { href: "/tarifs",                label: "Tarifs & offres" },
   { href: "/methode",               label: "Notre méthode" },
   { href: "/track-record",          label: "Suivi de performance" },

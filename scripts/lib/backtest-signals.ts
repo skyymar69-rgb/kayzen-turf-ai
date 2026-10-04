@@ -45,6 +45,7 @@ export function confrontationKeys(input: {
   if (stance) keys.push(`conf-${stance}-sg`);
   if (stance === "accord" || stance === "ia") keys.push(`conf-${stance}-sp`);
   if (signals.includes("argent")) keys.push("argent-entrant-sg");
+  if (signals.includes("sortant")) keys.push("argent-sortant-sg");
   if (signals.includes("smart")) keys.push("smart-money-sg");
   return keys;
 }

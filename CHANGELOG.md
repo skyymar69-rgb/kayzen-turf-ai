@@ -11,6 +11,15 @@ qu'un visiteur peut constater, vit dans `src/lib/changelog.ts` et s'affiche sur
 ## [Non publié]
 
 ### Ajouté
+- /pronostics : navigation latérale par réunion, filtres, recherche, tri, vue compacte, sélecteur de jour, raccourcis clavier (`src/components/pronostics/`, `src/lib/pronostics-filters.ts`).
+- /direct : courses des 30 prochaines minutes (`src/lib/direct.ts`).
+- Page course : sommaire, navigation entre courses, comparateur, graphique de toutes les cotes, nuage IA × marché, différences depuis la dernière visite, lexique au survol, partage du ticket en image, image Open Graph par course, cartes mobiles, glissement entre courses, éclair des cotes, comparaison H-60 → départ.
+- Accueil découpé en `src/components/home/` et `src/lib/home/` : ligne du temps, chevaux suivis, résumé du jour, bilan d'hier, aperçu au survol, blocs personnalisables.
+- Alertes push : smart money, délaissé, arrivée (`src/lib/push/market-alerts.ts`) ; historique `/alertes` ; nouveaux motifs dans `push_deliveries`.
+- Backtest : série quotidienne par signal, signaux placés de la confrontation, contrôle « argent sortant » ; `npm run model:confrontation`.
+- Export CSV `/api/races/[id]/historique.csv`.
+- PWA : service worker réseau d'abord avec copies hors ligne, invitation à l'installation, barre de navigation mobile.
+- Workflow Lighthouse (seuils en avertissement).
 - Page publique « État du service » (`/etat`) : âge des dernières cotes, dernier import du programme, couverture des cotes sur les courses du jour, dernier rapport de suivi de performance ; état « mode démonstration » explicite sans base.
 - Page publique « Nouveautés » (`/nouveautes`), alimentée par `src/lib/changelog.ts`.
 - Tests de bout en bout Playwright (`npm run test:e2e`, dossier `e2e/`) avec audit d'accessibilité axe-core sur l'accueil, une page course, `/pronostics` et `/methode` ; tâche CI `e2e` distincte.
