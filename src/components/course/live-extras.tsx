@@ -68,7 +68,7 @@ export function TabCountdown({ race }: { race: Pick<RaceAnalysis, "raceDate" | "
     let shown = original;
     function tick() {
       const minutes = minutesToStart(race);
-      shown = minutes !== null && minutes > 0 && minutes <= 60 ? `${Math.max(1, Math.round(minutes))} min · ${race.programCode} — ${original}` : original;
+      shown = minutes !== null && minutes > 0 && minutes <= 60 ? `${Math.max(1, Math.round(minutes))} min — ${original}` : original;
       document.title = shown;
     }
     tick();
