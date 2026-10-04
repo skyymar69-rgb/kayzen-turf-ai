@@ -5,6 +5,7 @@ import { AlertTriangle, Check, Copy, Share2 } from "lucide-react";
 import { useClipboard, type EtatCopie } from "@/hooks/use-clipboard";
 import { buildBetRecommendations, type XTicket } from "@/lib/bet-recommendations";
 import { formatEuros } from "@/lib/format";
+import { pmuTicketText } from "@/lib/ticket-format";
 import type { BetOffer } from "@/lib/types";
 
 /**
@@ -166,7 +167,7 @@ function TicketCard({ label, ticket, confidence, strategy }: {
     <div className="rounded-xl border border-border bg-surface-sub p-3">
       <div className="flex items-start justify-between gap-2">
         <p className="text-xs font-semibold text-fg">{label}</p>
-        <BoutonCopier etat={etat} onCopier={() => copier(ticket)} taille={11} />
+        <BoutonCopier etat={etat} onCopier={() => copier(pmuTicketText(label, ticket))} taille={11} />
       </div>
       <p className="mt-1 font-mono text-base font-bold text-accent-text">{ticket}</p>
       <p className="mt-1 text-[10px] text-muted">

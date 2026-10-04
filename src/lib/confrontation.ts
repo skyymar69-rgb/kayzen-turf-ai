@@ -18,6 +18,9 @@
  *                                plus rapide que sur les 10 minutes précédentes
  *                Smart money     argent entrant ou accélération, cote en baisse
  *                                (MVT « joué ») ET IA favorable ou d'accord.
+ *                Argent sortant  −STRONG_MONEY_PTS points en 15 minutes : le
+ *                                miroir de l'argent entrant, le cheval est
+ *                                délaissé par les parieurs.
  *              Le PMU ne publie pas les mises individuelles : « smart money »
  *              désigne un argent que le modèle indépendant confirme, jamais
  *              « l'argent des initiés ». Sa valeur est mesurée au backtest.
@@ -53,12 +56,13 @@ export function classifyStance(ai: number | null, market: number | null): Stance
   return gap > 0 ? "ia" : "marche";
 }
 
-export type MarketSignal = "argent" | "acceleration" | "smart";
+export type MarketSignal = "argent" | "acceleration" | "smart" | "sortant";
 
 export const SIGNAL_LABELS: Record<MarketSignal, string> = {
   argent: "Argent entrant",
   acceleration: "Accélération des mises",
   smart: "Smart money",
+  sortant: "Argent sortant",
 };
 
 export function marketSignals(input: {
@@ -69,6 +73,7 @@ export function marketSignals(input: {
   const { delta15, delta5 } = input.flow;
   const signals: MarketSignal[] = [];
   const entering = delta15 !== null && delta15 >= STRONG_MONEY_PTS;
+  const leaving = delta15 !== null && delta15 <= -STRONG_MONEY_PTS;
   // Les 5 dernières minutes vont plus vite que les 10 d'avant :
   // delta5 / 5 > (delta15 − delta5) / 10, soit 3 × delta5 > delta15.
   const accelerating = delta5 !== null && delta5 >= FLOW_ACCEL_PTS && (delta15 === null || 3 * delta5 > delta15);
@@ -77,5 +82,6 @@ export function marketSignals(input: {
   if ((entering || accelerating) && input.direction === "joue" && (input.stance === "ia" || input.stance === "accord")) {
     signals.push("smart");
   }
+  if (leaving) signals.push("sortant");
   return signals;
 }

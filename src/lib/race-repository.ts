@@ -551,3 +551,113 @@ export async function getLatestTrackRecord(): Promise<(TrackRecordSummary & Reco
     return null;
   }
 }
+
+/**
+ * Programme d'un jour réduit à l'essentiel, pour la navigation de la page
+ * course (course précédente / suivante, carte de la réunion). Une requête sur
+ * `races` seule, indexée par date — pas de partants, contrairement à
+ * `getRaces`, qui hydrate chaque course entière. Une course sans partant est
+ * écartée, comme dans le programme : elle répondrait 404.
+ */
+export type DayRaceIndexItem = Pick<
+  RaceAnalysis,
+  "id" | "raceDate" | "startTime" | "reunionNumber" | "courseNumber" | "programCode" | "racecourse" | "name" | "discipline"
+> & {
+  /** Au moins une place d'arrivée publiée. */
+  arrived: boolean;
+};
+
+export async function getDayRaceIndex(raceDate: string): Promise<DayRaceIndexItem[]> {
+  if (!hasDatabase()) {
+    return demoRaces
+      .filter((race) => race.raceDate === raceDate)
+      .map((race) => ({
+        id: race.id,
+        raceDate: race.raceDate,
+        startTime: race.startTime,
+        reunionNumber: race.reunionNumber,
+        courseNumber: race.courseNumber,
+        programCode: race.programCode,
+        racecourse: race.racecourse,
+        name: race.name,
+        discipline: race.discipline,
+        arrived: race.horses.some((h) => h.finishPosition != null && h.finishPosition > 0),
+      }));
+  }
+
+  try {
+    const sql = getSql();
+    const rows = (await sql`
+      select
+        races.id,
+        races.race_date::text,
+        races.reunion_number,
+        races.course_number,
+        races.name,
+        racecourses.name as racecourse,
+        races.start_time,
+        races.discipline,
+        exists (select 1 from results where results.race_id = races.id and results.finish_position > 0) as arrived
+      from races
+      left join racecourses on racecourses.id = races.racecourse_id
+      where races.race_date = ${raceDate}::date
+        and exists (select 1 from entries where entries.race_id = races.id)
+      order by races.start_time, races.reunion_number, races.course_number
+    `) as Array<{
+      id: string;
+      race_date: string;
+      reunion_number: number | null;
+      course_number: number | null;
+      name: string;
+      racecourse: string | null;
+      start_time: string;
+      discipline: RaceAnalysis["discipline"];
+      arrived: boolean;
+    }>;
+    return rows.map((row) => {
+      const reunion = row.reunion_number ?? programNumber(row.id, "R");
+      const course = row.course_number ?? programNumber(row.id, "C");
+      return {
+        id: row.id,
+        raceDate: row.race_date,
+        startTime: row.start_time,
+        reunionNumber: reunion,
+        courseNumber: course,
+        programCode: `R${reunion}C${course}`,
+        racecourse: row.racecourse ?? "",
+        name: row.name,
+        discipline: row.discipline,
+        arrived: Boolean(row.arrived),
+      };
+    });
+  } catch (cause) {
+    // La navigation enrichit la page, elle ne la conditionne pas.
+    console.error("Programme du jour indisponible pour %s", raceDate, cause);
+    return [];
+  }
+}
+
+/** Rapport officiel PMU pour 1 € (table `race_payouts`, alimentée après l'arrivée). */
+export type RacePayout = { betType: string; combination: string; dividend: number };
+
+/**
+ * Rapports officiels d'une course : quatre à huit lignes, lues par clé
+ * primaire. Liste vide tant que le PMU ne les a pas publiés, et en
+ * démonstration : aucun rapport n'est inventé.
+ */
+export async function getRacePayouts(raceId: string): Promise<RacePayout[]> {
+  if (!hasDatabase()) return [];
+  try {
+    const sql = getSql();
+    const rows = (await sql`
+      select bet_type, combination, dividend::float8 as dividend
+        from race_payouts
+       where race_id = ${raceId}
+       order by bet_type, dividend
+    `) as Array<{ bet_type: string; combination: string; dividend: number }>;
+    return rows.map((row) => ({ betType: row.bet_type, combination: row.combination, dividend: Number(row.dividend) }));
+  } catch (cause) {
+    console.error("Rapports indisponibles pour %s", raceId, cause);
+    return [];
+  }
+}

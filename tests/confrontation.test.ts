@@ -63,6 +63,17 @@ describe("marketSignals", () => {
     assert.deepEqual(marketSignals({ direction: "joue", flow: flow(2.5, 0.2), stance: null }), ["argent"]);
   });
 
+  it("argent sortant à −2 points en 15 minutes, miroir de l'argent entrant", () => {
+    assert.deepEqual(marketSignals({ direction: "delaisse", flow: flow(-2.4, -0.3), stance: "marche" }), ["sortant"]);
+    assert.deepEqual(marketSignals({ direction: "stable", flow: flow(-2, null), stance: null }), ["sortant"]);
+    assert.deepEqual(marketSignals({ direction: "delaisse", flow: flow(-1.9, -0.5), stance: null }), []);
+  });
+
+  it("l'argent sortant n'est jamais de la smart money", () => {
+    // Une part qui fond ne peut pas accélérer à la hausse ni être « joué ».
+    assert.deepEqual(marketSignals({ direction: "joue", flow: flow(-3, -1), stance: "ia" }), ["sortant"]);
+  });
+
   it("rien sans données de mises", () => {
     assert.deepEqual(marketSignals({ direction: "joue", flow: flow(null, null), stance: "ia" }), []);
   });

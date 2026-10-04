@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 import { CourseDetail } from "@/components/course-detail";
 import { JsonLd } from "@/components/json-ld";
 import { formatMeters, properName } from "@/lib/format";
-import { getLatestTrackRecord, getRaceById, getRaceMarketHistory } from "@/lib/race-repository";
+import { getDayRaceIndex, getLatestTrackRecord, getRaceById, getRaceMarketHistory, getRacePayouts } from "@/lib/race-repository";
+import { officialArrival } from "@/lib/race-status";
 import { buildSelection } from "@/lib/selection";
 import { SITE_URL } from "@/lib/site";
 
@@ -133,7 +134,15 @@ export default async function RacePage({ params }: RacePageProps) {
 
   if (!race) notFound();
 
-  const [history, trackRecord] = await Promise.all([getRaceMarketHistory(race.id), getLatestTrackRecord()]);
+  // Navigation du jour : une requête légère sur `races`, sans partants.
+  // Rapports : lus seulement une fois l'arrivée publiée.
+  const arrived = officialArrival(race).length > 0;
+  const [history, trackRecord, dayIndex, payouts] = await Promise.all([
+    getRaceMarketHistory(race.id),
+    getLatestTrackRecord(),
+    getDayRaceIndex(race.raceDate),
+    arrived ? getRacePayouts(race.id) : Promise.resolve([]),
+  ]);
 
   /* Données structurées : une course est un SportsEvent daté et localisé. */
   const jsonLd = {
@@ -161,7 +170,7 @@ export default async function RacePage({ params }: RacePageProps) {
       {/* Les noms de course, d'hippodrome et de cheval viennent de l'API PMU :
           `JSON.stringify` seul laissait passer `</script>`. */}
       <JsonLd data={jsonLd} />
-      <CourseDetail history={history} race={race} signals={trackRecord?.signals ?? []} />
+      <CourseDetail dayIndex={dayIndex} history={history} payouts={payouts} race={race} signals={trackRecord?.signals ?? []} />
     </>
   );
 }
