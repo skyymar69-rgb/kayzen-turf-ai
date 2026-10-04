@@ -26,7 +26,8 @@
 import { neon, type NeonQueryFunction } from "@neondatabase/serverless";
 import { FUNDAMENTAL_TRAIN_CUTOFF, FUNDAMENTAL_VERSION, fundamentalProbabilities } from "@/lib/fundamental/model";
 import { MODEL_VERSION, MODEL_WEIGHT, blendProbabilities, devig, monteCarloTopK } from "@/lib/probability";
-import { MVT_NOISE_PCT } from "@/lib/market";
+import { classifyStance, marketSignals } from "@/lib/confrontation";
+import { MVT_NOISE_PCT, moneyFlow, type PoolSnapshot } from "@/lib/market";
 import { PROFILES_VERSION, PROFILE_LABELS, classifyField, type Profile } from "@/lib/profiles";
 import { loadDataset, loadLocalEnv, type DatasetRace } from "./lib/dataset";
 
@@ -46,6 +47,11 @@ const SIGNALS: SignalDef[] = [
   { key: "eviter-sg", label: "À éviter", betType: "SG", description: "Simple gagnant sur chaque cheval classé À éviter (contrôle : doit perdre)" },
   { key: "mvt-joue-sg", label: "Plus joué (MVT)", betType: "SG", description: "Simple gagnant sur le cheval dont la cote a le plus baissé depuis le matin (au moins 10 %)" },
   { key: "mvt-joue-sp", label: "Plus joué (MVT)", betType: "SP", description: "Simple placé sur le cheval dont la cote a le plus baissé depuis le matin (au moins 10 %)" },
+  { key: "conf-accord-sg", label: "Accord IA + marché", betType: "SG", description: "Simple gagnant sur chaque cheval où l'IA et le marché convergent (au moins 8 % pour l'un des deux)" },
+  { key: "conf-ia-sg", label: "Favori IA", betType: "SG", description: "Simple gagnant sur chaque cheval nettement plus haut chez l'IA que sur le marché" },
+  { key: "conf-marche-sg", label: "Favori marché", betType: "SG", description: "Simple gagnant sur chaque cheval nettement plus soutenu par le marché que par l'IA" },
+  { key: "argent-entrant-sg", label: "Argent entrant", betType: "SG", description: "Simple gagnant sur chaque cheval qui gagne 2 points de part des mises en 15 minutes" },
+  { key: "smart-money-sg", label: "Smart money", betType: "SG", description: "Simple gagnant quand l'argent entre ou accélère, que la cote baisse et que l'IA est favorable ou d'accord" },
   { key: "favori-marche-sg", label: "Favori du marché", betType: "SG", description: "Référence : simple gagnant sur la plus petite cote" },
   { key: "tous-sg", label: "Tous les partants", betType: "SG", description: "Référence : 1 € gagnant sur chaque partant — le coût du prélèvement" },
 ];
@@ -143,6 +149,53 @@ function mostBacked(raceId: string, numbers: number[], odds: Array<number | null
   return found && found.change <= -MVT_NOISE_PCT ? found.number : null;
 }
 
+/**
+ * Parts des mises par course, relevés antérieurs à la décision seulement :
+ * `cutoff` (SQL) borne `observed_at`, comme la cote de décision.
+ */
+async function poolsUntil(sql: NeonQueryFunction<false, false>, raceIds: string[], cutoff: string, params: unknown[]) {
+  const rows = (await sql.query(
+    `select p.race_id, to_char(p.observed_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as t, p.numbers, p.pool_win
+       from pool_snapshots p
+       join races r on r.id = p.race_id
+      where p.race_id = any($1) and p.observed_at <= ${cutoff}
+      order by p.race_id, p.observed_at`,
+    [raceIds, ...params],
+  )) as Array<{ race_id: string; t: string; numbers: number[]; pool_win: number[] }>;
+  const pools = new Map<string, PoolSnapshot[]>();
+  for (const r of rows) {
+    const list = pools.get(r.race_id) ?? [];
+    list.push({ t: r.t, numbers: r.numbers.map(Number), win: r.pool_win.map(Number) });
+    pools.set(r.race_id, list);
+  }
+  return pools;
+}
+
+/**
+ * Signaux de la confrontation IA × marché (lib/confrontation), avec les mêmes
+ * règles que la page course : familles, argent entrant, smart money.
+ * Probabilités en %, cotes et parts lues avant la décision.
+ */
+function confrontationKeys(input: {
+  number: number;
+  odds: number | null;
+  market: number;
+  ai: number | null;
+  morning: number | undefined;
+  pools: PoolSnapshot[];
+}): string[] {
+  const hasOdds = input.odds != null && input.odds > 1;
+  const stance = classifyStance(input.ai, hasOdds ? input.market : null);
+  const change = hasOdds && input.morning && input.morning > 1 ? ((input.odds! - input.morning) / input.morning) * 100 : null;
+  const direction = change === null ? "inconnu" : Math.abs(change) < MVT_NOISE_PCT ? "stable" : change < 0 ? "joue" : "delaisse";
+  const signals = marketSignals({ direction, flow: moneyFlow(input.pools, input.number), stance });
+  const keys: string[] = [];
+  if (stance) keys.push(`conf-${stance}-sg`);
+  if (signals.includes("argent")) keys.push("argent-entrant-sg");
+  if (signals.includes("smart")) keys.push("smart-money-sg");
+  return keys;
+}
+
 function diagnose(rows: Array<{ ratio: number; fundRank: number; odds: number; sg: number | null; sp: number | null }>) {
   const groups: Array<{ label: string; keep: (r: (typeof rows)[number]) => boolean }> = [
     { label: "IA/marché < 1", keep: (r) => r.ratio < 1 },
@@ -179,7 +232,11 @@ async function liveTracking(sql: NeonQueryFunction<false, false>) {
       where s.stage = 'H-2'
         and exists (select 1 from race_payouts p where p.race_id = s.race_id and p.bet_type = 'SIMPLE_GAGNANT')
       order by s.captured_at`,
-  )) as Array<{ race_id: string; captured_at: string; payload: { numbers: number[]; odds: Array<number | null>; profile?: Profile[] } }>;
+  )) as Array<{
+    race_id: string;
+    captured_at: string;
+    payload: { numbers: number[]; odds: Array<number | null>; profile?: Profile[]; market?: number[]; ai?: Array<number | null> };
+  }>;
   if (rows.length === 0) return { since: null, races: 0, signals: [] };
 
   const payoutRows = (await sql.query(
@@ -195,10 +252,16 @@ async function liveTracking(sql: NeonQueryFunction<false, false>) {
   }
 
   const morning = await morningOdds(sql, rows.map((r) => r.race_id), 2);
+  const livePools = await poolsUntil(
+    sql,
+    rows.map((r) => r.race_id),
+    `(select s.captured_at from prediction_snapshots s where s.race_id = p.race_id and s.stage = 'H-2')`,
+    [],
+  );
   const bets = new Map<string, Bet[]>(SIGNALS.map((s) => [s.key, []]));
   rows.forEach((row, raceIndex) => {
     const table = pay.get(row.race_id)!;
-    const { numbers, odds, profile } = row.payload;
+    const { numbers, odds, profile, market, ai } = row.payload;
     const place = (key: string, i: number) => {
       const def = SIGNALS.find((s) => s.key === key)!;
       const dividend = (def.betType === "SG" ? table.SG : table.SP).get(numbers[i]);
@@ -211,6 +274,20 @@ async function liveTracking(sql: NeonQueryFunction<false, false>) {
     if (backed !== null) {
       place("mvt-joue-sg", numbers.indexOf(backed));
       place("mvt-joue-sp", numbers.indexOf(backed));
+    }
+    // Les pronostics gelés avant l'ajout de `market` et `ai` ne portent pas la confrontation.
+    if (market && ai) {
+      numbers.forEach((number, i) => {
+        const keys = confrontationKeys({
+          number,
+          odds: odds[i],
+          market: market[i],
+          ai: ai[i],
+          morning: morning.get(`${row.race_id}|${number}`),
+          pools: livePools.get(row.race_id) ?? [],
+        });
+        keys.forEach((key) => place(key, i));
+      });
     }
     const fav = odds.map((o, i) => [o ?? Infinity, i] as const).sort((a, b) => a[0] - b[0])[0];
     if (fav && Number.isFinite(fav[0])) place("favori-marche-sg", fav[1]);
@@ -248,6 +325,12 @@ async function main() {
   )) as Array<{ race_id: string; horse_id: string; odds: number; age: number }>;
   const decisionOdds = new Map(decision.map((d) => [`${d.race_id}|${d.horse_id}`, d]));
   const morning = await morningOdds(sql, raceIds, leadMinutes);
+  const pools = await poolsUntil(
+    sql,
+    raceIds,
+    `((r.race_date + replace(r.start_time, 'h', ':')::time) at time zone 'Europe/Paris') - make_interval(mins => $2)`,
+    [leadMinutes],
+  );
 
   const payoutRows = (await sql.query(
     `select race_id, bet_type, combination, dividend::float8 as dividend
@@ -343,6 +426,17 @@ async function main() {
       place("mvt-joue-sg", backed);
       place("mvt-joue-sp", backed);
     }
+    race.field.forEach((h, i) => {
+      const keys = confrontationKeys({
+        number: h.number,
+        odds: odds[i],
+        market: market[i] * 100,
+        ai: fundamental[i] * 100,
+        morning: morning.get(`${race.raceId}|${h.number}`),
+        pools: pools.get(race.raceId) ?? [],
+      });
+      keys.forEach((key) => place(key, h.number));
+    });
     const favorite = race.field.map((h, i) => ({ n: h.number, o: odds[i] })).filter((x) => x.o > 1).sort((a, b) => a.o - b.o)[0];
     if (favorite) place("favori-marche-sg", favorite.n);
     for (const h of race.field) if (odds[byNumber.get(h.number)!] > 1) place("tous-sg", h.number);

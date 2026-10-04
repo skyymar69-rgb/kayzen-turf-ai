@@ -4,7 +4,8 @@ import { ArrowLeft, Scale } from "lucide-react";
 import modelFile from "@/lib/fundamental/model.json";
 import { FEATURE_LABELS } from "@/lib/fundamental/features";
 import { FUNDAMENTAL_TRAIN_CUTOFF, FUNDAMENTAL_VERSION } from "@/lib/fundamental/model";
-import { FLOW_ACCEL_WINDOW_MIN, FLOW_WINDOW_MIN, MVT_NOISE_PCT, STRONG_MONEY_PTS } from "@/lib/market";
+import { ACCORD_MAX_GAP_PTS, ACCORD_RATIO_MAX, ACCORD_RATIO_MIN, CONFRONT_MIN_PCT } from "@/lib/confrontation";
+import { FLOW_ACCEL_PTS, FLOW_ACCEL_WINDOW_MIN, FLOW_WINDOW_MIN, MVT_NOISE_PCT, STRONG_MONEY_PTS } from "@/lib/market";
 import { MODEL_VERSION, MODEL_WEIGHT } from "@/lib/probability";
 import { PROFILES_VERSION, PROFILE_LABELS, PROFILE_RULES, READING_LABELS, READING_RULES, type RaceReading } from "@/lib/profiles";
 import { ProfileBadge } from "@/components/course/shared";
@@ -163,6 +164,22 @@ export default function MethodePage() {
               et sa variation sur {FLOW_WINDOW_MIN} minutes ({FLOW_ACCEL_WINDOW_MIN} minutes pour l&apos;accélération).
               La tuile « Argent fort » s&apos;allume à +{STRONG_MONEY_PTS} points en {FLOW_WINDOW_MIN} minutes. Le PMU ne publie pas
               les mises individuelles : nous mesurons une part des enjeux, jamais « l&apos;argent des initiés ».
+            </p>
+            <p>
+              <strong className="text-fg">Confrontation IA × marché</strong> : seuls les chevaux à au moins{" "}
+              {CONFRONT_MIN_PCT} % pour l&apos;IA ou pour le marché sont classés. <em>Accord IA + marché</em> : écart de{" "}
+              {ACCORD_MAX_GAP_PTS} points au plus, ou rapport IA ÷ marché entre {String(ACCORD_RATIO_MIN).replace(".", ",")} et{" "}
+              {String(ACCORD_RATIO_MAX).replace(".", ",")}. Au-delà, le cheval est <em>favori IA</em> si l&apos;IA l&apos;estime plus
+              haut que le marché, <em>favori marché</em> dans le cas inverse.
+            </p>
+            <p>
+              <strong className="text-fg">Signaux d&apos;argent</strong> : <em>argent entrant</em> à +{STRONG_MONEY_PTS} points de
+              part des mises en {FLOW_WINDOW_MIN} minutes ; <em>accélération</em> à +{FLOW_ACCEL_PTS} point en{" "}
+              {FLOW_ACCEL_WINDOW_MIN} minutes, plus vite que sur les 10 minutes précédentes ; <em>smart money</em> quand
+              l&apos;argent entre ou accélère, que la cote baisse et que l&apos;IA — qui ne voit jamais la cote — est
+              favorable ou d&apos;accord. C&apos;est un argent que notre modèle indépendant confirme, pas une information sur
+              ceux qui misent. Le rendement de chaque famille et de chaque signal est mesuré et publié sur le suivi de
+              performance.
             </p>
           </Section>
 

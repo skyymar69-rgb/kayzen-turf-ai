@@ -1,3 +1,4 @@
+import { STANCE_ORDER, classifyStance, marketSignals, type MarketSignal, type Stance } from "@/lib/confrontation";
 import { compareMarketSupport, moneyFlow, oddsMovement, type Flow, type MarketHistory, type Movement } from "@/lib/market";
 import type { CalibratedHorse } from "@/lib/probability";
 import type { Profile, RaceVerdict } from "@/lib/profiles";
@@ -24,12 +25,18 @@ export type HorseRow = {
   expectedValue: number | null;
   movement: Movement;
   flow: Flow;
+  /** Famille de la confrontation IA × marché, `null` hors du jeu. */
+  stance: Stance | null;
+  /** Argent entrant, accélération, smart money. */
+  signals: MarketSignal[];
 };
 
 export type CourseViewModel = {
   rows: HorseRow[];
   /** Les mêmes lignes, du plus joué au plus délaissé (onglet MVT). */
   marketRows: HorseRow[];
+  /** Chevaux classés IA × marché, par famille puis par avis le plus fort (onglet IA × Marché). */
+  confrontRows: HorseRow[];
   verdict: RaceVerdict;
   byProfile: Record<Profile, HorseRow[]>;
   strongMoney: HorseRow[];
@@ -44,6 +51,9 @@ export function buildCourseViewModel(race: RaceAnalysis, history: MarketHistory)
   const rows: HorseRow[] = selection.field.map(({ horse, rank, profile, ratio }) => {
     const ai = Number.isFinite(Number(horse.fundamentalProbability)) ? Number(horse.fundamentalProbability) : null;
     const market = hasOdds(horse.odds) ? horse.marketProbability : null;
+    const movement = oddsMovement(history.odds[horse.number], horse.odds, race.raceDate);
+    const flow = moneyFlow(history.pools, horse.number);
+    const stance = classifyStance(ai, market);
     return {
       horse,
       rank,
@@ -53,8 +63,10 @@ export function buildCourseViewModel(race: RaceAnalysis, history: MarketHistory)
       gap: ai !== null && market !== null ? ai - market : null,
       ratio,
       expectedValue: hasOdds(horse.odds) ? (horse.odds * horse.winProbability) / 100 * 100 - 100 : null,
-      movement: oddsMovement(history.odds[horse.number], horse.odds, race.raceDate),
-      flow: moneyFlow(history.pools, horse.number),
+      movement,
+      flow,
+      stance,
+      signals: marketSignals({ direction: movement.direction, flow, stance }),
     };
   });
 
@@ -70,11 +82,19 @@ export function buildCourseViewModel(race: RaceAnalysis, history: MarketHistory)
   return {
     rows,
     marketRows: [...rows].sort(compareMarketSupport),
+    confrontRows: rows
+      .filter((r) => r.stance !== null)
+      .sort((a, b) => STANCE_ORDER.indexOf(a.stance!) - STANCE_ORDER.indexOf(b.stance!) || strength(b) - strength(a)),
     verdict: selection.verdict,
     byProfile,
     strongMoney: rows.filter((r) => r.flow.strong).sort((a, b) => (b.flow.delta15 ?? 0) - (a.flow.delta15 ?? 0)),
     lastObservation: latest([race.oddsRefreshedAt ?? null, times.at(-1) ?? null]),
   };
+}
+
+/** Avis le plus fort des deux, pour ordonner une famille. */
+function strength(row: HorseRow): number {
+  return Math.max(row.ai ?? 0, row.market ?? 0);
 }
 
 /** Le plus récent de plusieurs instants ISO, comparés en temps et non en texte. */
