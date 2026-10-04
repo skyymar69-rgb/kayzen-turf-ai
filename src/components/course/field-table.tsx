@@ -10,6 +10,7 @@ import type { RaceAnalysis } from "@/lib/types";
 import { CAPTIONS, COLUMNS, FOOTNOTES, TABS, TAB_LABELS, tabId, type Tab } from "@/components/course/field-columns";
 import { STANCE_HINTS, StanceBadge } from "@/components/course/field-cells";
 import { ConfrontScatter } from "@/components/course/confront-scatter";
+import { FieldCards } from "@/components/course/field-cards";
 import { ProfileBadge, roiLine } from "@/components/course/shared";
 import { Term } from "@/components/course/term";
 
@@ -92,7 +93,19 @@ export function FieldTable({
 
       <div id="tableau-partants" role="tabpanel" aria-labelledby={tabId(tab)}>
         {confrontView && <ConfrontScatter onSelect={onSelect} rows={vm.rows} selectedNumber={selectedNumber} />}
-        <div className="overflow-x-auto">
+        <FieldCards
+          columns={columns}
+          compare={compare}
+          compareFull={compareFull}
+          confrontView={confrontView}
+          followed={followed}
+          marketView={marketView}
+          onSelect={onSelect}
+          onToggleCompare={onToggleCompare}
+          rows={rows}
+          selectedNumber={selectedNumber}
+        />
+        <div className="hidden overflow-x-auto sm:block">
           <table className={`w-full border-collapse text-left text-sm ${marketView || confrontView ? "min-w-[900px]" : "min-w-[760px]"}`}>
             <caption className="sr-only">{CAPTIONS[tab]}</caption>
             <thead>

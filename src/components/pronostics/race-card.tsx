@@ -20,7 +20,10 @@ export function RaceCard({ race, status, active }: Props) {
       id={race.anchor}
       tabIndex={-1}
       aria-labelledby={headingId}
-      className={`scroll-mt-24 overflow-hidden rounded-2xl border bg-surface shadow-sm transition hover:shadow-md ${active ? "border-accent/60" : "border-border"}`}
+      // content-visibility : les cartes hors écran ne sont ni mises en page ni
+      // peintes — les gros jours (plus de 50 courses) restent fluides sans
+      // liste virtualisée, et la recherche du navigateur trouve toujours tout.
+      className={`scroll-mt-24 overflow-hidden rounded-2xl border bg-surface shadow-sm transition [contain-intrinsic-size:auto_280px] [content-visibility:auto] hover:shadow-md ${active ? "border-accent/60" : "border-border"}`}
     >
       {/* Barre haute */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border bg-surface-sub px-4 py-3 sm:px-5">

@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import { cache } from "react";
+import { cache, Suspense } from "react";
 import { notFound } from "next/navigation";
 import { CourseDetail } from "@/components/course-detail";
 import { JsonLd } from "@/components/json-ld";
+import { FrozenDiffPanel } from "@/components/track/frozen-diff-panel";
 import { formatMeters, properName } from "@/lib/format";
-import { getDayRaceIndex, getLatestTrackRecord, getRaceById, getRaceMarketHistory, getRacePayouts } from "@/lib/race-repository";
+import { getDayRaceIndex, getFrozenPredictions, getLatestTrackRecord, getRaceById, getRaceMarketHistory, getRacePayouts } from "@/lib/race-repository";
 import { officialArrival } from "@/lib/race-status";
 import { buildSelection } from "@/lib/selection";
 import { SITE_URL } from "@/lib/site";
@@ -101,11 +102,13 @@ export async function generateMetadata({ params }: RacePageProps): Promise<Metad
   // la plus partagée du site, sortaient donc sans `og:image` : lien collé sur
   // WhatsApp, X ou LinkedIn, la carte s'affichait en texte nu. L'image doit
   // être reprise explicitement.
+  // Image propre à la course (opengraph-image.tsx du segment) : code,
+  // hippodrome, heure et les trois premiers de l'IA.
   const image = {
-    url: "/opengraph-image",
+    url: `${chemin}/opengraph-image`,
     width: 1200,
     height: 630,
-    alt: "Kayzen Turf — pronostics PMU assistés par IA",
+    alt: `Pronostic Kayzen Turf — ${titre}`,
   };
 
   return {
@@ -170,7 +173,26 @@ export default async function RacePage({ params }: RacePageProps) {
       {/* Les noms de course, d'hippodrome et de cheval viennent de l'API PMU :
           `JSON.stringify` seul laissait passer `</script>`. */}
       <JsonLd data={jsonLd} />
-      <CourseDetail dayIndex={dayIndex} history={history} payouts={payouts} race={race} signals={trackRecord?.signals ?? []} />
+      <CourseDetail
+        dayIndex={dayIndex}
+        frozen={
+          // Lu à part et rendu en flux : la page s'affiche sans attendre cette comparaison.
+          <Suspense fallback={null}>
+            <FrozenSlot horseNames={Object.fromEntries(race.horses.map((h) => [h.number, h.horse]))} raceId={race.id} />
+          </Suspense>
+        }
+        history={history}
+        payouts={payouts}
+        race={race}
+        signals={trackRecord?.signals ?? []}
+      />
     </>
   );
+}
+
+/** Ce que l'IA a changé entre H-60 et le départ — rien tant qu'il n'y a pas deux pronostics gelés. */
+async function FrozenSlot({ raceId, horseNames }: { raceId: string; horseNames: Record<number, string> }) {
+  const stages = await getFrozenPredictions(raceId);
+  if (stages.length < 2) return null;
+  return <FrozenDiffPanel horseNames={horseNames} stages={stages} />;
 }

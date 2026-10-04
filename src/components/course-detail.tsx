@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AlertTriangle, ArrowLeft } from "lucide-react";
 import { AllOddsChart } from "@/components/course/all-odds-chart";
 import { AnalysisReport } from "@/components/course/analysis-report";
@@ -10,6 +10,7 @@ import { CourseHeader } from "@/components/course/course-header";
 import { FieldTable } from "@/components/course/field-table";
 import { HorseCompare } from "@/components/course/horse-compare";
 import { HorseSheet } from "@/components/course/horse-sheet";
+import { OddsFlashProvider, SwipeNavigation, TabCountdown } from "@/components/course/live-extras";
 import type { RelaunchResult } from "@/components/course/live-status";
 import { MarketPanel } from "@/components/course/market-panel";
 import { NonRunners } from "@/components/course/non-runners";
@@ -62,12 +63,14 @@ type CourseDetailProps = {
   dayIndex?: RaceIndexItem[];
   /** Rapports officiels PMU, vides tant qu'ils ne sont pas publiés. */
   payouts?: Payout[];
+  /** Comparaison des pronostics gelés (H-60 → départ), rendue côté serveur. */
+  frozen?: ReactNode;
 };
 
 const EMPTY_HISTORY: MarketHistory = { odds: {}, pools: [] };
 const SECTION_SCROLL = "scroll-mt-32 lg:scroll-mt-20";
 
-export function CourseDetail({ race, history = EMPTY_HISTORY, signals = [], dayIndex = [], payouts = [] }: CourseDetailProps) {
+export function CourseDetail({ race, history = EMPTY_HISTORY, signals = [], dayIndex = [], payouts = [], frozen }: CourseDetailProps) {
   const vm = useMemo(() => buildCourseViewModel(race, history), [race, history]);
   const selection = useMemo(() => buildSelection(race.horses), [race.horses]);
   const signalMap = useMemo(() => new Map(signals.map((s) => [s.key, s])), [signals]);
@@ -139,6 +142,9 @@ export function CourseDetail({ race, history = EMPTY_HISTORY, signals = [], dayI
   const selected = selectedRow?.horse.number ?? null;
 
   return (
+    <OddsFlashProvider rows={vm.rows}>
+    <TabCountdown race={race} />
+    <SwipeNavigation dayIndex={dayIndex} raceId={race.id} />
     <main className="min-h-screen bg-bg pb-20" id="contenu-principal">
       <div className="mx-auto max-w-[1520px] px-4 pt-6 sm:px-6 lg:px-8">
         <nav aria-label="Fil d'Ariane" className="mb-4 flex flex-wrap items-center gap-2">
@@ -233,11 +239,13 @@ export function CourseDetail({ race, history = EMPTY_HISTORY, signals = [], dayI
                 <div className={SECTION_SCROLL} id="apres-course">
                   <PostRacePanel analysis={postRace} />
                 </div>
+                {frozen}
               </aside>
             </div>
           </div>
         </div>
       </div>
     </main>
+    </OddsFlashProvider>
   );
 }

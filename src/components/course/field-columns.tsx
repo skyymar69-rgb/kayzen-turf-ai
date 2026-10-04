@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { ACCORD_MAX_GAP_PTS, CONFRONT_MIN_PCT } from "@/lib/confrontation";
 import type { HorseRow } from "@/lib/course-view-model";
+import { OddsCell } from "@/components/course/live-extras";
 import { formatOdds } from "@/lib/format";
 import type { LexiqueTerm } from "@/lib/lexique";
 import { FLOW_ACCEL_PTS, FLOW_TREND_PTS, MVT_NOISE_PCT, STRONG_MONEY_PTS } from "@/lib/market";
@@ -83,20 +84,20 @@ export const COLUMNS: Record<Tab, (race: RaceAnalysis) => Column[]> = {
     { label: "Écart", title: "IA moins marché, en points", align: "right", render: (r) => <span className={gapClass(r.gap)}>{signedPts(r.gap)}</span> },
     { label: "Retenue", title: "Probabilité de victoire retenue pour le classement", align: "right", render: (r) => <span className="font-bold text-fg">{pct(r.horse.winProbability, 1)}</span> },
     { label: "Top 3", term: "Top 3", align: "right", render: (r) => pct(r.horse.top3Probability) },
-    { label: "Cote", align: "right", render: (r) => formatOdds(r.horse.odds, 1) },
+    { label: "Cote", align: "right", render: (r) => <OddsCell number={r.horse.number} odds={r.horse.odds} /> },
   ],
   Confrontation: () => [
     { label: "IA", title: "Probabilité de victoire selon l'IA, sans cote", align: "right", render: (r) => pct(r.ai, 1) },
     { label: "Marché", title: "Probabilité implicite de la cote, marge retirée", align: "right", render: (r) => pct(r.market, 1) },
     { label: "Écart", title: "IA moins marché, en points", align: "right", render: (r) => <span className={gapClass(r.gap)}>{signedPts(r.gap)}</span> },
-    { label: "Cote", align: "right", render: (r) => formatOdds(r.horse.odds, 1) },
+    { label: "Cote", align: "right", render: (r) => <OddsCell number={r.horse.number} odds={r.horse.odds} /> },
     { label: "MVT", term: "MVT", render: (r) => <MoveCell row={r} /> },
     { label: "Argent 15 min", title: "Variation de la part des mises sur 15 min", align: "right", render: (r) => <FlowCell row={r} /> },
     { label: "Signaux", title: "Argent entrant ou sortant, accélération des mises, smart money", render: (r) => <SignalBadges row={r} /> },
   ],
   MVT: () => [
     { label: "Cote du matin", align: "right", render: (r) => formatOdds(r.movement.reference ?? NaN, 1) },
-    { label: "Cote actuelle", align: "right", render: (r) => formatOdds(r.movement.current ?? NaN, 1) },
+    { label: "Cote actuelle", align: "right", render: (r) => <OddsCell number={r.horse.number} odds={r.movement.current ?? NaN} /> },
     {
       label: "Variation",
       align: "right",
@@ -113,7 +114,7 @@ export const COLUMNS: Record<Tab, (race: RaceAnalysis) => Column[]> = {
     { label: "Rg IA", title: "Rang au classement IA", align: "right", render: (r) => r.rank },
   ],
   "Cotes & Marché": () => [
-    { label: "Cote", align: "right", render: (r) => formatOdds(r.horse.odds, 1) },
+    { label: "Cote", align: "right", render: (r) => <OddsCell number={r.horse.number} odds={r.horse.odds} /> },
     { label: "Cote juste", term: "Cote juste", align: "right", render: (r) => formatOdds(r.horse.fairOdds, 1) },
     {
       label: "Espérance",

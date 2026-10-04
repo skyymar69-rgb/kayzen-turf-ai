@@ -122,19 +122,28 @@ export function PronosticsExplorer({ races, day, serverNow }: Props) {
 
   return (
     <div className="lg:grid lg:grid-cols-[15.5rem_minmax(0,1fr)] lg:gap-6">
+      {/* Liens d'évitement : sauter la barre de navigation, ou y aller directement. */}
+      <div className="lg:col-span-2">
+        <a className="sr-only rounded-lg bg-accent px-3 py-2 text-sm font-bold text-accent-fg focus:not-sr-only focus:mb-3 focus:inline-block" href="#liste-courses">
+          Aller à la liste des courses
+        </a>
+        <a className="hidden rounded-lg bg-accent px-3 py-2 text-sm font-bold text-accent-fg lg:sr-only lg:inline-block lg:focus:not-sr-only lg:focus:mb-3 lg:focus:ml-2" href="#navigation-courses">
+          Aller à la navigation des courses
+        </a>
+      </div>
       <aside className="hidden lg:block">
         <div className="sticky top-20 flex max-h-[calc(100dvh-6rem)] flex-col rounded-2xl border border-border bg-surface py-3 shadow-sm">
           <h2 className="flex items-center gap-2 px-4 pb-2 font-display text-base font-bold text-fg">
             <ListOrdered aria-hidden="true" size={16} className="text-muted" />
             Courses ({filtered.length})
           </h2>
-          <nav aria-label="Courses de la journée" className="min-h-0 flex-1 px-1">
+          <nav aria-label="Courses de la journée" className="min-h-0 flex-1 px-1" id="navigation-courses" tabIndex={-1}>
             <RaceNavigator groups={groups} statusOf={getStatus} activeAnchor={activeAnchor} onSelect={scrollToRace} idPrefix="barre" />
           </nav>
         </div>
       </aside>
 
-      <div className="min-w-0">
+      <div className="min-w-0" id="liste-courses" tabIndex={-1}>
         <NextRaceBanner race={next} now={now} onJump={scrollToRace} />
         <FiltersBar
           races={races}
