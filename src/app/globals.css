@@ -50,6 +50,20 @@
   --warn:          #92400e;
   --warn-lo:       #fffbeb;
 
+  /* Paris phares et disciplines : couleurs fixes de marque PMU, une seule
+     définition pour toutes les pages (texte ≥ 4,5:1 sur leur fond). */
+  --bet-quinte:    #b91c1c;
+  --bet-quinte-fg: #ffffff;
+  --bet-quarte:    #0369a1;
+  --bet-quarte-fg: #ffffff;
+  --bet-pick5:     #fde047;
+  --bet-pick5-fg:  #991b1b;
+  --disc-plat:     #ede9fe;
+  --disc-plat-fg:  #5b21b6;
+  --disc-trot:     #e0f2fe;
+  --disc-trot-fg:  #075985;
+  --disc-obst:     #ffedd5;
+  --disc-obst-fg:  #9a3412;
   /* amélioration #10 — transition durée + easing cohérents */
   --t-fast:   100ms ease;
   --t-base:   160ms ease;
@@ -79,6 +93,18 @@
   --danger:        #fb7185;
   --warn:          #fbbf24;
   --warn-lo:       #1c1505;
+  --bet-quinte:    #dc2626;
+  --bet-quinte-fg: #ffffff;
+  --bet-quarte:    #0284c7;
+  --bet-quarte-fg: #ffffff;
+  --bet-pick5:     #facc15;
+  --bet-pick5-fg:  #7f1d1d;
+  --disc-plat:     #2e1065;
+  --disc-plat-fg:  #ddd6fe;
+  --disc-trot:     #082f49;
+  --disc-trot-fg:  #bae6fd;
+  --disc-obst:     #431407;
+  --disc-obst-fg:  #fed7aa;
 }
 
 /* ─── Tailwind v4 theme tokens ───────────────────────────────────── */
@@ -107,6 +133,18 @@
   --color-danger:       var(--danger);
   --color-warn:         var(--warn);
   --color-warn-lo:      var(--warn-lo);
+  --color-bet-quinte:    var(--bet-quinte);
+  --color-bet-quinte-fg: var(--bet-quinte-fg);
+  --color-bet-quarte:    var(--bet-quarte);
+  --color-bet-quarte-fg: var(--bet-quarte-fg);
+  --color-bet-pick5:     var(--bet-pick5);
+  --color-bet-pick5-fg:  var(--bet-pick5-fg);
+  --color-disc-plat:     var(--disc-plat);
+  --color-disc-plat-fg:  var(--disc-plat-fg);
+  --color-disc-trot:     var(--disc-trot);
+  --color-disc-trot-fg:  var(--disc-trot-fg);
+  --color-disc-obst:     var(--disc-obst);
+  --color-disc-obst-fg:  var(--disc-obst-fg);
 }
 
 /* ─── Base ───────────────────────────────────────────────────────── */
