@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, CalendarClock } from "lucide-react";
 import { DisciplinePill, RaceStatusPill, titleCase } from "@/components/badges";
+import { EmptyState, RacecourseDot } from "@/components/ui-kit";
 import { STANCE_LABELS } from "@/lib/confrontation";
 import { directStatus, inDirectWindow, nextDirectRace, type DirectRace } from "@/lib/direct";
 import { formatOdds } from "@/lib/format";
@@ -62,20 +63,18 @@ export function DirectBoard({ races }: { races: DirectRace[] }) {
 
   if (live.length === 0) {
     return (
-      <div className="rounded-2xl border border-border bg-surface p-10 text-center">
-        <CalendarClock aria-hidden="true" className="mx-auto text-muted" size={36} />
-        <p className="mt-4 text-lg font-semibold text-fg">Aucune course dans les 30 prochaines minutes.</p>
+      <EmptyState icon={CalendarClock} title="Aucune course dans les 30 prochaines minutes.">
         {upcoming ? (
-          <p className="mt-2 text-sm text-muted">
+          <p>
             Prochaine : {upcoming.anchor} {titleCase(upcoming.racecourse)} à {upcoming.startTime}.{" "}
             <Link className="font-semibold text-accent-text underline-offset-2 hover:underline" href={`/races/${encodeURIComponent(upcoming.id)}`}>
               Voir l&apos;analyse
             </Link>
           </p>
         ) : (
-          <p className="mt-2 text-sm text-muted">Plus aucune course aujourd&apos;hui.</p>
+          <p>Plus aucune course aujourd&apos;hui.</p>
         )}
-      </div>
+      </EmptyState>
     );
   }
 
@@ -88,7 +87,7 @@ export function DirectBoard({ races }: { races: DirectRace[] }) {
           <li key={race.id} className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
             <div className="flex flex-wrap items-center gap-3 border-b border-border bg-surface-sub px-5 py-3">
               <span className="font-mono text-lg font-bold text-fg">{race.anchor}</span>
-              <span className="text-sm text-muted">{titleCase(race.racecourse)}</span>
+              <span className="inline-flex items-center gap-1.5 text-sm text-muted"><RacecourseDot racecourse={race.racecourse} />{titleCase(race.racecourse)}</span>
               <DisciplinePill discipline={race.discipline} />
               <RaceStatusPill status={status} />
               <span className={`ml-auto font-mono text-xl font-bold ${minutes > 0 && minutes <= 5 ? "text-danger" : "text-fg"}`}>
