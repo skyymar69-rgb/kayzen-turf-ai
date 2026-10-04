@@ -1,4 +1,4 @@
-import { Dashboard, type DashboardPerformance } from "@/components/dashboard";
+import { HomePage, type DashboardPerformance } from "@/components/home/home-page";
 import { getLatestTrackRecord, getRaces } from "@/lib/race-repository";
 
 // `force-dynamic` refaisait la cascade de requêtes à chaque visite (TTFB mesuré
@@ -20,5 +20,5 @@ export default async function Home() {
       }
     : null;
 
-  return <Dashboard performance={performance} races={races} />;
+  return <HomePage performance={performance} races={races} />;
 }
