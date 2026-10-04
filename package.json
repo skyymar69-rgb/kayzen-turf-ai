@@ -10,6 +10,8 @@
     "lint": "eslint .",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "node --import tsx --test \"tests/**/*.test.mjs\" \"tests/**/*.test.ts\"",
+    "test:coverage": "node --import tsx --test --experimental-test-coverage --test-coverage-include=\"src/lib/**\" \"tests/**/*.test.mjs\" \"tests/**/*.test.ts\"",
+    "test:e2e": "playwright test",
     "brand:icons": "node scripts/generate-icons.mjs",
     "db:schema": "node scripts/apply-schema.mjs",
     "db:stats": "node scripts/db-stats.mjs",
@@ -34,6 +36,8 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4.2.4",
     "@types/node": "^25.6.0",
     "@types/react": "^19.2.14",

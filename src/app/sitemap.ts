@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 
+import { CHANGELOG } from "@/lib/changelog";
 import { getRaces } from "@/lib/race-repository";
 import { SITE_URL } from "@/lib/site";
 
@@ -36,6 +37,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/methode`,               lastModified: fixe, changeFrequency: "monthly", priority: 0.8 },
     { url: `${base}/track-record`,          lastModified: now,  changeFrequency: "daily",   priority: 0.8 },
     { url: `${base}/lexique`,               lastModified: fixe, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${base}/nouveautes`,            lastModified: CHANGELOG[0]?.date ?? fixe, changeFrequency: "weekly", priority: 0.5 },
+    { url: `${base}/etat`,                  lastModified: now,  changeFrequency: "hourly",  priority: 0.3 },
     { url: `${base}/jeu-responsable`,       lastModified: fixe, changeFrequency: "yearly",  priority: 0.4 },
     { url: `${base}/mentions-legales`,      lastModified: fixe, changeFrequency: "yearly",  priority: 0.3 },
     { url: `${base}/cgu`,                   lastModified: fixe, changeFrequency: "yearly",  priority: 0.3 },
