@@ -47,6 +47,20 @@ export default function manifest(): MetadataRoute.Manifest {
         url: "/pronostics",
         icons: [{ src: "/icon-192.png", sizes: "192x192", type: "image/png" }],
       },
+      {
+        name: "Courses imminentes",
+        short_name: "Direct",
+        description: "Les courses des 30 prochaines minutes",
+        url: "/direct",
+        icons: [{ src: "/icon-192.png", sizes: "192x192", type: "image/png" }],
+      },
+      {
+        name: "Suivi de performance",
+        short_name: "Suivi",
+        description: "Ce que chaque signal a réellement rapporté",
+        url: "/track-record",
+        icons: [{ src: "/icon-192.png", sizes: "192x192", type: "image/png" }],
+      },
     ],
   };
 }

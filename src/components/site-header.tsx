@@ -11,6 +11,7 @@ import { usePdfJour } from "@/hooks/use-pdf-jour";
 const NAV_LINKS = [
   { href: "/",                      label: "Programme" },
   { href: "/pronostics",            label: "Pronostics" },
+  { href: "/direct",                label: "Direct" },
   { href: "/tarifs",                label: "Tarifs" },
   { href: "/methode",               label: "Méthode" },
   { href: "/track-record",          label: "Suivi" },
@@ -124,7 +125,7 @@ export function SiteHeader() {
                 // le trait vert sous l'onglet ne portait cette information que
                 // visuellement.
                 aria-current={active ? "page" : undefined}
-                className={`relative px-4 py-5 text-sm font-bold italic tracking-wide transition ${
+                className={`relative whitespace-nowrap px-3 py-5 text-sm font-bold italic tracking-wide transition xl:px-4 ${
                   active ? "text-white" : "text-white/80 hover:text-white"
                 }`}
               >
@@ -153,7 +154,7 @@ export function SiteHeader() {
           {/* CTA principal */}
           <Link
             href="/tarifs"
-            className="hidden h-9 items-center rounded-lg bg-cta px-4 text-sm font-bold text-cta-text transition hover:bg-cta-hi hover:scale-[1.02] sm:inline-flex"
+            className="hidden h-9 shrink-0 items-center whitespace-nowrap rounded-lg bg-cta px-4 text-sm font-bold text-cta-text transition hover:bg-cta-hi hover:scale-[1.02] sm:inline-flex"
           >
             Commencer
           </Link>
@@ -243,7 +244,7 @@ function PdfButton({ variant }: { variant: "desktop" | "mobile" }) {
   const classes =
     variant === "mobile"
       ? "flex min-h-11 w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10 hover:text-white disabled:opacity-60"
-      : "hidden h-9 items-center gap-2 rounded-lg border border-white/30 bg-white/12 px-3 text-sm font-medium text-white transition hover:bg-white/20 disabled:opacity-60 sm:inline-flex";
+      : "hidden h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-white/30 bg-white/12 px-3 text-sm font-medium text-white transition hover:bg-white/20 disabled:opacity-60 sm:inline-flex";
 
   return (
     <button
@@ -258,7 +259,10 @@ function PdfButton({ variant }: { variant: "desktop" | "mobile" }) {
       {chargement
         ? <Loader2 aria-hidden="true" size={14} className="animate-spin" />
         : <Download aria-hidden="true" size={14} />}
-      <span className={variant === "mobile" ? "" : "hidden md:inline"}>{libelle}</span>
+      {/* Le libellé ne s'affiche qu'à partir de xl : entre lg et xl, il passait
+          sur trois lignes à côté de la navigation. L'icône garde le titre. */}
+      <span className={variant === "mobile" ? "" : "hidden xl:inline"}>{libelle}</span>
+      {variant === "desktop" && <span className="sr-only xl:hidden">{libelle}</span>}
       {/* L'échec doit être annoncé, pas seulement affiché. */}
       {etat === "echec" && <span className="sr-only" role="alert">Le PDF n&apos;a pas pu être généré.</span>}
     </button>

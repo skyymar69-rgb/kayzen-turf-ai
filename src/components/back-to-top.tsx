@@ -69,7 +69,7 @@ export function BackToTop() {
   return (
     <button
       aria-label="Retour en haut de page"
-      className="fixed bottom-6 right-6 z-50 flex size-11 items-center justify-center rounded-full border border-border bg-surface text-muted shadow-lg transition-all hover:bg-accent hover:text-accent-fg hover:scale-110"
+      className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-4 lg:bottom-6 lg:right-6 z-50 flex size-11 items-center justify-center rounded-full border border-border bg-surface text-muted shadow-lg transition-all hover:bg-accent hover:text-accent-fg hover:scale-110"
       onClick={remonter}
       style={{
         opacity: visible ? 1 : 0,

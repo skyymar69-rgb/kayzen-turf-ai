@@ -3,6 +3,7 @@ import { BackToTop } from "@/components/back-to-top";
 import { CookieBanner } from "@/components/cookie-banner";
 import { DemoBanner } from "@/components/demo-banner";
 import { JsonLd } from "@/components/json-ld";
+import { MobileNav } from "@/components/mobile-nav";
 import { PushFollowSync } from "@/components/push-follow-sync";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
@@ -171,6 +172,9 @@ export default function RootLayout({
         <SiteHeader />
         {children}
         <SiteFooter />
+        {/* Réserve la hauteur de la barre basse mobile sous le pied de page. */}
+        <div aria-hidden="true" className="h-[calc(3.5rem+env(safe-area-inset-bottom))] lg:hidden" />
+        <MobileNav />
         <CookieBanner />
         <PushFollowSync />
         <BackToTop />

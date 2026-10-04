@@ -91,27 +91,31 @@ export function CookieBanner() {
   return (
     <section
       aria-label="Gestion des cookies"
-      className="fixed inset-x-3 bottom-3 z-[90] rounded-xl border border-border bg-surface p-4 text-fg shadow-2xl sm:inset-x-auto sm:right-4 sm:max-w-xl"
+      className="fixed inset-x-3 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-[90] rounded-xl border border-border bg-surface p-3 text-fg shadow-2xl sm:p-4 lg:inset-x-auto lg:bottom-3 lg:right-4 lg:max-w-xl"
     >
-      <h2 className="flex items-center gap-2 text-base font-bold">
+      <h2 className="flex items-center gap-2 text-sm font-bold sm:text-base">
         <Cookie aria-hidden="true" size={17} className="text-accent-text" />
         Confidentialité et cookies
       </h2>
-      <p className="mt-2 text-sm leading-6 text-muted">
-        Nous utilisons uniquement les cookies strictement nécessaires par défaut. Les mesures d’audience
-        ou services tiers ne sont activés qu’après consentement. Vous pouvez revenir sur ce choix à tout
-        moment via « Gérer les cookies » en pied de page.
+      {/* Sur mobile, la bannière couvrait la moitié de l'écran : le texte
+          essentiel reste, le détail n'apparaît qu'à partir de sm. */}
+      <p className="mt-1.5 text-xs leading-5 text-muted sm:mt-2 sm:text-sm sm:leading-6">
+        Seuls les cookies strictement nécessaires sont utilisés par défaut.
+        <span className="hidden sm:inline">
+          {" "}Les mesures d’audience ou services tiers ne sont activés qu’après consentement. Vous pouvez revenir
+          sur ce choix à tout moment via « Gérer les cookies » en pied de page.
+        </span>
       </p>
-      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+      <div className="mt-3 flex flex-wrap gap-2 sm:mt-4">
         <button
-          className="min-h-11 rounded-lg bg-cta px-4 font-bold text-cta-text transition hover:bg-cta-hi"
+          className="min-h-11 flex-1 rounded-lg bg-cta px-4 font-bold text-cta-text transition hover:bg-cta-hi sm:flex-none"
           onClick={() => saveChoice("accepted")}
           type="button"
         >
           Accepter
         </button>
         <button
-          className="min-h-11 rounded-lg border border-border bg-surface px-4 font-bold text-fg transition hover:bg-surface-sub"
+          className="min-h-11 flex-1 rounded-lg border border-border bg-surface px-4 font-bold text-fg transition hover:bg-surface-sub sm:flex-none"
           onClick={() => saveChoice("refused")}
           type="button"
         >
