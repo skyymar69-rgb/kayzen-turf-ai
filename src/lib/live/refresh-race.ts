@@ -51,6 +51,17 @@ export function refreshIntervalSeconds(minutesToStart: number): number {
   return 45;
 }
 
+/**
+ * Numéros à retirer : présents en base mais absents des partants PMU. Une
+ * réponse tronquée (moins de 70 % des partants connus) n'est pas une vague de
+ * forfaits : on ne retire rien et on laisse le passage suivant trancher.
+ */
+export function planScratches(presentNumbers: number[], runningNumbers: number[]): number[] {
+  if (runningNumbers.length < presentNumbers.length * 0.7) return [];
+  const running = new Set(runningNumbers);
+  return presentNumbers.filter((n) => !running.has(n));
+}
+
 type Citation = { typePari?: string; participants?: Array<{ numPmu: number | string; citations?: Array<{ ratio?: number }> }> };
 
 export async function refreshRace(
@@ -105,17 +116,21 @@ export async function refreshRace(
     // Pas de pools : on continue avec les cotes seules.
   }
 
-  // Non-partants. Une réponse tronquée (moins de 70 % des partants connus)
-  // n'est pas une vague de forfaits : on ne retire rien et on laisse le
-  // passage suivant trancher.
+  // Non-partants (voir `planScratches`). Leur ligne `entries` est supprimée
+  // AVANT la mise à jour des cotes et le gel : les probabilités calibrées
+  // (marché dévigé, modèle fondamental, calibrateField) sont recalculées sur
+  // le peloton réduit à chaque lecture de la course, et le gel H-2 de ce même
+  // passage — réécrit à chaque passage du dernier quart d'heure — porte donc
+  // déjà le peloton réduit.
   const runningNumbers = running.map((p) => Number(p.numPmu));
-  const [{ presents }] = (await sql.query(`select count(*)::int as presents from entries where race_id = $1`, [raceId])) as Array<{ presents: number }>;
+  const present = (await sql.query(`select number from entries where race_id = $1`, [raceId])) as Array<{ number: number }>;
+  const toRemove = planScratches(present.map((r) => Number(r.number)), runningNumbers);
   let scratched: number[] = [];
   let scratchedHorseIds: string[] = [];
-  if (runningNumbers.length >= presents * 0.7) {
+  if (toRemove.length > 0) {
     const removed = (await sql.query(
-      `delete from entries where race_id = $1 and not (number = any($2::int[])) returning number, horse_id`,
-      [raceId, runningNumbers],
+      `delete from entries where race_id = $1 and number = any($2::int[]) returning number, horse_id`,
+      [raceId, toRemove],
     )) as Array<{ number: number; horse_id: string }>;
     scratched = removed.map((r) => r.number);
     scratchedHorseIds = removed.map((r) => r.horse_id);

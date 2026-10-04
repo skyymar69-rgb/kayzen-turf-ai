@@ -551,3 +551,40 @@ export async function getLatestTrackRecord(): Promise<(TrackRecordSummary & Reco
     return null;
   }
 }
+
+/**
+ * Pronostics gelés d'une course (H-60, H-15, H-2), du plus ancien au plus
+ * récent, tels qu'ils ont été publiés avant le départ. Tableau vide sans base
+ * (démonstration), pour une course sans gel, ou si la lecture échoue : la
+ * comparaison enrichit la page, elle ne la conditionne pas.
+ */
+export async function getFrozenPredictions(raceId: string): Promise<Array<import("@/lib/frozen-diff").FrozenStage>> {
+  if (!hasDatabase()) return [];
+  try {
+    const sql = getSql();
+    const rows = (await sql`
+      select stage,
+             to_char(captured_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as captured_at,
+             minutes_to_start, model_version, payload
+        from prediction_snapshots
+       where race_id = ${raceId}
+       order by captured_at
+    `) as Array<{
+      stage: import("@/lib/frozen-diff").FrozenStageName;
+      captured_at: string;
+      minutes_to_start: number;
+      model_version: string;
+      payload: import("@/lib/live/freeze").FrozenPayload;
+    }>;
+    return rows.map((r) => ({
+      stage: r.stage,
+      capturedAt: r.captured_at,
+      minutesToStart: Number(r.minutes_to_start),
+      modelVersion: r.model_version,
+      payload: r.payload,
+    }));
+  } catch (cause) {
+    console.error("Pronostics gelés indisponibles pour %s", raceId, cause);
+    return [];
+  }
+}

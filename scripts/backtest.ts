@@ -14,6 +14,7 @@
  *      du PMU y est déjà déduit : le ROI est donc net.
  *   5. Mise fixe de 1 € par pari. Intervalle à 90 % par rééchantillonnage des
  *      courses (bootstrap, 1 000 tirages).
+ *   6. Série quotidienne cumulée par signal (`daily`, 90 points au plus) pour /track-record.
  *
  * Le rapport est enregistré dans `track_record_reports` et publié sur
  * /track-record, y compris pour les signaux qui perdent de l'argent.
@@ -26,13 +27,13 @@
 import { neon, type NeonQueryFunction } from "@neondatabase/serverless";
 import { FUNDAMENTAL_TRAIN_CUTOFF, FUNDAMENTAL_VERSION, fundamentalProbabilities } from "@/lib/fundamental/model";
 import { MODEL_VERSION, MODEL_WEIGHT, blendProbabilities, devig, monteCarloTopK } from "@/lib/probability";
-import { classifyStance, marketSignals } from "@/lib/confrontation";
-import { MVT_NOISE_PCT, moneyFlow, type PoolSnapshot } from "@/lib/market";
 import { PROFILES_VERSION, PROFILE_LABELS, classifyField, type Profile } from "@/lib/profiles";
+import { decisionOdds as loadDecisionOdds, morningOdds, officialPayouts, poolsUntil } from "./lib/backtest-data";
+import { confrontationKeys, mostBacked } from "./lib/backtest-signals";
 import { loadDataset, loadLocalEnv, type DatasetRace } from "./lib/dataset";
+import { dailySeries, quantile, summarize, type Bet } from "./lib/signal-stats";
 
 type BetType = "SG" | "SP";
-type Bet = { race: number; hit: boolean; dividend: number; odds: number };
 type SignalDef = { key: string; label: string; betType: BetType; description: string };
 
 const SIGNALS: SignalDef[] = [
@@ -49,6 +50,8 @@ const SIGNALS: SignalDef[] = [
   { key: "mvt-joue-sp", label: "Plus joué (MVT)", betType: "SP", description: "Simple placé sur le cheval dont la cote a le plus baissé depuis le matin (au moins 10 %)" },
   { key: "conf-accord-sg", label: "Accord IA + marché", betType: "SG", description: "Simple gagnant sur chaque cheval où l'IA et le marché convergent (au moins 8 % pour l'un des deux)" },
   { key: "conf-ia-sg", label: "Favori IA", betType: "SG", description: "Simple gagnant sur chaque cheval nettement plus haut chez l'IA que sur le marché" },
+  { key: "conf-accord-sp", label: "Accord IA + marché", betType: "SP", description: "Simple placé sur chaque cheval où l'IA et le marché convergent (au moins 8 % pour l'un des deux)" },
+  { key: "conf-ia-sp", label: "Favori IA", betType: "SP", description: "Simple placé sur chaque cheval nettement plus haut chez l'IA que sur le marché" },
   { key: "conf-marche-sg", label: "Favori marché", betType: "SG", description: "Simple gagnant sur chaque cheval nettement plus soutenu par le marché que par l'IA" },
   { key: "argent-entrant-sg", label: "Argent entrant", betType: "SG", description: "Simple gagnant sur chaque cheval qui gagne 2 points de part des mises en 15 minutes" },
   { key: "smart-money-sg", label: "Smart money", betType: "SG", description: "Simple gagnant quand l'argent entre ou accélère, que la cote baisse et que l'IA est favorable ou d'accord" },
@@ -68,132 +71,6 @@ const PROFILE_SIGNAL: Partial<Record<Profile, string[]>> = {
 function arg(name: string, fallback: string) {
   const i = process.argv.indexOf(`--${name}`);
   return i === -1 ? fallback : process.argv[i + 1];
-}
-
-function quantile(sorted: number[], q: number) {
-  if (sorted.length === 0) return NaN;
-  const pos = (sorted.length - 1) * q;
-  const lo = Math.floor(pos);
-  const hi = Math.ceil(pos);
-  return sorted[lo] + (sorted[hi] - sorted[lo]) * (pos - lo);
-}
-
-/** ROI et intervalle à 90 % par rééchantillonnage des courses. */
-function summarize(bets: Bet[], raceCount: number) {
-  const n = bets.length;
-  const returned = bets.reduce((s, b) => s + (b.hit ? b.dividend : 0), 0);
-  const roi = n ? (returned - n) / n : NaN;
-
-  const byRace = new Map<number, Bet[]>();
-  for (const b of bets) byRace.set(b.race, [...(byRace.get(b.race) ?? []), b]);
-  const groups = [...byRace.values()];
-  const rois: number[] = [];
-  let seed = 12345;
-  const rand = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
-  for (let k = 0; k < 1000 && groups.length > 0; k++) {
-    let staked = 0;
-    let ret = 0;
-    for (let i = 0; i < groups.length; i++) {
-      const g = groups[Math.floor(rand() * groups.length)];
-      staked += g.length;
-      ret += g.reduce((s, b) => s + (b.hit ? b.dividend : 0), 0);
-    }
-    rois.push((ret - staked) / staked);
-  }
-  rois.sort((a, b) => a - b);
-  return {
-    bets: n,
-    races: byRace.size,
-    raceCoverage: raceCount ? byRace.size / raceCount : 0,
-    hits: bets.filter((b) => b.hit).length,
-    hitRate: n ? bets.filter((b) => b.hit).length / n : NaN,
-    staked: n,
-    returned: Math.round(returned * 100) / 100,
-    roi,
-    roiLow: quantile(rois, 0.05),
-    roiHigh: quantile(rois, 0.95),
-    averageOdds: n ? bets.reduce((s, b) => s + b.odds, 0) / n : NaN,
-  };
-}
-
-/**
- * Cote du matin : premier relevé du jour de la course, par numéro, pris au plus
- * tard `leadMinutes` avant le départ (même référence que la page course).
- */
-async function morningOdds(sql: NeonQueryFunction<false, false>, raceIds: string[], leadMinutes: number) {
-  const rows = (await sql.query(
-    `select distinct on (o.race_id, o.horse_id) o.race_id, e.number, o.odds::float8 as odds
-       from odds_snapshots o
-       join races r on r.id = o.race_id
-       join entries e on e.race_id = o.race_id and e.horse_id = o.horse_id
-      where o.race_id = any($1)
-        and (o.observed_at at time zone 'Europe/Paris')::date = r.race_date
-        and o.observed_at <= ((r.race_date + replace(r.start_time, 'h', ':')::time) at time zone 'Europe/Paris') - make_interval(mins => $2)
-      order by o.race_id, o.horse_id, o.observed_at`,
-    [raceIds, leadMinutes],
-  )) as Array<{ race_id: string; number: number; odds: number }>;
-  return new Map(rows.map((r) => [`${r.race_id}|${r.number}`, r.odds]));
-}
-
-/** Numéro du cheval le plus joué depuis le matin, si sa cote a baissé d'au moins MVT_NOISE_PCT. */
-function mostBacked(raceId: string, numbers: number[], odds: Array<number | null>, morning: Map<string, number>): number | null {
-  let best: { number: number; change: number } | null = null;
-  numbers.forEach((number, i) => {
-    const ref = morning.get(`${raceId}|${number}`);
-    const now = odds[i];
-    if (!ref || !(ref > 1) || now == null || !(now > 1)) return;
-    const change = ((now - ref) / ref) * 100;
-    if (!best || change < best.change) best = { number, change };
-  });
-  const found = best as { number: number; change: number } | null;
-  return found && found.change <= -MVT_NOISE_PCT ? found.number : null;
-}
-
-/**
- * Parts des mises par course, relevés antérieurs à la décision seulement :
- * `cutoff` (SQL) borne `observed_at`, comme la cote de décision.
- */
-async function poolsUntil(sql: NeonQueryFunction<false, false>, raceIds: string[], cutoff: string, params: unknown[]) {
-  const rows = (await sql.query(
-    `select p.race_id, to_char(p.observed_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as t, p.numbers, p.pool_win
-       from pool_snapshots p
-       join races r on r.id = p.race_id
-      where p.race_id = any($1) and p.observed_at <= ${cutoff}
-      order by p.race_id, p.observed_at`,
-    [raceIds, ...params],
-  )) as Array<{ race_id: string; t: string; numbers: number[]; pool_win: number[] }>;
-  const pools = new Map<string, PoolSnapshot[]>();
-  for (const r of rows) {
-    const list = pools.get(r.race_id) ?? [];
-    list.push({ t: r.t, numbers: r.numbers.map(Number), win: r.pool_win.map(Number) });
-    pools.set(r.race_id, list);
-  }
-  return pools;
-}
-
-/**
- * Signaux de la confrontation IA × marché (lib/confrontation), avec les mêmes
- * règles que la page course : familles, argent entrant, smart money.
- * Probabilités en %, cotes et parts lues avant la décision.
- */
-function confrontationKeys(input: {
-  number: number;
-  odds: number | null;
-  market: number;
-  ai: number | null;
-  morning: number | undefined;
-  pools: PoolSnapshot[];
-}): string[] {
-  const hasOdds = input.odds != null && input.odds > 1;
-  const stance = classifyStance(input.ai, hasOdds ? input.market : null);
-  const change = hasOdds && input.morning && input.morning > 1 ? ((input.odds! - input.morning) / input.morning) * 100 : null;
-  const direction = change === null ? "inconnu" : Math.abs(change) < MVT_NOISE_PCT ? "stable" : change < 0 ? "joue" : "delaisse";
-  const signals = marketSignals({ direction, flow: moneyFlow(input.pools, input.number), stance });
-  const keys: string[] = [];
-  if (stance) keys.push(`conf-${stance}-sg`);
-  if (signals.includes("argent")) keys.push("argent-entrant-sg");
-  if (signals.includes("smart")) keys.push("smart-money-sg");
-  return keys;
 }
 
 function diagnose(rows: Array<{ ratio: number; fundRank: number; odds: number; sg: number | null; sp: number | null }>) {
@@ -227,7 +104,8 @@ function diagnose(rows: Array<{ ratio: number; fundRank: number; odds: number; s
  */
 async function liveTracking(sql: NeonQueryFunction<false, false>) {
   const rows = (await sql.query(
-    `select s.race_id, s.captured_at::text as captured_at, s.payload
+    `select s.race_id, s.captured_at::text as captured_at,
+            ((s.captured_at at time zone 'Europe/Paris')::date)::text as day, s.payload
        from prediction_snapshots s
       where s.stage = 'H-2'
         and exists (select 1 from race_payouts p where p.race_id = s.race_id and p.bet_type = 'SIMPLE_GAGNANT')
@@ -235,21 +113,21 @@ async function liveTracking(sql: NeonQueryFunction<false, false>) {
   )) as Array<{
     race_id: string;
     captured_at: string;
+    day: string;
     payload: { numbers: number[]; odds: Array<number | null>; profile?: Profile[]; market?: number[]; ai?: Array<number | null> };
   }>;
   if (rows.length === 0) return { since: null, races: 0, signals: [] };
 
-  const payoutRows = (await sql.query(
-    `select race_id, bet_type, combination, dividend::float8 as dividend
-       from race_payouts where race_id = any($1) and bet_type in ('SIMPLE_GAGNANT', 'SIMPLE_PLACE')`,
+  const pay = await officialPayouts(sql, rows.map((r) => r.race_id));
+  // Non-partants tardifs : un cheval retiré après le dernier gel H-2 (au départ)
+  // figure encore dans le pronostic gelé, mais sa ligne `entries` a été
+  // supprimée par le rafraîchissement. Le PMU rembourse ces mises : ce ne sont
+  // ni des paris perdus ni des paris gagnés, ils sont donc écartés.
+  const runnerRows = (await sql.query(
+    `select race_id, array_agg(number)::int[] as numbers from entries where race_id = any($1) group by race_id`,
     [rows.map((r) => r.race_id)],
-  )) as Array<{ race_id: string; bet_type: string; combination: string; dividend: number }>;
-  const pay = new Map<string, { SG: Map<number, number>; SP: Map<number, number> }>();
-  for (const p of payoutRows) {
-    const e = pay.get(p.race_id) ?? { SG: new Map(), SP: new Map() };
-    e[p.bet_type === "SIMPLE_GAGNANT" ? "SG" : "SP"].set(Number(p.combination), p.dividend);
-    pay.set(p.race_id, e);
-  }
+  )) as Array<{ race_id: string; numbers: number[] }>;
+  const runners = new Map(runnerRows.map((r) => [r.race_id, new Set(r.numbers.map(Number))]));
 
   const morning = await morningOdds(sql, rows.map((r) => r.race_id), 2);
   const livePools = await poolsUntil(
@@ -262,10 +140,12 @@ async function liveTracking(sql: NeonQueryFunction<false, false>) {
   rows.forEach((row, raceIndex) => {
     const table = pay.get(row.race_id)!;
     const { numbers, odds, profile, market, ai } = row.payload;
+    const ran = runners.get(row.race_id);
     const place = (key: string, i: number) => {
+      if (ran && !ran.has(numbers[i])) return;
       const def = SIGNALS.find((s) => s.key === key)!;
       const dividend = (def.betType === "SG" ? table.SG : table.SP).get(numbers[i]);
-      bets.get(key)!.push({ race: raceIndex, hit: dividend !== undefined, dividend: dividend ?? 0, odds: odds[i] ?? NaN });
+      bets.get(key)!.push({ race: raceIndex, hit: dividend !== undefined, dividend: dividend ?? 0, odds: odds[i] ?? NaN, day: row.day });
     };
     place("rank1-sg", 0);
     place("rank1-sp", 0);
@@ -289,7 +169,9 @@ async function liveTracking(sql: NeonQueryFunction<false, false>) {
         keys.forEach((key) => place(key, i));
       });
     }
-    const fav = odds.map((o, i) => [o ?? Infinity, i] as const).sort((a, b) => a[0] - b[0])[0];
+    const fav = odds
+      .map((o, i) => [ran && !ran.has(numbers[i]) ? Infinity : (o ?? Infinity), i] as const)
+      .sort((a, b) => a[0] - b[0])[0];
     if (fav && Number.isFinite(fav[0])) place("favori-marche-sg", fav[1]);
     odds.forEach((o, i) => o && place("tous-sg", i));
   });
@@ -297,7 +179,7 @@ async function liveTracking(sql: NeonQueryFunction<false, false>) {
   return {
     since: rows[0].captured_at,
     races: rows.length,
-    signals: SIGNALS.map((s) => ({ ...s, ...summarize(bets.get(s.key)!, rows.length) })),
+    signals: SIGNALS.map((s) => ({ ...s, ...summarize(bets.get(s.key)!, rows.length), daily: dailySeries(bets.get(s.key)!) })),
   };
 }
 
@@ -313,17 +195,7 @@ async function main() {
   const races = all.filter((r) => r.date >= from && r.date < today);
   const raceIds = races.map((r) => r.raceId);
 
-  const decision = (await sql.query(
-    `select distinct on (o.race_id, o.horse_id) o.race_id, o.horse_id, o.odds::float8 as odds,
-            (extract(epoch from (((r.race_date + replace(r.start_time, 'h', ':')::time) at time zone 'Europe/Paris') - o.observed_at)) / 60)::float8 as age
-       from odds_snapshots o
-       join races r on r.id = o.race_id
-      where o.race_id = any($1)
-        and o.observed_at <= ((r.race_date + replace(r.start_time, 'h', ':')::time) at time zone 'Europe/Paris') - make_interval(mins => $2)
-      order by o.race_id, o.horse_id, o.observed_at desc`,
-    [raceIds, leadMinutes],
-  )) as Array<{ race_id: string; horse_id: string; odds: number; age: number }>;
-  const decisionOdds = new Map(decision.map((d) => [`${d.race_id}|${d.horse_id}`, d]));
+  const decisionOdds = await loadDecisionOdds(sql, raceIds, leadMinutes);
   const morning = await morningOdds(sql, raceIds, leadMinutes);
   const pools = await poolsUntil(
     sql,
@@ -332,17 +204,7 @@ async function main() {
     [leadMinutes],
   );
 
-  const payoutRows = (await sql.query(
-    `select race_id, bet_type, combination, dividend::float8 as dividend
-       from race_payouts where race_id = any($1) and bet_type in ('SIMPLE_GAGNANT', 'SIMPLE_PLACE')`,
-    [raceIds],
-  )) as Array<{ race_id: string; bet_type: string; combination: string; dividend: number }>;
-  const payouts = new Map<string, { SG: Map<number, number>; SP: Map<number, number> }>();
-  for (const p of payoutRows) {
-    const entry = payouts.get(p.race_id) ?? { SG: new Map(), SP: new Map() };
-    entry[p.bet_type === "SIMPLE_GAGNANT" ? "SG" : "SP"].set(Number(p.combination), p.dividend);
-    payouts.set(p.race_id, entry);
-  }
+  const payouts = await officialPayouts(sql, raceIds);
 
   const bets = new Map<string, Bet[]>(SIGNALS.map((s) => [s.key, []]));
   const weights = [0, 0.05, 0.1, 0.15, 0.2];
@@ -415,7 +277,7 @@ async function main() {
       const def = SIGNALS.find((s) => s.key === key)!;
       const table = def.betType === "SG" ? pay.SG : pay.SP;
       const dividend = table.get(number);
-      bets.get(key)!.push({ race: raceIndex, hit: dividend !== undefined, dividend: dividend ?? 0, odds: odds[byNumber.get(number)!] });
+      bets.get(key)!.push({ race: raceIndex, hit: dividend !== undefined, dividend: dividend ?? 0, odds: odds[byNumber.get(number)!], day: race.date });
     };
 
     place("rank1-sg", profiled[0].number);
@@ -494,11 +356,12 @@ async function main() {
         winnerFound: s.top1 / Math.max(evaluated, 1),
       })),
     },
+    // Index attribué avant le filtre : une tranche écartée décalait les suivantes.
     calibration: calibration
-      .filter((b) => b.n >= 30)
-      .map((b, i) => ({ bucket: i, announced: b.announced / b.n, observed: b.wins / b.n, n: b.n })),
+      .map((b, i) => ({ bucket: i, announced: b.announced / Math.max(b.n, 1), observed: b.wins / Math.max(b.n, 1), n: b.n }))
+      .filter((b) => b.n >= 30),
     profileShare: Object.fromEntries([...profileCounts.entries()].map(([p, n]) => [PROFILE_LABELS[p], n])),
-    signals: SIGNALS.map((s) => ({ ...s, ...summarize(bets.get(s.key)!, withPayouts) })),
+    signals: SIGNALS.map((s) => ({ ...s, ...summarize(bets.get(s.key)!, withPayouts), daily: dailySeries(bets.get(s.key)!) })),
     longshotDiagnostics: diagnose(longshots),
     live: await liveTracking(sql),
   };

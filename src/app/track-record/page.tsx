@@ -1,7 +1,10 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowLeft, LineChart } from "lucide-react";
+import { CalibrationChart } from "@/components/track/calibration-chart";
+import { RoiCurveChart } from "@/components/track/roi-curve-chart";
 import { getLatestTrackRecord, type SignalRecord } from "@/lib/race-repository";
+import { hasRoiSeries, type DailyPoint } from "./roi-series";
 
 export const metadata: Metadata = {
   title: "Suivi de performance — réussite et ROI de chaque signal",
@@ -26,12 +29,12 @@ type Report = {
   oddsAgeMinutes: { median: number; p25: number; p75: number; within30: number };
   accuracy: { winnerFoundShown: number | null; top3HitsPerRace: number; byModel: Array<{ key: string; logLoss: number; winnerFound: number }> };
   calibration: Array<{ bucket: number; announced: number; observed: number; n: number }>;
-  signals: Array<SignalRecord & { description: string; races: number; hits: number; averageOdds: number }>;
+  signals: Array<SignalRecord & { description: string; races: number; hits: number; averageOdds: number; daily?: DailyPoint[] }>;
   longshotDiagnostics?: Array<{ label: string; n: number; winRate: number; roiSG: number; roiSP: number }>;
   live?: {
     since: string;
     races: number;
-    signals: Array<SignalRecord & { description: string }>;
+    signals: Array<SignalRecord & { description: string; daily?: DailyPoint[] }>;
   };
 };
 
@@ -142,6 +145,18 @@ export default async function TrackRecordPage() {
               <SignalTable signals={report.signals} />
             </section>
 
+            {hasRoiSeries(report.signals) && (
+              <section className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
+                <h2 className="font-display text-xl font-bold text-fg">ROI cumulé dans le temps — backtest</h2>
+                <p className="mb-4 mt-1 text-xs text-muted">
+                  Du {dateFr(report.period.from)} au {dateFr(report.period.to)}, mise fixe de 1 € par pari, rapports officiels nets du
+                  prélèvement. Chaque point cumule tous les paris depuis le début de la période : les premiers jours reposent sur peu de
+                  paris et varient fortement. Les pointillés sont les références (tous les partants, favori du marché).
+                </p>
+                <RoiCurveChart period={report.period} signals={report.signals} title="ROI cumulé par signal, backtest" />
+              </section>
+            )}
+
             {report.live && report.live.races > 0 && (
               <section className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
                 <h2 className="font-display text-xl font-bold text-fg">Suivi en direct — pronostics gelés avant le départ</h2>
@@ -150,26 +165,27 @@ export default async function TrackRecordPage() {
                   le départ, puis confronté aux rapports officiels. C&apos;est ce suivi qui confirme ou infirme le backtest.
                 </p>
                 <SignalTable signals={report.live.signals as Report["signals"]} />
+                {hasRoiSeries(report.live.signals) && (
+                  <div className="mt-6">
+                    <h3 className="mb-3 font-display text-base font-bold text-fg">ROI cumulé du suivi en direct</h3>
+                    <RoiCurveChart
+                      period={{ from: report.live.since.slice(0, 10), to: report.generatedAt.slice(0, 10) }}
+                      signals={report.live.signals}
+                      title="ROI cumulé par signal, suivi en direct"
+                    />
+                  </div>
+                )}
               </section>
             )}
 
             <section className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
               <h2 className="font-display text-xl font-bold text-fg">Calibration — quand nous annonçons x %, cela arrive-t-il x % du temps ?</h2>
-              <div className="mt-4 space-y-2">
-                {report.calibration.map((b) => (
-                  <div key={b.bucket} className="grid grid-cols-[90px_1fr_120px] items-center gap-3 text-xs">
-                    <span className="font-mono text-muted">{b.bucket * 10}–{b.bucket * 10 + 10} %</span>
-                    <span className="relative h-3 rounded-full bg-surface-sub">
-                      <span className="absolute inset-y-0 left-0 rounded-full bg-border-strong" style={{ width: `${Math.min(100, b.announced * 100)}%` }} />
-                      <span className="absolute inset-y-0.5 left-0 rounded-full bg-accent" style={{ width: `${Math.min(100, b.observed * 100)}%` }} />
-                    </span>
-                    <span className="text-right font-mono text-fg">
-                      {pct(b.announced, 0)} → {pct(b.observed, 0)} <span className="text-muted">({nf.format(b.n)})</span>
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <p className="mt-3 text-xs text-muted">Barre grise : probabilité annoncée en moyenne. Barre verte : fréquence de victoire observée.</p>
+              <p className="mb-4 mt-1 text-xs text-muted">
+                Chaque point regroupe les chevaux d&apos;une tranche de probabilité affichée. Sur la diagonale, la probabilité annoncée
+                se réalise exactement ; sous la diagonale, nous surestimons les chances. Plus le point est gros, plus la tranche compte de
+                chevaux ; le trait vertical est la marge d&apos;erreur à 90 %.
+              </p>
+              <CalibrationChart buckets={report.calibration} period={report.period} />
             </section>
 
             {report.longshotDiagnostics && (
