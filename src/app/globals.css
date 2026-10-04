@@ -95,7 +95,8 @@
   --warn-lo:       #1c1505;
   --bet-quinte:    #dc2626;
   --bet-quinte-fg: #ffffff;
-  --bet-quarte:    #0284c7;
+  /* #0284c7 ne donnait que 4,1:1 avec le blanc. */
+  --bet-quarte:    #0369a1;
   --bet-quarte-fg: #ffffff;
   --bet-pick5:     #facc15;
   --bet-pick5-fg:  #7f1d1d;
