@@ -50,18 +50,30 @@ self.addEventListener("fetch", (event) => {
 
   event.respondWith(
     (async () => {
+      let response;
       try {
-        const response = await fetch(request);
+        response = await fetch(request);
+      } catch {
+        response = null;
+      }
+      if (response) {
+        // La copie s'écrit à côté, sans retenir la réponse : le flux HTML
+        // arrive au navigateur sans attendre, et un échec d'écriture (quota)
+        // ne fait jamais servir une copie quand le réseau a répondu.
         if (cacheable && response.ok && response.type === "basic") {
-          const cache = await caches.open(PAGES_CACHE);
-          await cache.put(url.pathname + url.search, response.clone());
-          await trimCache(cache);
+          const copy = response.clone();
+          event.waitUntil(
+            caches
+              .open(PAGES_CACHE)
+              .then((cache) => cache.put(url.pathname + url.search, copy).then(() => trimCache(cache)))
+              .catch(() => undefined),
+          );
         }
         return response;
-      } catch {
-        const cache = await caches.open(PAGES_CACHE);
-        return (cacheable && (await cache.match(url.pathname + url.search))) || (await cache.match(OFFLINE_URL)) || Response.error();
       }
+      // Réseau absent : dernière copie de la page, sinon la page hors ligne.
+      const cache = await caches.open(PAGES_CACHE);
+      return (cacheable && (await cache.match(url.pathname + url.search))) || (await cache.match(OFFLINE_URL)) || Response.error();
     })(),
   );
 });

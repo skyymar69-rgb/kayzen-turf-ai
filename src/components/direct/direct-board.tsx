@@ -51,9 +51,12 @@ export function DirectBoard({ races }: { races: DirectRace[] }) {
     const first = live[0];
     const minutes = first && now ? minutesToStart(first, now) : null;
     const base = "Direct — Kayzen Turf";
-    document.title = first && minutes !== null && minutes > 0 ? `${Math.max(1, Math.round(minutes))} min · ${first.anchor} — Kayzen Turf` : base;
+    const shown = first && minutes !== null && minutes > 0 ? `${Math.max(1, Math.round(minutes))} min · ${first.anchor} — Kayzen Turf` : base;
+    document.title = shown;
     return () => {
-      document.title = base;
+      // Après une navigation, Next a déjà posé le titre de la page suivante :
+      // on ne restaure que si le titre est encore le nôtre.
+      if (document.title === shown) document.title = base;
     };
   }, [live, now]);
 

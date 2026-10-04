@@ -65,15 +65,18 @@ export function OddsCell({ number, odds }: { number: number; odds: number }) {
 export function TabCountdown({ race }: { race: Pick<RaceAnalysis, "raceDate" | "startTime" | "programCode"> }) {
   useEffect(() => {
     const original = document.title;
+    let shown = original;
     function tick() {
       const minutes = minutesToStart(race);
-      document.title = minutes !== null && minutes > 0 && minutes <= 60 ? `${Math.max(1, Math.round(minutes))} min · ${race.programCode} — ${original}` : original;
+      shown = minutes !== null && minutes > 0 && minutes <= 60 ? `${Math.max(1, Math.round(minutes))} min · ${race.programCode} — ${original}` : original;
+      document.title = shown;
     }
     tick();
     const id = window.setInterval(tick, 30_000);
     return () => {
       window.clearInterval(id);
-      document.title = original;
+      // Ne restaure que si le titre est encore le nôtre (navigation client).
+      if (document.title === shown) document.title = original;
     };
   }, [race]);
   return null;

@@ -42,7 +42,7 @@ test("accueil", async ({ page }) => {
 test("page course", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("link", { name: "Analyse complète" }).first().click();
-  await expect(page).toHaveURL(/\/races\/R1C3-/);
+  await expect(page).toHaveURL(/\/races\/R\d+C\d+-/);
   await auditer(page, "course");
 });
 

@@ -1,16 +1,17 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * Parcours principaux, en mode démonstration (aucune base) : une seule course
- * du jour, R1C3 « Prix Kayzen Turf Data » (src/lib/mock-data.ts). Sa date
- * suit le jour courant, d'où les expressions régulières sur l'URL.
+ * Parcours principaux, en mode démonstration (aucune base) : les courses
+ * fictives de src/lib/mock-data.ts, datées du jour courant. Les tests ne
+ * visent aucune course précise : une course de démonstration ajoutée ou
+ * retirée ne doit pas les casser.
  *
  * Localisateurs par rôle et libellé français, comme un lecteur d'écran les
  * annonce : un test qui casse sur un renommage signale aussi un libellé changé
  * pour l'utilisateur.
  */
 
-const URL_COURSE = /\/races\/R1C3-\d{4}-\d{2}-\d{2}$/;
+const URL_COURSE = /\/races\/R\d+C\d+-\d{4}-\d{2}-\d{2}$/;
 
 test("accueil → course → onglets du tableau des partants", async ({ page }) => {
   await page.goto("/");
@@ -38,12 +39,12 @@ test("accueil → course → onglets du tableau des partants", async ({ page }) 
   }
 });
 
-test("/pronostics liste la course de démonstration avec un lien vers son analyse", async ({ page }) => {
+test("/pronostics liste les courses du jour avec un lien vers leur analyse", async ({ page }) => {
   await page.goto("/pronostics");
   await expect(page.getByRole("heading", { level: 1, name: "Pronostics PMU du jour" })).toBeVisible();
-  await expect(page.getByText("Prix Kayzen Turf Data", { exact: false }).first()).toBeVisible();
+  await expect(page.getByRole("article").first()).toBeVisible();
 
-  const analyse = page.getByRole("link", { name: "Analyse", exact: true }).first();
+  const analyse = page.getByRole("link", { name: /^Analyse de la course R\d+C\d+$/ }).first();
   await expect(analyse).toHaveAttribute("href", URL_COURSE);
   await analyse.click();
   await expect(page).toHaveURL(URL_COURSE);

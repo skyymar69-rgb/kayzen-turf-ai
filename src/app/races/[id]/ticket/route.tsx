@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 import { MARQUE_DATA_URI, MARQUE_RATIO } from "@/lib/brand-mark";
 import { properName } from "@/lib/format";
+import { adresseAppelant, limiterDebit, reponseTropDeRequetes } from "@/lib/rate-limit";
 import { getRaceById } from "@/lib/race-repository";
 import { parseTicketParams } from "@/lib/ticket-format";
 
@@ -32,6 +33,9 @@ function safeDecode(id: string): string | null {
 }
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  // Rendu coûteux en calcul : chaque combinaison t/k échappe au cache.
+  const limite = limiterDebit(`ticket:${adresseAppelant(request)}`, 30, 10 * 60_000);
+  if (!limite.autorise) return reponseTropDeRequetes(limite);
   const { id } = await params;
   const { searchParams } = new URL(request.url);
   const parsed = parseTicketParams(searchParams.get("t"), searchParams.get("k"));
@@ -39,6 +43,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
   const race = await getRaceById(safeDecode(id));
   if (!race) return new Response("Course introuvable", { status: 404 });
+  // Le libellé doit être celui d'un pari réellement proposé sur la course :
+  // aucun texte libre (« Gain garanti ») sous la marque du site.
+  if (!race.betTypes.some((offer) => offer.label === parsed.label)) return new Response("Pari inconnu", { status: 400 });
 
   const numbers = parsed.ticket.replace(/ ordre$/, "").split("-");
   const ordered = parsed.ticket.endsWith(" ordre");

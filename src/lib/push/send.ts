@@ -86,8 +86,28 @@ export function scratchNotification(t: Target): Notification {
   };
 }
 
+/**
+ * Réserve l'alerte dans le journal AVANT de l'envoyer : si l'écriture échoue
+ * (base indisponible, motif encore refusé par une contrainte pas migrée), rien
+ * ne part — jamais la même notification toutes les 30 s. Deux passages qui se
+ * chevauchent ne peuvent pas réserver la même ligne. Ne lève jamais : un
+ * destinataire en échec n'empêche pas les suivants.
+ */
 async function deliver(t: Target, kind: AlertKind, notification: Notification, ttlSeconds?: number): Promise<boolean> {
   const sql = getSql();
+  let reserved: unknown[];
+  try {
+    reserved = (await sql.query(
+      `insert into push_deliveries (subscription_id, race_id, horse_id, kind) values ($1, $2, $3, $4)
+       on conflict do nothing returning 1`,
+      [t.subscription_id, t.race_id, t.horse_id, kind],
+    )) as unknown[];
+  } catch (error) {
+    console.warn(`[push] journal indisponible, alerte « ${kind} » non envoyée (${(error as Error).message})`);
+    return false;
+  }
+  if (reserved.length === 0) return false;
+
   try {
     await webpush.sendNotification(
       { endpoint: t.endpoint, keys: { p256dh: t.p256dh, auth: t.auth } },
@@ -95,21 +115,28 @@ async function deliver(t: Target, kind: AlertKind, notification: Notification, t
       // Une alerte de départ n'a plus de sens une fois le départ donné.
       { TTL: ttlSeconds ?? Math.max(60, Math.round(t.minutes_to_start * 60)), urgency: "high" },
     );
+    return true;
   } catch (error) {
-    if (error instanceof WebPushError && (error.statusCode === 404 || error.statusCode === 410)) {
-      await sql.query(`delete from push_subscriptions where id = $1`, [t.subscription_id]);
-      return false;
+    const status = error instanceof WebPushError ? error.statusCode : null;
+    try {
+      if (status === 404 || status === 410) {
+        // Abonnement expiré : supprimé, son journal part avec lui (cascade).
+        await sql.query(`delete from push_subscriptions where id = $1`, [t.subscription_id]);
+      } else if (status === null || status === 429 || status >= 500) {
+        // Panne passagère : la réservation est levée, le passage suivant réessaiera.
+        await sql.query(
+          `delete from push_deliveries where subscription_id = $1 and race_id = $2 and horse_id = $3 and kind = $4`,
+          [t.subscription_id, t.race_id, t.horse_id, kind],
+        );
+      }
+      // 400, 403, 413 : erreur définitive (clés invalides, VAPID) — la
+      // réservation reste, l'alerte n'est pas relancée en boucle.
+    } catch {
+      // Le journal reste en l'état : au pire, une alerte passagère est perdue.
     }
-    // Panne passagère du service de push : le passage suivant réessaiera.
-    console.warn(`[push] envoi impossible (${(error as Error).message})`);
+    console.warn(`[push] envoi impossible (${status ?? "réseau"} : ${(error as Error).message})`);
     return false;
   }
-  await sql.query(
-    `insert into push_deliveries (subscription_id, race_id, horse_id, kind) values ($1, $2, $3, $4)
-     on conflict do nothing`,
-    [t.subscription_id, t.race_id, t.horse_id, kind],
-  );
-  return true;
 }
 
 const TARGET_COLUMNS = `
@@ -238,7 +265,7 @@ async function marketTargets(): Promise<Target[]> {
             between now() and now() + make_interval(mins => $1)
         and not exists (
           select 1 from push_deliveries d
-           where d.subscription_id = s.id and d.race_id = r.id and d.horse_id = e.horse_id
+           where d.subscription_id = s.id and d.race_id = r.id
              and d.kind in ('smart-money', 'delaisse'))`,
     [DEPART_ALERT_MINUTES],
   )) as Target[];
@@ -277,7 +304,12 @@ async function sendMarketAlerts(): Promise<number> {
   if (targets.length === 0) return 0;
   const { pools, morning } = await marketContext([...new Set(targets.map((t) => t.race_id))]);
   let sent = 0;
+  // Une seule alerte de marché par navigateur et par course, même pour
+  // plusieurs chevaux suivis dans la même épreuve.
+  const served = new Set<string>();
   for (const t of targets) {
+    const key = `${t.subscription_id}|${t.race_id}`;
+    if (served.has(key)) continue;
     const index = t.payload?.numbers.indexOf(t.number) ?? -1;
     const hasOdds = t.odds !== null && t.odds > 1;
     const kind = evaluateMarketAlert({
@@ -289,7 +321,9 @@ async function sendMarketAlerts(): Promise<number> {
       ai: index >= 0 ? (t.payload?.ai?.[index] ?? null) : null,
       market: index >= 0 && hasOdds ? (t.payload?.market?.[index] ?? null) : null,
     });
-    if (kind && (await deliver(t, kind, marketNotification(t, kind)))) sent += 1;
+    if (!kind) continue;
+    served.add(key);
+    if (await deliver(t, kind, marketNotification(t, kind))) sent += 1;
   }
   return sent;
 }
@@ -330,6 +364,9 @@ async function arrivalTargets(): Promise<ArrivalTarget[]> {
        ) ps on true
       where r.race_date between (now() at time zone 'Europe/Paris')::date - 1 and (now() at time zone 'Europe/Paris')::date
         and arr.published_at > now() - make_interval(hours => $1)
+        -- Arrivée définitive seulement : les rapports ne sont écrits qu'une fois
+        -- le résultat officiel complet, jamais sur une arrivée provisoire.
+        and exists (select 1 from race_payouts p where p.race_id = r.id)
         and not exists (
           select 1 from push_deliveries d
            where d.subscription_id = s.id and d.race_id = r.id and d.horse_id = e.horse_id and d.kind = 'arrivee')`,

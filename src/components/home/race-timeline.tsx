@@ -11,7 +11,9 @@ import { raceHref } from "./types";
 
 const CARD_STYLES: Record<TimelineState, string> = {
   imminente: "border-cta/50 bg-cta/10 ring-1 ring-cta/30",
-  passee: "border-border bg-surface-sub opacity-60 hover:opacity-100",
+  // Estompée par le fond et la bordure, pas par l'opacité : le texte d'une
+  // course passée doit rester lisible (contraste ≥ 4,5:1).
+  passee: "border-dashed border-border bg-surface-sub",
   "a-venir": "border-border bg-surface hover:border-accent/40 hover:bg-accent-lo",
 };
 
