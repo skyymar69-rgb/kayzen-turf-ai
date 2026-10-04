@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Star, ThumbsDown, ThumbsUp } from "lucide-react";
+import { GitCompare, Star, ThumbsDown, ThumbsUp } from "lucide-react";
 import { useFollowedHorses } from "@/hooks/use-followed-horses";
 import type { HorseRow } from "@/lib/course-view-model";
 import type { FeatureName } from "@/lib/fundamental/features";
@@ -9,6 +9,7 @@ import { fundamentalContributions, type Contribution } from "@/lib/fundamental/m
 import { formatOdds } from "@/lib/format";
 import { PROFILE_RULES } from "@/lib/profiles";
 import type { RaceAnalysis } from "@/lib/types";
+import { PastRuns } from "@/components/course/past-runs";
 import { Card, Eyebrow, ProfileBadge, pct, signedPts } from "@/components/course/shared";
 
 /**
@@ -44,7 +45,19 @@ function describe(c: Contribution): string {
   return values[c.feature] ?? n(v);
 }
 
-export function HorseSheet({ race, row }: { race: RaceAnalysis; row: HorseRow | null }) {
+export function HorseSheet({
+  race,
+  row,
+  compared = false,
+  compareFull = false,
+  onToggleCompare,
+}: {
+  race: RaceAnalysis;
+  row: HorseRow | null;
+  compared?: boolean;
+  compareFull?: boolean;
+  onToggleCompare?: (number: number) => void;
+}) {
   const contributions = useMemo(() => fundamentalContributions(race.horses, race.discipline), [race.horses, race.discipline]);
   const { followed, toggle } = useFollowedHorses();
 
@@ -69,16 +82,31 @@ export function HorseSheet({ race, row }: { race: RaceAnalysis; row: HorseRow | 
           <p className="mt-1 text-sm text-muted">
             {row.horse.jockey} · {row.horse.trainer} · cote {formatOdds(row.horse.odds, 1)}
           </p>
-          {row.horse.horseId && (
-            <button
-              className="mt-2 inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-border bg-surface-sub px-2.5 text-xs font-semibold text-fg transition hover:border-accent"
-              onClick={() => toggle({ id: row.horse.horseId!, name: row.horse.horse })}
-              type="button"
-            >
-              <Star aria-hidden="true" className={followed.has(row.horse.horseId) ? "fill-amber-500 text-amber-700 dark:fill-amber-400 dark:text-amber-400" : "text-muted"} size={13} />
-              {followed.has(row.horse.horseId) ? "Cheval suivi" : "Suivre ce cheval"}
-            </button>
-          )}
+          <div className="mt-2 flex flex-wrap gap-2">
+            {row.horse.horseId && (
+              <button
+                className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-border bg-surface-sub px-2.5 text-xs font-semibold text-fg transition hover:border-accent"
+                onClick={() => toggle({ id: row.horse.horseId!, name: row.horse.horse })}
+                type="button"
+              >
+                <Star aria-hidden="true" className={followed.has(row.horse.horseId) ? "fill-amber-500 text-amber-700 dark:fill-amber-400 dark:text-amber-400" : "text-muted"} size={13} />
+                {followed.has(row.horse.horseId) ? "Cheval suivi" : "Suivre ce cheval"}
+              </button>
+            )}
+            {onToggleCompare && (
+              <button
+                aria-pressed={compared}
+                className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-border bg-surface-sub px-2.5 text-xs font-semibold text-fg transition hover:border-accent disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={!compared && compareFull}
+                onClick={() => onToggleCompare(row.horse.number)}
+                type="button"
+              >
+                <GitCompare aria-hidden="true" className={compared ? "text-accent-text" : "text-muted"} size={13} />
+                {compared ? "Dans le comparateur" : compareFull ? "Comparateur complet" : "Comparer"}
+              </button>
+            )}
+          </div>
+          {row.nonRunner && <p className="mt-2 text-sm font-semibold text-danger">Non-partant : ce cheval ne court pas.</p>}
           {rule && <p className="mt-2 max-w-xl text-xs leading-5 text-muted">Profil attribué parce que : {rule.charAt(0).toLowerCase() + rule.slice(1)}</p>}
         </div>
 
@@ -153,6 +181,8 @@ export function HorseSheet({ race, row }: { race: RaceAnalysis; row: HorseRow | 
           </details>
         </>
       )}
+
+      <PastRuns music={row.horse.music} />
     </Card>
   );
 }

@@ -3,6 +3,7 @@ import type { CourseViewModel, HorseRow } from "@/lib/course-view-model";
 import { READING_LABELS, READING_RULES } from "@/lib/profiles";
 import type { SignalRecord } from "@/lib/race-repository";
 import { Card, roiLine } from "@/components/course/shared";
+import { Term } from "@/components/course/term";
 
 /**
  * VERDICT DE COURSE — une phrase, puis six tuiles.
@@ -34,11 +35,14 @@ export function VerdictBanner({
   signals,
   onSelect,
   selectedNumber,
+  summary = null,
 }: {
   vm: CourseViewModel;
   signals: Map<string, SignalRecord>;
   onSelect: (number: number) => void;
   selectedNumber: number | null;
+  /** Résumé en une phrase pour débutant (lib/beginner-summary). */
+  summary?: string | null;
 }) {
   const tiles: Tile[] = [
     { key: "base", title: "Bases", icon: ShieldCheck, rows: vm.byProfile.base, signal: signals.get("base-sp"), empty: "Aucune base solide", hint: "en simple placé" },
@@ -54,6 +58,23 @@ export function VerdictBanner({
 
   return (
     <Card className="mt-4 overflow-hidden">
+      {summary && (
+        <div className="border-b border-border bg-surface-sub px-5 py-3 sm:px-6">
+          <p className="text-sm font-semibold leading-6 text-fg">
+            <span className="mr-2 rounded-full bg-accent-lo px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-accent-text">En bref</span>
+            {summary}
+          </p>
+          <details className="mt-1 text-xs leading-5 text-muted">
+            <summary className="cursor-pointer font-semibold text-accent-text">Comment lire ce résumé</summary>
+            <p className="mt-1">
+              « 1 chance sur N » traduit la probabilité de victoire retenue par nos calculs (l&apos;avis de l&apos;IA, qui ne voit jamais la cote,
+              croisé avec le marché). « {READING_LABELS[vm.verdict.reading]} » suit une règle fixe : {READING_RULES[vm.verdict.reading]} Le détail
+              cheval par cheval est dans les tuiles ci-dessous et dans le tableau des partants. Ce résumé décrit la course : ce n&apos;est pas un
+              conseil de pari.
+            </p>
+          </details>
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-3 border-b border-border px-5 py-4 sm:px-6">
         <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${READING_STYLES[vm.verdict.reading]}`} title={READING_RULES[vm.verdict.reading]}>
           {READING_LABELS[vm.verdict.reading]}
@@ -66,7 +87,7 @@ export function VerdictBanner({
           <li key={tile.key} className="flex min-h-[132px] flex-col gap-2 p-4">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted">
               <tile.icon aria-hidden="true" size={14} />
-              {tile.title}
+              {tile.key === "value" ? <Term name="Value Bet">{tile.title}</Term> : tile.key === "money" ? <Term name="Argent entrant / sortant">{tile.title}</Term> : tile.title}
             </div>
             {tile.rows.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">

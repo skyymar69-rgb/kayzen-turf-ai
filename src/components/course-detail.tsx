@@ -2,23 +2,34 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, ArrowLeft, Clock3 } from "lucide-react";
-import { Countdown } from "@/components/countdown";
-import { FieldTable } from "@/components/course/field-table";
-import { HorseSheet } from "@/components/course/horse-sheet";
+import { AlertTriangle, ArrowLeft } from "lucide-react";
+import { AllOddsChart } from "@/components/course/all-odds-chart";
 import { AnalysisReport } from "@/components/course/analysis-report";
-import { LiveStatus, type RelaunchResult } from "@/components/course/live-status";
+import { ArrivalRecap } from "@/components/course/arrival-recap";
+import { CourseHeader } from "@/components/course/course-header";
+import { FieldTable } from "@/components/course/field-table";
+import { HorseCompare } from "@/components/course/horse-compare";
+import { HorseSheet } from "@/components/course/horse-sheet";
+import type { RelaunchResult } from "@/components/course/live-status";
 import { MarketPanel } from "@/components/course/market-panel";
+import { NonRunners } from "@/components/course/non-runners";
+import { SectionNavBar, SectionNavRail } from "@/components/course/section-nav";
 import { PostRacePanel, SimulationPanel } from "@/components/course/side-panels";
-import { BetBadges, ShareButton, TicketTools, formatLongDate } from "@/components/course/tools";
+import { TicketShare } from "@/components/course/ticket-share";
+import { TicketTools } from "@/components/course/tools";
 import { VerdictBanner } from "@/components/course/verdict-banner";
+import { VisitChanges } from "@/components/course/visit-changes";
 import { RaceSelectionPanel } from "@/components/race-selection";
 import { diffAnalysis, hasChanges, snapshotAnalysis, type AnalysisDiff, type AnalysisSnapshot } from "@/lib/analysis-diff";
+import type { Payout } from "@/lib/arrival-recap";
+import { beginnerSummary } from "@/lib/beginner-summary";
 import { buildBetRecommendations, buildXTickets, raceToContext } from "@/lib/bet-recommendations";
 import { buildCourseViewModel } from "@/lib/course-view-model";
-import { formatMeters, properName } from "@/lib/format";
+import { properName } from "@/lib/format";
+import { COMPARE_MAX, toggleCompare } from "@/lib/horse-compare";
 import type { MarketHistory } from "@/lib/market";
 import { buildPostRaceAnalysis } from "@/lib/post-race-analysis";
+import type { RaceIndexItem } from "@/lib/race-navigation";
 import type { SignalRecord } from "@/lib/race-repository";
 import { buildSelection } from "@/lib/selection";
 import type { RaceAnalysis } from "@/lib/types";
@@ -26,29 +37,37 @@ import type { RaceAnalysis } from "@/lib/types";
 /**
  * PAGE COURSE — le verdict d'abord, le détail à la demande.
  *
- *   1. en-tête et âge des cotes (« Relancer l'analyse IA » jusqu'au départ, automatique dans les 10 dernières minutes) ;
- *   1 bis. le panneau « Analyse réactualisée » : ce que la relance a changé ;
- *   2. verdict en une phrase et tuiles de profils, avec le ROI historique de chaque signal ;
+ *   1. en-tête : terrain et météo, âge des cotes (« Relancer l'analyse IA »
+ *      jusqu'au départ), courses précédente / suivante, carte de la réunion ;
+ *   1 bis. une fois l'arrivée publiée, l'arrivée et les rapports PMU ;
+ *   1 ter. non-partants, changements depuis la dernière visite, et le panneau
+ *      « Analyse réactualisée » après une relance ;
+ *   2. verdict : une phrase pour débutant, puis la lecture et les tuiles ;
  *   3. notre sélection et un ticket par stratégie ;
- *   4. le tableau unique (Classement IA, MVT, Cotes & Marché, Forme) ;
- *   5. la fiche du cheval sélectionné et son marché ;
- *   6. les outils de tickets, repliés.
+ *   4. le tableau unique (Classement IA, IA × Marché, MVT, Cotes & Marché,
+ *      Forme), puis le comparateur ;
+ *   5. la fiche du cheval sélectionné ; à côté, son marché, les cotes de tous
+ *      les partants et la simulation ;
+ *   6. les tickets : copie au format PMU, partage en image, outils repliés.
  *
- * L'ancien composant (1 693 lignes) est découpé sous src/components/course/.
- * Les blocs qui affichaient des valeurs fixes de l'import comme des mesures
- * — « consensus modèle » constant à 68 %, versions de modèles « en attente DB »,
- * radar et nuage tirés du PronoScore — ont été retirés.
+ * Un sommaire (rail sur grand écran, pastilles sur mobile) suit la lecture.
+ * Les blocs vivent sous src/components/course/.
  */
 
 type CourseDetailProps = {
   race: RaceAnalysis;
   history?: MarketHistory;
   signals?: SignalRecord[];
+  /** Programme allégé du jour, pour la navigation entre courses. */
+  dayIndex?: RaceIndexItem[];
+  /** Rapports officiels PMU, vides tant qu'ils ne sont pas publiés. */
+  payouts?: Payout[];
 };
 
 const EMPTY_HISTORY: MarketHistory = { odds: {}, pools: [] };
+const SECTION_SCROLL = "scroll-mt-32 lg:scroll-mt-20";
 
-export function CourseDetail({ race, history = EMPTY_HISTORY, signals = [] }: CourseDetailProps) {
+export function CourseDetail({ race, history = EMPTY_HISTORY, signals = [], dayIndex = [], payouts = [] }: CourseDetailProps) {
   const vm = useMemo(() => buildCourseViewModel(race, history), [race, history]);
   const selection = useMemo(() => buildSelection(race.horses), [race.horses]);
   const signalMap = useMemo(() => new Map(signals.map((s) => [s.key, s])), [signals]);
@@ -60,6 +79,22 @@ export function CourseDetail({ race, history = EMPTY_HISTORY, signals = [] }: Co
   const [selectedNumber, setSelectedNumber] = useState<number | null>(() => vm.rows[0]?.horse.number ?? null);
   const selectedRow = vm.rows.find((r) => r.horse.number === selectedNumber) ?? vm.rows[0] ?? null;
   const finished = race.horses.some((h) => h.finishPosition != null);
+
+  // Comparateur : les numéros qui ont quitté le peloton (relance) sont ignorés.
+  const [compareRaw, setCompare] = useState<number[]>([]);
+  const compare = compareRaw.filter((n) => vm.rows.some((r) => r.horse.number === n));
+  const onToggleCompare = useCallback((n: number) => setCompare((list) => toggleCompare(list, n)), []);
+
+  const summary = useMemo(
+    () =>
+      beginnerSummary({
+        reading: vm.verdict.reading,
+        top: vm.rows.filter((r) => !r.nonRunner).slice(0, 3).map((r) => ({ number: r.horse.number, name: r.horse.horse, win: r.horse.winProbability })),
+        oddsAvailable: race.oddsAvailable !== false,
+        finished,
+      }),
+    [vm, race.oddsAvailable, finished],
+  );
 
   // Analyse de dernière minute : photographie avant la relance, comparaison
   // une fois la page recalculée avec les nouvelles données.
@@ -101,6 +136,8 @@ export function CourseDetail({ race, history = EMPTY_HISTORY, signals = [] }: Co
     document.getElementById("fiche-cheval")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  const selected = selectedRow?.horse.number ?? null;
+
   return (
     <main className="min-h-screen bg-bg pb-20" id="contenu-principal">
       <div className="mx-auto max-w-[1520px] px-4 pt-6 sm:px-6 lg:px-8">
@@ -117,74 +154,88 @@ export function CourseDetail({ race, history = EMPTY_HISTORY, signals = [] }: Co
           <span className="text-sm font-semibold text-fg">{race.programCode} — {properName(race.name)}</span>
         </nav>
 
-        <header className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
-          <div className="border-t-4 border-accent px-5 py-4 sm:px-7">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
-                  <span className="font-bold text-fg">{race.discipline}</span>
-                  {race.specialty && <><span>·</span><span>{race.specialty}</span></>}
-                  <span>·</span><span>{formatMeters(race.distance)}</span>
-                  <span>·</span><span>{race.horses.length} partants</span>
-                  {race.going && <><span>·</span><span>{race.going}</span></>}
-                </div>
-                <h1 className="mt-1 font-display text-xl font-bold text-fg sm:text-2xl">
-                  {properName(race.racecourse)} — {formatLongDate(race.raceDate)}
-                </h1>
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="flex items-center gap-2 font-bold text-accent-text">
-                  <Clock3 aria-hidden="true" size={18} />
-                  Départ {race.startTime}
-                  <Countdown relativeDay={race.relativeDay} startTime={race.startTime} />
-                </span>
-                <ShareButton name={race.name} programCode={race.programCode} />
-              </div>
-            </div>
-            <BetBadges offers={race.betTypes} />
-            <LiveStatus
-              finished={finished}
-              lastObservation={vm.lastObservation}
-              raceDate={race.raceDate}
-              raceId={race.id}
-              startTime={race.startTime}
-              onDone={onRelaunchDone}
-              onStart={onRelaunchStart}
-            />
+        <CourseHeader
+          dayIndex={dayIndex}
+          finished={finished}
+          lastObservation={vm.lastObservation}
+          onRelaunchDone={onRelaunchDone}
+          onRelaunchStart={onRelaunchStart}
+          race={race}
+        />
+
+        <SectionNavBar />
+
+        <div className="lg:grid lg:grid-cols-[150px_minmax(0,1fr)] lg:gap-6">
+          <div className="hidden pt-4 lg:block">
+            <SectionNavRail />
           </div>
-        </header>
 
-        {race.oddsAvailable === false && (
-          <div className="mt-4 flex items-start gap-3 rounded-2xl border border-warn/30 bg-warn-lo px-4 py-3 text-sm leading-6 text-warn sm:px-5" role="status">
-            <AlertTriangle aria-hidden="true" className="mt-1 shrink-0" size={16} />
-            <p>
-              <strong className="font-bold">Cotes PMU non encore publiées pour cette course.</strong> Le classement repose
-              sur l&apos;IA seule et sera recalculé dès l&apos;ouverture du marché.
-            </p>
-          </div>
-        )}
-
-        {report && (
-          <AnalysisReport diff={report.diff} onClose={() => setReport(null)} onSelect={select} result={report.result} />
-        )}
-
-        <VerdictBanner onSelect={select} selectedNumber={selectedRow?.horse.number ?? null} signals={signalMap} vm={vm} />
-
-        <div className="mt-0 grid gap-x-4 xl:grid-cols-[minmax(0,1fr)_360px]">
           <div className="min-w-0">
-            <RaceSelectionPanel onSelect={select} selectedNumber={selectedRow?.horse.number ?? null} selection={selection} signals={signalMap} />
-            <FieldTable onSelect={select} race={race} selectedNumber={selectedRow?.horse.number ?? null} signals={signalMap} vm={vm} />
-            <div id="fiche-cheval" className="scroll-mt-4">
-              <HorseSheet race={race} row={selectedRow} />
-            </div>
-            <TicketTools recommendations={recommendations} xTickets={xTickets} />
-          </div>
+            <ArrivalRecap payouts={payouts} postRace={postRace} race={race} vm={vm} />
+            <NonRunners rows={vm.nonRunners} />
 
-          <aside className="mt-4 grid content-start gap-4" aria-label="Marché et simulation">
-            <MarketPanel history={history} row={selectedRow} />
-            <SimulationPanel row={selectedRow} />
-            <PostRacePanel analysis={postRace} />
-          </aside>
+            {race.oddsAvailable === false && (
+              <div className="mt-4 flex items-start gap-3 rounded-2xl border border-warn/30 bg-warn-lo px-4 py-3 text-sm leading-6 text-warn sm:px-5" role="status">
+                <AlertTriangle aria-hidden="true" className="mt-1 shrink-0" size={16} />
+                <p>
+                  <strong className="font-bold">Cotes PMU non encore publiées pour cette course.</strong> Le classement repose
+                  sur l&apos;IA seule et sera recalculé dès l&apos;ouverture du marché.
+                </p>
+              </div>
+            )}
+
+            <VisitChanges raceId={race.id} vm={vm} />
+
+            {report && (
+              <AnalysisReport diff={report.diff} onClose={() => setReport(null)} onSelect={select} result={report.result} />
+            )}
+
+            <div className={SECTION_SCROLL} id="verdict">
+              <VerdictBanner onSelect={select} selectedNumber={selected} signals={signalMap} summary={summary} vm={vm} />
+            </div>
+
+            <div className="mt-0 grid gap-x-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+              <div className="min-w-0">
+                <RaceSelectionPanel onSelect={select} selectedNumber={selected} selection={selection} signals={signalMap} />
+                <FieldTable
+                  compare={compare}
+                  onSelect={select}
+                  onToggleCompare={onToggleCompare}
+                  race={race}
+                  selectedNumber={selected}
+                  signals={signalMap}
+                  vm={vm}
+                />
+                <HorseCompare compare={compare} onClear={() => setCompare([])} onRemove={onToggleCompare} race={race} rows={vm.rows} />
+                <div className={SECTION_SCROLL} id="fiche-cheval">
+                  <HorseSheet
+                    compareFull={compare.length >= COMPARE_MAX}
+                    compared={selected !== null && compare.includes(selected)}
+                    onToggleCompare={onToggleCompare}
+                    race={race}
+                    row={selectedRow}
+                  />
+                </div>
+                <div className={`mt-4 grid gap-3 ${SECTION_SCROLL}`} id="tickets">
+                  <TicketShare programCode={race.programCode} raceId={race.id} recommendations={recommendations} />
+                  <TicketTools recommendations={recommendations} xTickets={xTickets} />
+                </div>
+              </div>
+
+              <aside className="mt-4 grid content-start gap-4" aria-label="Marché et simulation">
+                <div className={`grid gap-4 ${SECTION_SCROLL}`} id="marche">
+                  <MarketPanel history={history} row={selectedRow} />
+                  <AllOddsChart history={history} rows={vm.rows} selectedNumber={selected} />
+                </div>
+                <div className={SECTION_SCROLL} id="simulation">
+                  <SimulationPanel row={selectedRow} />
+                </div>
+                <div className={SECTION_SCROLL} id="apres-course">
+                  <PostRacePanel analysis={postRace} />
+                </div>
+              </aside>
+            </div>
+          </div>
         </div>
       </div>
     </main>

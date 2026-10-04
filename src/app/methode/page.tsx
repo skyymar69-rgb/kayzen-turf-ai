@@ -178,7 +178,8 @@ export default function MethodePage() {
               {FLOW_ACCEL_WINDOW_MIN} minutes, plus vite que sur les 10 minutes précédentes ; <em>smart money</em> quand
               l&apos;argent entre ou accélère, que la cote baisse et que l&apos;IA — qui ne voit jamais la cote — est
               favorable ou d&apos;accord. C&apos;est un argent que notre modèle indépendant confirme, pas une information sur
-              ceux qui misent. Le rendement de chaque famille et de chaque signal est mesuré et publié sur le suivi de
+              ceux qui misent. À l&apos;inverse, <em>argent sortant</em> signale une part des mises en baisse de{" "}
+              {STRONG_MONEY_PTS} points ou plus en {FLOW_WINDOW_MIN} minutes : le cheval est délaissé. Le rendement de chaque famille et de chaque signal est mesuré et publié sur le suivi de
               performance.
             </p>
           </Section>

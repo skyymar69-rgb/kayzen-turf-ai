@@ -27,9 +27,22 @@ export type HorseRow = {
   flow: Flow;
   /** Famille de la confrontation IA × marché, `null` hors du jeu. */
   stance: Stance | null;
-  /** Argent entrant, accélération, smart money. */
+  /** Argent entrant ou sortant, accélération, smart money. */
   signals: MarketSignal[];
+  /** Déclaré non-partant (voir `NonRunnerFields`). */
+  nonRunner: boolean;
+  /** Heure de la déclaration de non-partant (ISO), quand la source la donne. */
+  nonRunnerAt: string | null;
 };
+
+/**
+ * Non-partants : le modèle de données n'a pas encore de champ pour eux —
+ * l'import PMU écarte tout participant dont le statut n'est pas « PARTANT ».
+ * La page lit donc ces deux champs optionnels, que l'import pourra renseigner
+ * (statut et heure de l'information) sans autre changement d'interface. En
+ * attendant, un retrait se voit d'une visite à l'autre (lib/visit-snapshot).
+ */
+type NonRunnerFields = { nonRunner?: boolean | null; nonRunnerAt?: string | null };
 
 export type CourseViewModel = {
   rows: HorseRow[];
@@ -40,6 +53,8 @@ export type CourseViewModel = {
   verdict: RaceVerdict;
   byProfile: Record<Profile, HorseRow[]>;
   strongMoney: HorseRow[];
+  /** Partants déclarés non-partants, dans l'ordre des numéros. */
+  nonRunners: HorseRow[];
   /** Dernier relevé de cote connu (ISO). */
   lastObservation: string | null;
 };
@@ -53,7 +68,10 @@ export function buildCourseViewModel(race: RaceAnalysis, history: MarketHistory)
     const market = hasOdds(horse.odds) ? horse.marketProbability : null;
     const movement = oddsMovement(history.odds[horse.number], horse.odds, race.raceDate);
     const flow = moneyFlow(history.pools, horse.number);
-    const stance = classifyStance(ai, market);
+    const extra = horse as typeof horse & NonRunnerFields;
+    const nonRunner = extra.nonRunner === true;
+    // Un non-partant ne se confronte pas au marché : sa cote n'a plus de sens.
+    const stance = nonRunner ? null : classifyStance(ai, market);
     return {
       horse,
       rank,
@@ -66,7 +84,9 @@ export function buildCourseViewModel(race: RaceAnalysis, history: MarketHistory)
       movement,
       flow,
       stance,
-      signals: marketSignals({ direction: movement.direction, flow, stance }),
+      signals: nonRunner ? [] : marketSignals({ direction: movement.direction, flow, stance }),
+      nonRunner,
+      nonRunnerAt: nonRunner && typeof extra.nonRunnerAt === "string" ? extra.nonRunnerAt : null,
     };
   });
 
@@ -87,7 +107,8 @@ export function buildCourseViewModel(race: RaceAnalysis, history: MarketHistory)
       .sort((a, b) => STANCE_ORDER.indexOf(a.stance!) - STANCE_ORDER.indexOf(b.stance!) || strength(b) - strength(a)),
     verdict: selection.verdict,
     byProfile,
-    strongMoney: rows.filter((r) => r.flow.strong).sort((a, b) => (b.flow.delta15 ?? 0) - (a.flow.delta15 ?? 0)),
+    strongMoney: rows.filter((r) => r.flow.strong && !r.nonRunner).sort((a, b) => (b.flow.delta15 ?? 0) - (a.flow.delta15 ?? 0)),
+    nonRunners: rows.filter((r) => r.nonRunner).sort((a, b) => a.horse.number - b.horse.number),
     lastObservation: latest([race.oddsRefreshedAt ?? null, times.at(-1) ?? null]),
   };
 }
