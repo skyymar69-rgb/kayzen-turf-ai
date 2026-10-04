@@ -382,3 +382,9 @@ create table if not exists push_deliveries (
   sent_at timestamptz not null default now(),
   primary key (subscription_id, race_id, horse_id, kind)
 );
+
+-- Octobre 2026 : alertes de marché (smart money, délaissé) et d'arrivée.
+-- La contrainte d'origine, nommée par défaut, est remplacée : idempotent.
+alter table push_deliveries drop constraint if exists push_deliveries_kind_check;
+alter table push_deliveries add constraint push_deliveries_kind_check
+  check (kind in ('depart', 'non-partant', 'smart-money', 'delaisse', 'arrivee'));
