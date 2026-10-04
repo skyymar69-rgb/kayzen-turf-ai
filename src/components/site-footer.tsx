@@ -10,6 +10,8 @@ const PRODUCT_LINKS = [
   { href: "/methode",               label: "Notre méthode" },
   { href: "/track-record",          label: "Suivi de performance" },
   { href: "/lexique",               label: "Lexique turf" },
+  { href: "/nouveautes",            label: "Nouveautés" },
+  { href: "/etat",                  label: "État du service" },
 ];
 
 const LEGAL_LINKS = [
@@ -116,8 +118,11 @@ export function SiteFooter() {
             href={COMPANY.agencyUrl}
             rel="noopener noreferrer"
             target="_blank"
-            className="font-semibold text-cta/80 transition hover:text-cta"
+            className="font-semibold text-cta underline-offset-4 transition hover:underline"
           >
+            {/* text-cta/80 donnait 4,06:1 sur le fond du pied de page (axe,
+                color-contrast) ; la teinte pleine passe à 5,5:1, au-dessus du
+                seuil AA de 4,5:1 pour ce texte de 12 px. */}
             Réalisé par Kayzen Web
           </a>
         </div>

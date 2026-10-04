@@ -588,3 +588,82 @@ export async function getFrozenPredictions(raceId: string): Promise<Array<import
     return [];
   }
 }
+
+/**
+ * Fraîcheur des données, pour la page publique /etat.
+ *
+ * Une seule requête, agrégée côté base, plutôt que de recharger le programme
+ * complet : la page est régénérée toutes les minutes. Les maxima sont bornés
+ * aux courses des sept derniers jours — l'import ne réécrit que J-1, J et J+1,
+ * et un balayage de tout l'historique n'apporterait rien de plus qu'un import
+ * en panne depuis plus d'une semaine, que la page annonce de toute façon.
+ *
+ *  - dernier import : `races.data_cutoff_at`, posé à chaque écriture d'une
+ *    course par l'import PMU ;
+ *  - dernières cotes : `races.odds_refreshed_at`, posé par la boucle live et
+ *    par le bouton « Relancer l'analyse IA » ;
+ *  - couverture : courses du jour (heure de Paris) dont au moins un partant a
+ *    une cote — une cote absente est NULL, jamais fabriquée ;
+ *  - dernier rapport du suivi de performance.
+ *
+ * Sans base, `mode: "demonstration"` ; base injoignable, `mode: "indisponible"`
+ * — la page le dit au lieu d'afficher des zéros trompeurs.
+ */
+export type EtatDonnees =
+  | { mode: "demonstration" }
+  | { mode: "indisponible" }
+  | {
+      mode: "connecte";
+      /** Instant de la lecture, horloge de la base : référence des âges affichés. */
+      luA: string;
+      dateDuJour: string;
+      dernierImport: string | null;
+      dernieresCotes: string | null;
+      coursesDuJour: number;
+      coursesDuJourAvecCotes: number;
+      dernierRapportPerformance: string | null;
+    };
+
+export async function getEtatDonnees(): Promise<EtatDonnees> {
+  if (!hasDatabase()) return { mode: "demonstration" };
+  const aujourdhui = dateForRelativeDay("today")!;
+  const iso = (colonne: string) => `to_char(${colonne} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')`;
+  try {
+    const rows = (await getSql().query(
+      `select
+         ${iso("now()")} as read_at,
+         ${iso("max(r.data_cutoff_at)")} as imported_at,
+         ${iso("max(r.odds_refreshed_at)")} as odds_refreshed_at,
+         count(*) filter (where r.race_date = $1::date)::int as races_today,
+         count(*) filter (
+           where r.race_date = $1::date
+             and exists (select 1 from entries e where e.race_id = r.id and e.odds is not null)
+         )::int as races_today_with_odds,
+         (select ${iso("max(generated_at)")} from track_record_reports) as report_at
+       from races r
+       where r.race_date >= $1::date - 7`,
+      [aujourdhui],
+    )) as Array<{
+      read_at: string;
+      imported_at: string | null;
+      odds_refreshed_at: string | null;
+      races_today: number;
+      races_today_with_odds: number;
+      report_at: string | null;
+    }>;
+    const row = rows[0];
+    return {
+      mode: "connecte",
+      luA: row?.read_at ?? new Date().toISOString(),
+      dateDuJour: aujourdhui,
+      dernierImport: row?.imported_at ?? null,
+      dernieresCotes: row?.odds_refreshed_at ?? null,
+      coursesDuJour: row?.races_today ?? 0,
+      coursesDuJourAvecCotes: row?.races_today_with_odds ?? 0,
+      dernierRapportPerformance: row?.report_at ?? null,
+    };
+  } catch (cause) {
+    console.error("État du service indisponible", cause);
+    return { mode: "indisponible" };
+  }
+}

@@ -6,6 +6,11 @@ dist
 coverage
 *.tsbuildinfo
 
+# Tests de bout en bout (Playwright)
+/test-results/
+/playwright-report/
+/blob-report/
+
 # Environnement
 .env
 .env*

@@ -17,14 +17,36 @@ The technical stack is based on open source packages. The product can still be c
 
 ```bash
 npm install
+cp .env.example .env.local   # optional: every variable is documented there, all commented out
 npm run dev
 ```
 
-Tests (Node's built-in `node:test` run through `tsx`, no framework — they cover the pure helpers of `scripts/lib/` and `src/lib/`: profiles, market reading, strategies, live cadence, payouts):
+No variable is required locally: without `DATABASE_URL` the app runs in demo mode on fictitious races. `.env.example` lists every environment variable read by `src/` and `scripts/`; uncomment only the ones you need (an empty value is not the same as an absent one).
+
+Tests (Node's built-in `node:test` run through `tsx`, no framework — they cover the pure helpers of `scripts/lib/` and `src/lib/`: profiles, market reading, strategies, live cadence, payouts, rate limiting):
 
 ```bash
 npm test
 ```
+
+Coverage of `src/lib/` (Node's experimental built-in coverage, no extra dependency):
+
+```bash
+npm run test:coverage
+```
+
+Target: **80 % of lines on `src/lib/`**. It is not enforced in CI yet (about 66 % today); only files imported by at least one test appear in the report, so an untested module lowers nothing until it gets its first test.
+
+End-to-end tests (Playwright, Chromium only, in `e2e/` — separate from `npm test`). They build and start the production server on port 3100 in demo mode (or reuse one already running there), walk the main flows (programme → race → table tabs, `/pronostics`, content pages, push-alerts toggle) and run an axe-core accessibility audit that fails on serious or critical violations:
+
+```bash
+npx playwright install chromium   # once
+npm run test:e2e
+```
+
+CI runs them in a separate `e2e` job after the main `verify` job and uploads the HTML report when they fail.
+
+Server errors are reported without any third-party service: `src/instrumentation.ts` (`onRequestError`) writes one JSON line per error (`"kind":"request-error"`, route, method, path without query string, digest, truncated message) to the runtime logs.
 
 ## Database
 
