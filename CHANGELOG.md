@@ -11,6 +11,7 @@ qu'un visiteur peut constater, vit dans `src/lib/changelog.ts` et s'affiche sur
 ## [Non publié]
 
 ### Ajouté
+- Page course : carré magique 16 partants (`src/lib/magic-square.ts`, `src/components/course/magic-square.tsx`). Carré d'ordre 4 bâti sur deux carrés latins diagonaux orthogonaux : ses 16 alignements (lignes, colonnes, diagonales, quarts, centre, coins) totalisent 34 et prennent chacun un cheval par quart du classement. Chances exactes Plackett-Luce (gagnant, 2 sur 4, Quarté+ désordre) ; meilleure lecture au 2 sur 4.
 - /pronostics : navigation latérale par réunion, filtres, recherche, tri, vue compacte, sélecteur de jour, raccourcis clavier (`src/components/pronostics/`, `src/lib/pronostics-filters.ts`).
 - /direct : courses des 30 prochaines minutes (`src/lib/direct.ts`).
 - Page course : sommaire, navigation entre courses, comparateur, graphique de toutes les cotes, nuage IA × marché, différences depuis la dernière visite, lexique au survol, partage du ticket en image, image Open Graph par course, cartes mobiles, glissement entre courses, éclair des cotes, comparaison H-60 → départ.
@@ -27,6 +28,9 @@ qu'un visiteur peut constater, vit dans `src/lib/changelog.ts` et s'affiche sur
 - Remontée structurée des erreurs serveur (`src/instrumentation.ts`, `onRequestError`) : une ligne JSON sans chaîne de requête ni en-têtes.
 - `.env.example` documentant chaque variable d'environnement.
 - Tests unitaires de `src/lib/rate-limit.ts`.
+
+### Corrigé
+- Page course sur mobile : la grille principale n'avait pas de colonne explicite sous 1280 px et s'élargissait à son contenu (page de ~600 px sur un écran de 375 px).
 
 ## 2026-10-04
 

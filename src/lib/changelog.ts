@@ -22,6 +22,22 @@ export type EntreeChangelog = {
 
 export const CHANGELOG: readonly EntreeChangelog[] = [
   {
+    date: "2026-10-05",
+    titre: "Carré magique 16 partants sur chaque course",
+    changements: [
+      {
+        categorie: "Ajouté",
+        elements: [
+          "Page course : carré magique 16 partants. Chaque ligne, colonne, diagonale et carré de la grille réunit un cheval de chaque quart de notre classement (rangs 1-4, 5-8, 9-12, 13-16), avec sa chance au 2 sur 4, au Quarté+ désordre et de contenir le gagnant.",
+        ],
+      },
+      {
+        categorie: "Corrigé",
+        elements: ["Page course sur mobile : la page ne déborde plus de l'écran."],
+      },
+    ],
+  },
+  {
     date: "2026-10-04",
     titre: "Navigation rapide, page Direct, alertes enrichies et application installable",
     changements: [

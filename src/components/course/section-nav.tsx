@@ -14,6 +14,7 @@ import { useEffect, useRef, useState } from "react";
 export const COURSE_SECTIONS = [
   { id: "verdict", label: "Verdict" },
   { id: "partants", label: "Partants" },
+  { id: "carre-magique", label: "Carré magique" },
   { id: "fiche-cheval", label: "Fiche cheval" },
   { id: "tickets", label: "Tickets" },
   { id: "marche", label: "Marché" },

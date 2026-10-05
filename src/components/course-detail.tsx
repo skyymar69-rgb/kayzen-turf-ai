@@ -12,6 +12,7 @@ import { HorseCompare } from "@/components/course/horse-compare";
 import { HorseSheet } from "@/components/course/horse-sheet";
 import { OddsFlashProvider, SwipeNavigation, TabCountdown } from "@/components/course/live-extras";
 import type { RelaunchResult } from "@/components/course/live-status";
+import { MagicSquarePanel } from "@/components/course/magic-square";
 import { MarketPanel } from "@/components/course/market-panel";
 import { NonRunners } from "@/components/course/non-runners";
 import { SectionNavBar, SectionNavRail } from "@/components/course/section-nav";
@@ -46,7 +47,7 @@ import type { RaceAnalysis } from "@/lib/types";
  *   2. verdict : une phrase pour débutant, puis la lecture et les tuiles ;
  *   3. notre sélection et un ticket par stratégie ;
  *   4. le tableau unique (Classement IA, IA × Marché, MVT, Cotes & Marché,
- *      Forme), puis le comparateur ;
+ *      Forme), puis le comparateur et le carré magique 16 partants ;
  *   5. la fiche du cheval sélectionné ; à côté, son marché, les cotes de tous
  *      les partants et la simulation ;
  *   6. les tickets : copie au format PMU, partage en image, outils repliés.
@@ -78,6 +79,12 @@ export function CourseDetail({ race, history = EMPTY_HISTORY, signals = [], dayI
   const recommendations = useMemo(() => buildBetRecommendations(race.horses, race.betTypes, ctx), [race.horses, race.betTypes, ctx]);
   const xTickets = useMemo(() => buildXTickets(race.horses, race.betTypes, ctx), [race.horses, race.betTypes, ctx]);
   const postRace = useMemo(() => buildPostRaceAnalysis(race), [race]);
+  const magicRunners = useMemo(() => {
+    const out = new Set(vm.nonRunners.map((r) => r.horse.number));
+    return selection.field
+      .filter((s) => !out.has(s.horse.number))
+      .map((s) => ({ number: s.horse.number, name: s.horse.horse, winProbability: s.horse.winProbability }));
+  }, [selection, vm.nonRunners]);
 
   const [selectedNumber, setSelectedNumber] = useState<number | null>(() => vm.rows[0]?.horse.number ?? null);
   const selectedRow = vm.rows.find((r) => r.horse.number === selectedNumber) ?? vm.rows[0] ?? null;
@@ -200,7 +207,7 @@ export function CourseDetail({ race, history = EMPTY_HISTORY, signals = [], dayI
               <VerdictBanner onSelect={select} selectedNumber={selected} signals={signalMap} summary={summary} vm={vm} />
             </div>
 
-            <div className="mt-0 grid gap-x-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+            <div className="mt-0 grid grid-cols-[minmax(0,1fr)] gap-x-4 xl:grid-cols-[minmax(0,1fr)_360px]">
               <div className="min-w-0">
                 <RaceSelectionPanel onSelect={select} selectedNumber={selected} selection={selection} signals={signalMap} />
                 <FieldTable
@@ -213,6 +220,9 @@ export function CourseDetail({ race, history = EMPTY_HISTORY, signals = [], dayI
                   vm={vm}
                 />
                 <HorseCompare compare={compare} onClear={() => setCompare([])} onRemove={onToggleCompare} race={race} rows={vm.rows} />
+                <div className={SECTION_SCROLL} id="carre-magique">
+                  <MagicSquarePanel onSelect={select} runners={magicRunners} selectedNumber={selected} />
+                </div>
                 <div className={SECTION_SCROLL} id="fiche-cheval">
                   <HorseSheet
                     compareFull={compare.length >= COMPARE_MAX}
