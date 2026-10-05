@@ -84,19 +84,19 @@ export function MagicSquarePanel({
                         <button
                           aria-label={`N° ${cell.runner.number} ${properName(cell.runner.name)}, rang ${cell.rank}`}
                           className={`relative flex aspect-square flex-col items-center justify-center rounded-xl border-2 p-1 text-center transition ${QUARTER_STYLES[cell.quarter]} ${
-                            on ? "ring-2 ring-cta ring-offset-2 ring-offset-surface" : "opacity-70 hover:opacity-100"
+                            on ? "ring-2 ring-cta ring-offset-2 ring-offset-surface" : "hover:border-cta/60"
                           } ${picked ? "outline outline-2 outline-fg" : ""}`}
                           onClick={() => onSelect(cell.runner!.number)}
                           type="button"
                         >
-                          <span className="absolute left-1.5 top-1 font-mono text-[9px] font-bold opacity-70">{cell.rank}</span>
+                          <span className="absolute left-1.5 top-1 font-mono text-[9px] font-bold">{cell.rank}</span>
                           <span className="font-mono text-2xl font-bold leading-none sm:text-3xl">{cell.runner.number}</span>
                           <span className="mt-1 w-full truncate text-[9px] font-medium leading-tight sm:text-[10px]">{properName(cell.runner.name)}</span>
                         </button>
                       ) : (
                         <div
                           aria-label={`Rang ${cell.rank} — pas de partant`}
-                          className={`flex aspect-square items-center justify-center rounded-xl border-2 border-dashed border-border text-xs text-muted/60 ${on ? "ring-2 ring-cta/50 ring-offset-2 ring-offset-surface" : ""}`}
+                          className={`flex aspect-square items-center justify-center rounded-xl border-2 border-dashed border-border text-xs text-muted ${on ? "ring-2 ring-cta/50 ring-offset-2 ring-offset-surface" : ""}`}
                         >
                           {cell.rank}
                         </div>
