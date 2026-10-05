@@ -102,12 +102,15 @@ export type MagicSquare = {
  * partants. Calcul exact plutôt que simulé : un Quarté désordre se joue
  * autour de 0,01 %, là où une simulation ne compterait qu'une poignée de
  * tirages.
+ *
+ * Null quand moins de `depth` chevaux ont une probabilité positive : les
+ * places restantes n'auraient aucun occupant possible.
  */
-export function topOverlapDistribution(pWin: number[], groups: number[][], depth = 4): number[][] {
+export function topOverlapDistribution(pWin: number[], groups: number[][], depth = 4): number[][] | null {
   const out = groups.map((g) => new Array<number>(g.length + 1).fill(0));
   const total = pWin.reduce((a, b) => a + b, 0);
   const d = Math.min(depth, pWin.length);
-  if (total <= 0 || d === 0) return out;
+  if (total <= 0 || d === 0 || pWin.filter((x) => x > 0).length < d) return null;
   const p = pWin.map((x) => x / total);
 
   // member[i] = groupes qui contiennent le cheval i.

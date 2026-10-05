@@ -33,7 +33,13 @@ export const CHANGELOG: readonly EntreeChangelog[] = [
       },
       {
         categorie: "Corrigé",
-        elements: ["Page course sur mobile : la page ne déborde plus de l'écran."],
+        elements: [
+          "Page course sur mobile : la page ne déborde plus de l'écran.",
+          "Non-partants : ils sont désormais retirés aussi dans les petits pelotons.",
+          "Course sans cotes publiées : les probabilités affichées sont bien celles de l'IA seule.",
+          "Course introuvable : la page répond enfin une vraie erreur 404.",
+          "Carré magique : mieux annoncé aux lecteurs d'écran.",
+        ],
       },
     ],
   },

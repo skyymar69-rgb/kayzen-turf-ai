@@ -36,9 +36,11 @@ export function signedPts(value: number | null | undefined, digits = 1): string 
   return `${value > 0 ? "+" : value < 0 ? "−" : ""}${Math.abs(value).toFixed(digits).replace(".", ",")} pt`;
 }
 
+const INTEGER_FR = new Intl.NumberFormat("fr-FR");
+
 /** ROI historique d'un signal, présenté avec son volume — jamais seul. */
 export function roiLine(roi: number, bets: number): string {
-  return `ROI ${signedPct(roi * 100)} sur ${new Intl.NumberFormat("fr-FR").format(bets)} paris`;
+  return `ROI ${signedPct(roi * 100)} sur ${INTEGER_FR.format(bets)} paris`;
 }
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {

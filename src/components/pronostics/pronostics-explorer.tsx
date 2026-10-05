@@ -107,7 +107,13 @@ export function PronosticsExplorer({ races, day, serverNow }: Props) {
 
   // Lien partagé (/pronostics#R1C3) et changements d'ancre ultérieurs.
   const onHash = useEffectEvent((smooth: boolean) => {
-    const anchor = decodeURIComponent(window.location.hash.slice(1));
+    // Une ancre mal encodée (#%E0) fait lever decodeURIComponent : on l'ignore.
+    let anchor = "";
+    try {
+      anchor = decodeURIComponent(window.location.hash.slice(1));
+    } catch {
+      return;
+    }
     if (anchor) scrollToRace(anchor, smooth);
   });
   useEffect(() => {

@@ -52,13 +52,21 @@ export function refreshIntervalSeconds(minutesToStart: number): number {
 }
 
 /**
- * Numéros à retirer : présents en base mais absents des partants PMU. Une
- * réponse tronquée (moins de 70 % des partants connus) n'est pas une vague de
- * forfaits : on ne retire rien et on laisse le passage suivant trancher.
+ * Numéros à retirer : présents en base mais absents des partants PMU.
+ *
+ * `listedNumbers` est la liste PMU complète, non-partants compris. C'est sur
+ * elle, et non sur les seuls partants, qu'on juge une réponse tronquée (moins
+ * de 70 % des chevaux connus) : comparer les partants seuls prenait les
+ * forfaits d'un petit peloton pour une troncature — 6 chevaux dont 2 retirés
+ * donnaient 4 < 4,2, et rien n'était jamais retiré. Sur une réponse tronquée,
+ * seuls les non-partants déclarés comme tels sont retirés.
  */
-export function planScratches(presentNumbers: number[], runningNumbers: number[]): number[] {
-  if (runningNumbers.length < presentNumbers.length * 0.7) return [];
+export function planScratches(presentNumbers: number[], runningNumbers: number[], listedNumbers: number[] = runningNumbers): number[] {
   const running = new Set(runningNumbers);
+  if (listedNumbers.length < presentNumbers.length * 0.7) {
+    const declared = new Set(listedNumbers.filter((n) => !running.has(n)));
+    return presentNumbers.filter((n) => declared.has(n));
+  }
   return presentNumbers.filter((n) => !running.has(n));
 }
 
@@ -88,9 +96,12 @@ export async function refreshRace(
   // des cotes « relevées à l'instant » qui n'ont pas été relues.
   const release = () => sql.query(`update races set odds_refreshed_at = $2 where id = $1`, [raceId, locked[0]!.previous]);
   let running: PmuParticipant[];
+  let listedNumbers: number[];
   try {
     const payload = await fetchPmuJson<{ participants?: PmuParticipant[] }>(participantsUrl);
-    running = (payload?.participants ?? []).filter((p) => !p.statut || p.statut === "PARTANT");
+    const listed = payload?.participants ?? [];
+    listedNumbers = listed.map((p) => Number(p.numPmu));
+    running = listed.filter((p) => !p.statut || p.statut === "PARTANT");
   } catch (error) {
     await release();
     throw error;
@@ -99,6 +110,19 @@ export async function refreshRace(
     await release();
     return { status: "skipped", reason: "no-runners" };
   }
+
+  // Une étape SQL qui échoue après la lecture PMU rend aussi le verrou : sinon
+  // l'en-tête annoncerait des cotes « relevées à l'instant » jamais écrites.
+  try {
+    return await applyRefresh(raceId, running, listedNumbers, minutesToStart);
+  } catch (error) {
+    await release().catch(() => undefined);
+    throw error;
+  }
+}
+
+async function applyRefresh(raceId: string, running: PmuParticipant[], listedNumbers: number[], minutesToStart: number): Promise<RefreshOutcome> {
+  const sql = getSql();
 
   // Les pools n'existent qu'une fois les paris ouverts : leur absence est normale.
   let pools = new Map<number, { win: number | null; place: number | null; quinte: number | null }>();
@@ -124,7 +148,7 @@ export async function refreshRace(
   // déjà le peloton réduit.
   const runningNumbers = running.map((p) => Number(p.numPmu));
   const present = (await sql.query(`select number from entries where race_id = $1`, [raceId])) as Array<{ number: number }>;
-  const toRemove = planScratches(present.map((r) => Number(r.number)), runningNumbers);
+  const toRemove = planScratches(present.map((r) => Number(r.number)), runningNumbers, listedNumbers);
   let scratched: number[] = [];
   let scratchedHorseIds: string[] = [];
   if (toRemove.length > 0) {

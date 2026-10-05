@@ -69,9 +69,14 @@ type CourseDetailProps = {
 };
 
 const EMPTY_HISTORY: MarketHistory = { odds: {}, pools: [] };
+// Valeurs par défaut stables : un `[]` littéral en paramètre changeait à chaque
+// rendu et relançait les useMemo qui en dépendent.
+const NO_SIGNALS: SignalRecord[] = [];
+const NO_RACES: RaceIndexItem[] = [];
+const NO_PAYOUTS: Payout[] = [];
 const SECTION_SCROLL = "scroll-mt-32 lg:scroll-mt-20";
 
-export function CourseDetail({ race, history = EMPTY_HISTORY, signals = [], dayIndex = [], payouts = [], frozen }: CourseDetailProps) {
+export function CourseDetail({ race, history = EMPTY_HISTORY, signals = NO_SIGNALS, dayIndex = NO_RACES, payouts = NO_PAYOUTS, frozen }: CourseDetailProps) {
   const vm = useMemo(() => buildCourseViewModel(race, history), [race, history]);
   const selection = useMemo(() => buildSelection(race.horses), [race.horses]);
   const signalMap = useMemo(() => new Map(signals.map((s) => [s.key, s])), [signals]);

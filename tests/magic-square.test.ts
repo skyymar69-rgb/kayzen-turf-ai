@@ -71,13 +71,15 @@ describe("carré magique 16 partants", () => {
   it("recoupement exact avec le top 4 : distribution complète, conforme à la simulation Plackett-Luce", () => {
     const p = field(8).map((h) => h.winProbability);
     const groups = [[0, 1, 2, 3], [4, 5, 6, 7], [0, 7]];
-    const dist = topOverlapDistribution(p, groups);
+    const dist = topOverlapDistribution(p, groups)!;
     for (const d of dist) assert.ok(Math.abs(d.reduce((a, b) => a + b, 0) - 1) < 1e-9);
     // Les deux groupes complémentaires se partagent les 4 places : P(k) de l'un = P(4 − k) de l'autre.
     for (let k = 0; k <= 4; k++) assert.ok(Math.abs(dist[0][k] - dist[1][4 - k]) < 1e-9);
     const simulated = ticketProbability(simulateTopOrders(p, 4, 40000), groups[0], 4, false);
     assert.ok(Math.abs(dist[0][4] * 100 - simulated) < 0.6, `${dist[0][4] * 100} vs ${simulated}`);
     // Quatre partants : les quatre sont forcément dans le top 4.
-    assert.ok(Math.abs(topOverlapDistribution([10, 20, 30, 40], [[0, 1, 2, 3]])[0][4] - 1) < 1e-9);
+    assert.ok(Math.abs(topOverlapDistribution([10, 20, 30, 40], [[0, 1, 2, 3]])![0][4] - 1) < 1e-9);
+    // Moins de quatre chevaux à probabilité positive : aucune chance calculable.
+    assert.equal(topOverlapDistribution([50, 50, 0, 0, 0], [[0, 1, 2, 3]]), null);
   });
 });

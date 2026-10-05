@@ -26,9 +26,9 @@ export function useScrollMemory(day: string) {
       }
     }
 
-    let scheduled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
     function save() {
-      scheduled = false;
+      timer = null;
       try {
         window.sessionStorage.setItem(key, JSON.stringify({ y: Math.round(window.scrollY), at: Date.now() }));
       } catch {
@@ -36,12 +36,15 @@ export function useScrollMemory(day: string) {
       }
     }
     function onScroll() {
-      if (scheduled) return;
-      scheduled = true;
-      setTimeout(save, 250);
+      if (timer) return;
+      timer = setTimeout(save, 250);
     }
 
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      // Une sauvegarde en attente écrirait la position de la page suivante.
+      if (timer) clearTimeout(timer);
+    };
   }, [day]);
 }

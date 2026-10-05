@@ -12,6 +12,15 @@ describe("planScratches", () => {
     assert.deepEqual(planScratches([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], [1, 2, 3, 4, 5, 6]), []);
   });
 
+  it("petit peloton : les non-partants déclarés ne passent plus pour une réponse tronquée", () => {
+    // 6 chevaux, 2 non-partants : 4 partants < 70 % de 6, mais la liste PMU est complète.
+    assert.deepEqual(planScratches([1, 2, 3, 4, 5, 6], [1, 2, 4, 6], [1, 2, 3, 4, 5, 6]), [3, 5]);
+  });
+
+  it("réponse tronquée : seuls les non-partants déclarés sont retirés", () => {
+    assert.deepEqual(planScratches([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], [1, 2, 3], [1, 2, 3, 4]), [4]);
+  });
+
   it("ne retire rien quand tout le monde court", () => {
     assert.deepEqual(planScratches([1, 2, 3], [3, 2, 1]), []);
   });

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Banknote, CircleSlash, Compass, Eye, Gem, ShieldCheck } from "lucide-react";
 import type { CourseViewModel, HorseRow } from "@/lib/course-view-model";
 import { READING_LABELS, READING_RULES } from "@/lib/profiles";
@@ -125,7 +126,7 @@ export function VerdictBanner({
         {provenProfitable
           ? "Le rendement de chaque signal est mesuré sur notre historique, net du prélèvement PMU"
           : "Sur notre historique, aucun signal n'est rentable de façon établie une fois le prélèvement PMU déduit"}{" "}
-        (<a className="font-semibold underline" href="/track-record">voir le suivi</a>).
+        (<Link className="font-semibold underline" href="/track-record">voir le suivi</Link>).
         Jouer comporte des risques : endettement, dépendance. Appelez le 09 74 75 13 13 (Joueurs Info Service, appel non surtaxé).
       </p>
     </Card>

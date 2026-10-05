@@ -82,7 +82,8 @@ export function MagicSquarePanel({
                     <div className="contents" key={cell.rank}>
                       {cell.runner ? (
                         <button
-                          aria-label={`N° ${cell.runner.number} ${properName(cell.runner.name)}, rang ${cell.rank}`}
+                          aria-label={`N° ${cell.runner.number} ${properName(cell.runner.name)}, rang ${cell.rank}${on ? `, dans ${active.label.toLowerCase()}` : ""}`}
+                          aria-pressed={picked}
                           className={`relative flex aspect-square flex-col items-center justify-center rounded-xl border-2 p-1 text-center transition ${QUARTER_STYLES[cell.quarter]} ${
                             on ? "ring-2 ring-cta ring-offset-2 ring-offset-surface" : "hover:border-cta/60"
                           } ${picked ? "outline outline-2 outline-fg" : ""}`}
@@ -96,6 +97,7 @@ export function MagicSquarePanel({
                       ) : (
                         <div
                           aria-label={`Rang ${cell.rank} — pas de partant`}
+                          role="img"
                           className={`flex aspect-square items-center justify-center rounded-xl border-2 border-dashed border-border text-xs text-muted ${on ? "ring-2 ring-cta/50 ring-offset-2 ring-offset-surface" : ""}`}
                         >
                           {cell.rank}
@@ -140,7 +142,12 @@ export function MagicSquarePanel({
                         >
                           <span className="w-32 shrink-0 truncate font-semibold">
                             {line.label}
-                            {square.best?.id === line.id && <span aria-label="meilleure lecture" className="ml-1 text-cta">★</span>}
+                            {square.best?.id === line.id && (
+                              <>
+                                <span aria-hidden="true" className="ml-1 text-cta">★</span>
+                                <span className="sr-only"> (meilleure lecture)</span>
+                              </>
+                            )}
                           </span>
                           <span className="min-w-0 flex-1 truncate font-mono font-bold">{line.numbers.length ? line.numbers.join("-") : "—"}</span>
                           <span className="shrink-0 font-mono text-[11px] text-muted" title="Chance au 2 sur 4">{chance(line.twoInFourChance)}</span>

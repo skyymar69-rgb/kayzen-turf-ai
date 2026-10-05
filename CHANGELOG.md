@@ -30,6 +30,12 @@ qu'un visiteur peut constater, vit dans `src/lib/changelog.ts` et s'affiche sur
 - Tests unitaires de `src/lib/rate-limit.ts`.
 
 ### Corrigé
+- Non-partants jamais retirés dans les petits pelotons : la garde « réponse tronquée » de `planScratches` comparait les seuls partants à 70 % des chevaux connus (6 chevaux dont 2 retirés : 4 < 4,2). Elle juge désormais la liste PMU complète, et retire toujours les non-partants déclarés.
+- Relance des cotes : le verrou `odds_refreshed_at` est rendu si une étape SQL échoue après la lecture PMU.
+- Course sans cotes publiées : probabilités de l'IA seule au lieu d'un mélange à 90 % avec une répartition uniforme (30 % devenait 11,6 % sur 10 partants).
+- `src/app/loading.tsx` supprimé : deux `<main>` dans le HTML servi et statut 200 sur une course introuvable (le `notFound()` arrivait après le début du flux).
+- Carré magique : cases vides et meilleure lecture annoncées aux lecteurs d'écran, case du cheval affiché en `aria-pressed`, « — » au lieu de « 0,00 % » quand moins de 4 chevaux ont une probabilité.
+- Relevés react-doctor : valeurs par défaut stables dans la page course, lien interne via `next/link`, minuteur de la mémoire de défilement nettoyé, ancre mal encodée ignorée sur /pronostics, formateurs `Intl` créés une fois.
 - Page course sur mobile : la grille principale n'avait pas de colonne explicite sous 1280 px et s'élargissait à son contenu (page de ~600 px sur un écran de 375 px).
 
 ## 2026-10-04

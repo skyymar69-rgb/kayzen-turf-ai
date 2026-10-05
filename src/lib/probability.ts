@@ -345,7 +345,11 @@ export function calibrateField(horses: HorsePrediction[]): CalibratedHorse[] {
   const model = fundamental.every((p) => Number.isFinite(p) && p > 0)
     ? fundamental.map((p) => p / 100)
     : modelProbabilities(horses.map((h) => h.kzScore));
-  const pWin = blendProbabilities(market, model);
+  // Aucune cote publiée : le « marché » n'est qu'une répartition uniforme, et
+  // le mélanger (à 90 %) écrasait l'IA — 30 % devenait 11,6 % sur 10 partants
+  // — alors que la page annonce un classement « sur l'IA seule ».
+  const noMarket = horses.every((h) => !(Number.isFinite(h.odds) && h.odds > 1));
+  const pWin = noMarket ? model : blendProbabilities(market, model);
 
   const topK = monteCarloTopK(pWin, [3, 5]);
   const pTop3 = topK.get(3)!;

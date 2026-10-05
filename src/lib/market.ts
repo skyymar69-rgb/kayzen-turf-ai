@@ -43,8 +43,11 @@ export type Movement = {
   referenceAt: string | null;
 };
 
+// Créé une fois : parisDay est appelé pour chaque relevé de cote de chaque cheval.
+const PARIS_DAY = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris" });
+
 function parisDay(iso: string) {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris" }).format(new Date(iso));
+  return PARIS_DAY.format(new Date(iso));
 }
 
 export function oddsMovement(points: OddsPoint[] | undefined, currentOdds: number, raceDate: string): Movement {

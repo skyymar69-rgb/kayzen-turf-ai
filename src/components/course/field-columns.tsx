@@ -11,6 +11,8 @@ import { MusicSparkline } from "@/components/course/music-sparkline";
 import { pct, signedPct, signedPts } from "@/components/course/shared";
 import { Term } from "@/components/course/term";
 
+const EUROS = new Intl.NumberFormat("fr-FR");
+
 /**
  * Colonnes, légendes et notes de chaque lecture du tableau des partants.
  * Un en-tête qui porte un `term` renvoie à sa définition du lexique.
@@ -131,7 +133,7 @@ export const COLUMNS: Record<Tab, (race: RaceAnalysis) => Column[]> = {
   Forme: (race) => [
     { label: "Musique", render: (r) => <MusicSparkline music={r.horse.music} /> },
     { label: "Âge", align: "right", render: (r) => `${r.horse.sex?.slice(0, 1) ?? ""}${r.horse.age ?? "—"}` },
-    { label: "Gains", align: "right", render: (r) => (r.horse.earnings ? `${new Intl.NumberFormat("fr-FR").format(Math.round(r.horse.earnings))} €` : "—") },
+    { label: "Gains", align: "right", render: (r) => (r.horse.earnings ? `${EUROS.format(Math.round(r.horse.earnings))} €` : "—") },
     { label: race.discipline === "Trot" ? "Driver" : "Jockey", render: (r) => <span className="text-xs text-muted">{r.horse.jockey} · {rate(r.horse.jockeyWins, r.horse.jockeyRuns)}</span> },
     { label: "Entraîneur", render: (r) => <span className="text-xs text-muted">{r.horse.trainer} · {rate(r.horse.trainerWins, r.horse.trainerRuns)}</span> },
   ],
