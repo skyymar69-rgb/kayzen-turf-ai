@@ -29,7 +29,7 @@ import { FUNDAMENTAL_TRAIN_CUTOFF, FUNDAMENTAL_VERSION, fundamentalProbabilities
 import { MODEL_VERSION, MODEL_WEIGHT, blendProbabilities, devig, monteCarloTopK } from "@/lib/probability";
 import { PROFILES_VERSION, PROFILE_LABELS, classifyField, type Profile } from "@/lib/profiles";
 import { decisionOdds as loadDecisionOdds, morningOdds, officialPayouts, poolsUntil } from "./lib/backtest-data";
-import { confrontationKeys, mostBacked } from "./lib/backtest-signals";
+import { confrontationKeys, mostBacked, surpriseNumbers } from "./lib/backtest-signals";
 import { loadDataset, loadLocalEnv, type DatasetRace } from "./lib/dataset";
 import { dailySeries, quantile, summarize, type Bet } from "./lib/signal-stats";
 
@@ -56,6 +56,8 @@ const SIGNALS: SignalDef[] = [
   { key: "argent-entrant-sg", label: "Argent entrant", betType: "SG", description: "Simple gagnant sur chaque cheval qui gagne 2 points de part des mises en 15 minutes" },
   { key: "argent-sortant-sg", label: "Argent sortant", betType: "SG", description: "Contrôle : simple gagnant sur chaque cheval qui perd 2 points de part des mises en 15 minutes" },
   { key: "smart-money-sg", label: "Smart money", betType: "SG", description: "Simple gagnant quand l'argent entre ou accélère, que la cote baisse et que l'IA est favorable ou d'accord" },
+  { key: "surprise-sg", label: "Surprise IA", betType: "SG", description: "Simple gagnant sur chaque alerte forte ou possible du score de surprise (trois au plus par course)" },
+  { key: "surprise-sp", label: "Surprise IA", betType: "SP", description: "Simple placé sur chaque alerte forte ou possible du score de surprise (trois au plus par course)" },
   { key: "favori-marche-sg", label: "Favori du marché", betType: "SG", description: "Référence : simple gagnant sur la plus petite cote" },
   { key: "tous-sg", label: "Tous les partants", betType: "SG", description: "Référence : 1 € gagnant sur chaque partant — le coût du prélèvement" },
 ];
@@ -300,6 +302,20 @@ async function main() {
       });
       keys.forEach((key) => place(key, h.number));
     });
+    const surprises = surpriseNumbers(
+      race.field.map((h, i) => ({
+        ...h,
+        odds: odds[i],
+        market: market[i] * 100,
+        ai: fundamental[i] * 100,
+        morning: morning.get(`${race.raceId}|${h.number}`),
+        pools: pools.get(race.raceId) ?? [],
+      })),
+    );
+    for (const n of surprises) {
+      place("surprise-sg", n);
+      place("surprise-sp", n);
+    }
     const favorite = race.field.map((h, i) => ({ n: h.number, o: odds[i] })).filter((x) => x.o > 1).sort((a, b) => a.o - b.o)[0];
     if (favorite) place("favori-marche-sg", favorite.n);
     for (const h of race.field) if (odds[byNumber.get(h.number)!] > 1) place("tous-sg", h.number);

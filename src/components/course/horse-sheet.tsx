@@ -11,6 +11,7 @@ import { PROFILE_RULES } from "@/lib/profiles";
 import type { RaceAnalysis } from "@/lib/types";
 import { PastRuns } from "@/components/course/past-runs";
 import { Card, Eyebrow, ProfileBadge, pct, signedPts } from "@/components/course/shared";
+import { ScoreBreakdown, ScoreCell, SurpriseBadge } from "@/components/course/surprise-cells";
 
 /**
  * FICHE CHEVAL — « pourquoi l'IA l'aime, ou pas ».
@@ -132,6 +133,28 @@ export function HorseSheet({
           </p>
         </div>
       </div>
+
+      {!row.nonRunner && (
+        <div className="mt-5 rounded-xl border border-border bg-surface-sub p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-fg">
+              Score de surprise {row.surprise.alert && <SurpriseBadge alert={row.surprise.alert} />}
+            </p>
+            <ScoreCell surprise={row.surprise} />
+          </div>
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            <ScoreBreakdown surprise={row.surprise} />
+            <ul className="space-y-1 text-xs leading-5 text-fg">
+              {row.surprise.reasons.length ? (
+                row.surprise.reasons.slice(0, 4).map((r) => <li key={r}>· {r}</li>)
+              ) : (
+                <li className="text-muted">Aucun signal particulier.</li>
+              )}
+              {row.surprise.conclusion && <li className="pt-1 font-semibold text-accent-text">→ {row.surprise.conclusion}</li>}
+            </ul>
+          </div>
+        </div>
+      )}
 
       {sorted.length === 0 ? (
         <p className="mt-5 text-sm text-muted">Le modèle fondamental n&apos;est pas disponible pour cette discipline.</p>

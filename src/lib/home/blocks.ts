@@ -11,6 +11,7 @@ export const HOME_BLOCKS = [
   { id: "yesterday", label: "Bilan d'hier" },
   { id: "timeline", label: "Ligne du temps" },
   { id: "featured", label: "Course phare" },
+  { id: "surprises", label: "Top surprises du jour" },
   { id: "indicators", label: "Indicateurs et top courses" },
   { id: "profiles", label: "Profils et value bets" },
 ] as const;

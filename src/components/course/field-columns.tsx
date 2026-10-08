@@ -9,7 +9,9 @@ import type { RaceAnalysis } from "@/lib/types";
 import { AccelCell, FlowCell, MoveCell, SignalBadges, gapClass, rate } from "@/components/course/field-cells";
 import { MusicSparkline } from "@/components/course/music-sparkline";
 import { pct, signedPct, signedPts } from "@/components/course/shared";
+import { ScoreCell, SurpriseBadge } from "@/components/course/surprise-cells";
 import { Term } from "@/components/course/term";
+import { SURPRISE_MIN_RATIO } from "@/lib/surprise";
 
 const EUROS = new Intl.NumberFormat("fr-FR");
 
@@ -18,11 +20,12 @@ const EUROS = new Intl.NumberFormat("fr-FR");
  * Un en-tête qui porte un `term` renvoie à sa définition du lexique.
  */
 
-export const TABS = ["Classement IA", "Confrontation", "MVT", "Cotes & Marché", "Forme"] as const;
+export const TABS = ["Classement IA", "Analyse complète", "Confrontation", "MVT", "Cotes & Marché", "Forme"] as const;
 export type Tab = (typeof TABS)[number];
 
 export const TAB_LABELS: Record<Tab, string> = {
   "Classement IA": "Classement IA",
+  "Analyse complète": "Analyse complète",
   Confrontation: "IA × Marché",
   MVT: "MVT & argent",
   "Cotes & Marché": "Cotes & Marché",
@@ -37,6 +40,8 @@ export type Column = { label: string; title?: string; term?: LexiqueTerm; align?
 
 export const CAPTIONS: Record<Tab, string> = {
   "Classement IA": "Classement : probabilité de l'IA sans cote, probabilité du marché, écart et probabilité retenue",
+  "Analyse complète":
+    "Analyse complète : IA, marché, écart, mouvement de cote, argent, forme, score de surprise sur 100 et alerte",
   Confrontation: "Confrontation IA × marché : accord, favoris de l'IA, favoris du marché, et signaux d'argent",
   MVT: "Classement du marché, du cheval le plus joué au plus délaissé : mouvement de cote depuis le matin et part des mises",
   "Cotes & Marché": "Cotes, cote juste, espérance et parts des enjeux PMU",
@@ -49,6 +54,15 @@ export const FOOTNOTES: Record<Tab, ReactNode> = {
       IA : probabilité de victoire estimée sans jamais voir la cote (forme, gains, entourage). Marché : cote PMU,{" "}
       <Term name="Marge du PMU (devig)">marge du PMU retirée</Term>. Retenue : marché corrigé à 10 % par l&apos;IA — c&apos;est elle qui fait le
       classement.
+    </>
+  ),
+  "Analyse complète": (
+    <>
+      <Term name="Score de surprise">Score de surprise</Term> sur 100 : écart IA / marché (40 pts), rang de l&apos;IA (15), forme sur les cinq
+      dernières courses (15), entourage (10), marché du jour — MVT et argent (20). Alerte seulement si l&apos;IA voit le cheval au moins{" "}
+      {String(SURPRISE_MIN_RATIO).replace(".", ",")} fois au-dessus du marché : Top value sous 10/1, Surprise IA de 10/1 à 30/1, Tocard malin
+      au-delà (signal fort seulement), trois au plus par course. Le score décrit un désaccord avec le marché, il n&apos;annonce pas plus de
+      gagnants que la cote finale.
     </>
   ),
   Confrontation: (
@@ -87,6 +101,17 @@ export const COLUMNS: Record<Tab, (race: RaceAnalysis) => Column[]> = {
     { label: "Retenue", title: "Probabilité de victoire retenue pour le classement", align: "right", render: (r) => <span className="font-bold text-fg">{pct(r.horse.winProbability, 1)}</span> },
     { label: "Top 3", term: "Top 3", align: "right", render: (r) => pct(r.horse.top3Probability) },
     { label: "Cote", align: "right", render: (r) => <OddsCell number={r.horse.number} odds={r.horse.odds} /> },
+  ],
+  "Analyse complète": () => [
+    { label: "IA", title: "Probabilité de victoire selon l'IA, sans cote", align: "right", render: (r) => pct(r.ai, 0) },
+    { label: "Marché", title: "Probabilité implicite de la cote, marge retirée", align: "right", render: (r) => pct(r.market, 0) },
+    { label: "Écart", title: "IA moins marché, en points", align: "right", render: (r) => <span className={gapClass(r.gap)}>{signedPts(r.gap, 0)}</span> },
+    { label: "Score", term: "Score de surprise", align: "right", render: (r) => <ScoreCell surprise={r.surprise} /> },
+    { label: "Alerte", title: "Top value, Surprise IA, Tocard malin ou À surveiller", render: (r) => <SurpriseBadge alert={r.surprise.alert} /> },
+    { label: "Cote", align: "right", render: (r) => <OddsCell number={r.horse.number} odds={r.horse.odds} /> },
+    { label: "MVT", term: "MVT", render: (r) => <MoveCell row={r} /> },
+    { label: "Argent", title: "Variation de la part des mises sur 15 min", align: "right", render: (r) => <FlowCell row={r} /> },
+    { label: "Forme", title: "Huit dernières courses, la plus récente à droite", render: (r) => <MusicSparkline music={r.horse.music} /> },
   ],
   Confrontation: () => [
     { label: "IA", title: "Probabilité de victoire selon l'IA, sans cote", align: "right", render: (r) => pct(r.ai, 1) },

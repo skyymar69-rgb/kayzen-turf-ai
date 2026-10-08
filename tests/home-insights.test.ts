@@ -120,6 +120,6 @@ describe("blocs personnalisables", () => {
     assert.equal(parseHiddenBlocks("{pas du json").size, 0);
     assert.equal(parseHiddenBlocks(null).size, 0);
     assert.equal(parseHiddenBlocks('{"a":1}').size, 0);
-    assert.equal(HOME_BLOCKS.length, 7);
+    assert.equal(HOME_BLOCKS.length, 8);
   });
 });

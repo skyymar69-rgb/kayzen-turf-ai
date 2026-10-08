@@ -15,6 +15,7 @@ import { ProgrammeHero } from "./programme-hero";
 import { ProgrammeSection } from "./programme-section";
 import { RacePreview } from "./race-preview";
 import { RaceTimeline } from "./race-timeline";
+import { SurprisesOfDay } from "./surprises-of-day";
 import type { DashboardPerformance } from "./types";
 import { useHomeBlocks } from "./use-home-blocks";
 import { useHomeProgramme } from "./use-home-programme";
@@ -58,6 +59,7 @@ export function HomePage({ races, performance = null }: HomePageProps) {
         {show("yesterday") && <YesterdayCard races={races} />}
         {show("timeline") && <RaceTimeline nowMs={nowMs} races={dayRaces} />}
         {show("featured") && star && <FeaturedRace race={star} />}
+        {show("surprises") && <SurprisesOfDay races={dayRaces} />}
         {show("indicators") && (
           <>
             <DayIndicators insights={insights} raceCount={dayRaces.length} />

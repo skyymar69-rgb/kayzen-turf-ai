@@ -3,6 +3,7 @@ import { compareMarketSupport, moneyFlow, oddsMovement, type Flow, type MarketHi
 import type { CalibratedHorse } from "@/lib/probability";
 import type { Profile, RaceVerdict } from "@/lib/profiles";
 import { buildSelection } from "@/lib/selection";
+import { scoreField, topSurprises, type Surprise } from "@/lib/surprise";
 import type { RaceAnalysis } from "@/lib/types";
 
 /**
@@ -33,6 +34,8 @@ export type HorseRow = {
   nonRunner: boolean;
   /** Heure de la déclaration de non-partant (ISO), quand la source la donne. */
   nonRunnerAt: string | null;
+  /** Score de surprise, alerte et raisons (voir lib/surprise). */
+  surprise: Surprise;
 };
 
 /**
@@ -55,6 +58,8 @@ export type CourseViewModel = {
   strongMoney: HorseRow[];
   /** Partants déclarés non-partants, dans l'ordre des numéros. */
   nonRunners: HorseRow[];
+  /** Trois meilleures surprises signalées (forte ou possible), par niveau puis note. */
+  surprises: HorseRow[];
   /** Dernier relevé de cote connu (ISO). */
   lastObservation: string | null;
 };
@@ -63,7 +68,7 @@ export function buildCourseViewModel(race: RaceAnalysis, history: MarketHistory)
   const selection = buildSelection(race.horses);
   const hasOdds = (o: number) => Number.isFinite(o) && o > 1;
 
-  const rows: HorseRow[] = selection.field.map(({ horse, rank, profile, ratio }) => {
+  const base = selection.field.map(({ horse, rank, profile, ratio }) => {
     const ai = Number.isFinite(Number(horse.fundamentalProbability)) ? Number(horse.fundamentalProbability) : null;
     const market = hasOdds(horse.odds) ? horse.marketProbability : null;
     const movement = oddsMovement(history.odds[horse.number], horse.odds, race.raceDate);
@@ -90,6 +95,26 @@ export function buildCourseViewModel(race: RaceAnalysis, history: MarketHistory)
     };
   });
 
+  // Le score se calcule sur tout le peloton : le rang de l'IA et le plafond
+  // d'alertes se lisent à l'échelle de la course.
+  const surprises = scoreField(
+    base.map((r) => ({
+      number: r.horse.number,
+      odds: hasOdds(r.horse.odds) ? r.horse.odds : null,
+      ai: r.ai,
+      market: r.market,
+      music: r.horse.music,
+      jockeyWins: r.horse.jockeyWins,
+      jockeyRuns: r.horse.jockeyRuns,
+      trainerWins: r.horse.trainerWins,
+      trainerRuns: r.horse.trainerRuns,
+      movement: r.movement,
+      signals: r.signals,
+      nonRunner: r.nonRunner,
+    })),
+  );
+  const rows: HorseRow[] = base.map((r) => ({ ...r, surprise: surprises.get(r.horse.number)! }));
+
   const byProfile = Object.fromEntries(
     (["base", "cache", "value", "favori", "outsider", "tocard", "eviter", "second"] as Profile[]).map((p) => [p, rows.filter((r) => r.profile === p)]),
   ) as Record<Profile, HorseRow[]>;
@@ -109,6 +134,7 @@ export function buildCourseViewModel(race: RaceAnalysis, history: MarketHistory)
     byProfile,
     strongMoney: rows.filter((r) => r.flow.strong && !r.nonRunner).sort((a, b) => (b.flow.delta15 ?? 0) - (a.flow.delta15 ?? 0)),
     nonRunners: rows.filter((r) => r.nonRunner).sort((a, b) => a.horse.number - b.horse.number),
+    surprises: topSurprises(rows),
     lastObservation: latest([race.oddsRefreshedAt ?? null, times.at(-1) ?? null]),
   };
 }

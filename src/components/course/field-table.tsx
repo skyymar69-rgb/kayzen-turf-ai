@@ -15,14 +15,15 @@ import { ProfileBadge, roiLine } from "@/components/course/shared";
 import { Term } from "@/components/course/term";
 
 /**
- * LE TABLEAU — un seul, cinq lectures du même peloton.
+ * LE TABLEAU — un seul, six lectures du même peloton.
  *
  * Les vues gardent l'ordre du classement IA, sauf deux onglets. MVT : le
  * classement du marché, du cheval le plus joué au plus délaissé, avec l'argent
  * (part des mises, variation sur 15 min, accélération sur 5 min). IA × Marché :
  * le nuage des deux avis, puis les chevaux qui comptent, groupés en accord,
  * favoris de l'IA et favoris du marché, avec les signaux d'argent (voir
- * lib/confrontation). Une ligne se sélectionne au clic ou au clavier et pilote
+ * lib/confrontation). Analyse complète : toutes les données d'un coup, avec le
+ * score de surprise et l'alerte de chaque cheval (lib/surprise). Une ligne se sélectionne au clic ou au clavier et pilote
  * la fiche cheval et le panneau marché ; la case de gauche l'ajoute au
  * comparateur. Un non-partant reste visible, barré.
  *
@@ -63,6 +64,7 @@ export function FieldTable({
 
   const columns = COLUMNS[tab](race);
   const marketView = tab === "MVT";
+  const surpriseView = tab === "Analyse complète";
   const confrontView = tab === "Confrontation";
   const rows = marketView ? vm.marketRows : confrontView ? vm.confrontRows : vm.rows;
   const mvtSignal = signals?.get("mvt-joue-sg");
@@ -79,7 +81,7 @@ export function FieldTable({
             id={tabId(t)}
             aria-controls="tableau-partants"
             aria-selected={tab === t}
-            className={`relative h-11 shrink-0 px-4 text-sm font-semibold transition sm:flex-1 ${tab === t ? "bg-surface text-fg" : "text-muted hover:text-fg"}`}
+            className={`relative h-11 shrink-0 whitespace-nowrap px-4 text-sm font-semibold transition sm:flex-1 ${tab === t ? "bg-surface text-fg" : "text-muted hover:text-fg"}`}
             onClick={() => setTab(t)}
             role="tab"
             tabIndex={tab === t ? 0 : -1}
@@ -106,7 +108,7 @@ export function FieldTable({
           selectedNumber={selectedNumber}
         />
         <div className="hidden overflow-x-auto sm:block">
-          <table className={`w-full border-collapse text-left text-sm ${marketView || confrontView ? "min-w-[900px]" : "min-w-[760px]"}`}>
+          <table className={`w-full border-collapse text-left text-sm ${surpriseView ? "min-w-[1040px]" : marketView || confrontView ? "min-w-[900px]" : "min-w-[760px]"}`}>
             <caption className="sr-only">{CAPTIONS[tab]}</caption>
             <thead>
               <tr className="border-b border-border text-[10px] font-bold uppercase tracking-widest text-muted">
@@ -137,6 +139,8 @@ export function FieldTable({
                 const position = marketView ? index + 1 : row.rank;
                 const groupStart = confrontView && row.stance !== null && row.stance !== rows[index - 1]?.stance;
                 const compared = compare.includes(row.horse.number);
+                // Analyse complète : un liseré marque les surprises signalées.
+                const flagged = surpriseView && row.surprise.alert !== null && row.surprise.alert.level !== "surveiller";
                 return (
                   <Fragment key={row.horse.id}>
                     {groupStart && (
@@ -151,7 +155,7 @@ export function FieldTable({
                       className={`cursor-pointer transition hover:bg-accent-lo/60 ${row.nonRunner ? "opacity-60" : ""} ${selected ? "bg-accent-lo" : position <= 3 ? "bg-surface" : "bg-surface-sub/40"}`}
                       onClick={() => onSelect(row.horse.number)}
                     >
-                      <td className="py-2.5 pl-3" onClick={(e) => e.stopPropagation()}>
+                      <td className={`py-2.5 pl-3 ${flagged ? "shadow-[inset_3px_0_0_var(--accent)]" : ""}`} onClick={(e) => e.stopPropagation()}>
                         <input
                           aria-label={`Comparer le n° ${row.horse.number}, ${row.horse.horse}`}
                           checked={compared}

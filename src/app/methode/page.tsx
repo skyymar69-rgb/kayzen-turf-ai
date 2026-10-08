@@ -9,20 +9,34 @@ import { FLOW_ACCEL_PTS, FLOW_ACCEL_WINDOW_MIN, FLOW_WINDOW_MIN, MVT_NOISE_PCT, 
 import { MODEL_VERSION, MODEL_WEIGHT } from "@/lib/probability";
 import { PROFILES_VERSION, PROFILE_LABELS, PROFILE_RULES, READING_LABELS, READING_RULES, type RaceReading } from "@/lib/profiles";
 import { ProfileBadge } from "@/components/course/shared";
+import {
+  SURPRISE_FULL_AI_PCT,
+  SURPRISE_FULL_RATIO,
+  SURPRISE_KIND_LABELS,
+  SURPRISE_LEVELS,
+  SURPRISE_MAX_PER_RACE,
+  SURPRISE_MIN_ODDS,
+  SURPRISE_MIN_RATIO,
+  SURPRISE_ODDS_BANDS,
+  SURPRISE_PART_LABELS,
+  SURPRISE_VERSION,
+  SURPRISE_WEIGHTS,
+  type SurprisePart,
+} from "@/lib/surprise";
 
 export const metadata: Metadata = {
   title: "Méthode — comment Kayzen Turf calcule ses pronostics",
   description:
-    "Les règles publiées de Kayzen Turf : probabilité du marché, avis de l'IA sans cote, profils des chevaux (Base, Caché, Value, Outsider, Tocard, À éviter), MVT et parts des mises PMU.",
+    "Les règles publiées de Kayzen Turf : probabilité du marché, avis de l'IA sans cote, profils des chevaux (Base, Caché, Value, Outsider, Tocard, À éviter), score de surprise, MVT et parts des mises PMU.",
   alternates: { canonical: "/methode" },
 };
 
 type Evaluation = Record<string, { trainRaces: number; testRaces: number; uniform: { top1: number }; fundamental: { top1: number; logLoss: number }; marketClosing: { top1: number; logLoss: number } }>;
 const evaluation = (modelFile as { evaluation: Evaluation }).evaluation;
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, id, children }: { title: string; id?: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
+    <section className="scroll-mt-20 rounded-2xl border border-border bg-surface p-6 shadow-sm" id={id}>
       <h2 className="font-display text-xl font-bold text-fg">{title}</h2>
       <div className="mt-3 space-y-3 text-sm leading-6 text-muted">{children}</div>
     </section>
@@ -30,6 +44,15 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 const fr = (v: number) => v.toFixed(1).replace(".", ",");
+const num = (v: number) => String(v).replace(".", ",");
+
+const SURPRISE_PART_RULES: Record<SurprisePart, string> = {
+  value: `rapport IA ÷ marché : plein à ${num(SURPRISE_FULL_RATIO)} fois ou plus, réduit si l'IA donne moins de ${SURPRISE_FULL_AI_PCT} % au cheval (trois fois 1 % ne vaut pas trois fois 8 %)`,
+  ia: "1er de l'IA 15, 2e 12, 3e 10, 4e 7, 5e 5, 6e à 8e 2",
+  forme: "cinq dernières courses de la musique : victoire 4, 2e-3e 3, 4e-5e 1, incident −2",
+  entourage: "réussite du jockey/driver et de l'entraîneur, rétrécie vers la moyenne",
+  marche: "MVT et argent : joué, argent entrant, smart money montent la note ; délaissé ne l'annule pas ; argent sortant la baisse",
+};
 
 export default function MethodePage() {
   return (
@@ -184,7 +207,38 @@ export default function MethodePage() {
             </p>
           </Section>
 
-          <Section title="6. Fraîcheur, pronostics gelés et suivi">
+          <Section id="surprise" title="6. Chevaux cachés · le score de surprise">
+            <p>
+              Une note de 0 à 100 ({SURPRISE_VERSION}) par partant, qui résume <strong className="text-fg">pourquoi</strong> l&apos;IA
+              le juge sous-estimé. Elle additionne cinq briques :
+            </p>
+            <ul className="space-y-1.5">
+              {(Object.keys(SURPRISE_WEIGHTS) as SurprisePart[]).map((part) => (
+                <li key={part} className="rounded-lg bg-surface-sub px-3 py-2 text-xs text-fg">
+                  <strong>{SURPRISE_PART_LABELS[part]}</strong> — {SURPRISE_WEIGHTS[part]} pts : {SURPRISE_PART_RULES[part]}.
+                </li>
+              ))}
+            </ul>
+            <p>
+              <strong className="text-fg">Alertes</strong> : seulement si l&apos;IA voit le cheval au moins {num(SURPRISE_MIN_RATIO)} fois
+              au-dessus du marché et si sa cote dépasse {SURPRISE_MIN_ODDS}/1 (le favori n&apos;est pas une surprise).{" "}
+              <em>{SURPRISE_KIND_LABELS.value}</em> sous {SURPRISE_ODDS_BANDS.value}/1, <em>{SURPRISE_KIND_LABELS.surprise}</em> de{" "}
+              {SURPRISE_ODDS_BANDS.value}/1 à {SURPRISE_ODDS_BANDS.tocard}/1, <em>{SURPRISE_KIND_LABELS.tocard}</em> au-delà. Niveau
+              fort à {SURPRISE_LEVELS.forte}/100, possible à {SURPRISE_LEVELS.possible}, à surveiller à {SURPRISE_LEVELS.surveiller}. Un
+              tocard n&apos;est signalé qu&apos;au niveau fort — l&apos;IA, moins tranchée que le marché, remonte presque toutes les
+              grosses cotes — et une course compte {SURPRISE_MAX_PER_RACE} alertes au plus.
+            </p>
+            <p>
+              <strong className="text-fg">Ce que le score n&apos;est pas.</strong> Mesuré sur 1 571 courses courues entre le 24 août et
+              le 7 octobre 2026, hors de la période d&apos;entraînement de l&apos;IA, contre la cote finale : aucune des cinq briques
+              n&apos;annonce plus de gagnants ni plus de chevaux placés que la cote elle-même. Le marché de clôture intègre déjà la
+              forme, l&apos;entourage et le désaccord de l&apos;IA. Le score est un outil de lecture — il montre où l&apos;IA et le marché
+              divergent, et pourquoi — et le rendement réel de ses alertes (simple gagnant et simple placé, rapports officiels)
+              est publié sur le suivi de performance.
+            </p>
+          </Section>
+
+          <Section title="7. Fraîcheur, pronostics gelés et suivi">
             <p>
               Les cotes des courses imminentes sont relues toutes les 15 minutes au-delà d&apos;une heure du départ, toutes
               les 4 minutes jusqu&apos;à H-15, puis chaque minute. Chaque page affiche l&apos;âge de la cote. Le pari mutuel
@@ -197,11 +251,11 @@ export default function MethodePage() {
             </p>
           </Section>
 
-          <Section title="7. Ce que nous ne faisons pas">
+          <Section title="8. Ce que nous ne faisons pas">
             <ul className="list-disc space-y-1 pl-5">
               <li>Aucune promesse de gain. Un rendement est toujours donné avec sa période, son nombre de paris et sa marge d&apos;erreur.</li>
               <li>Aucune autre source que le PMU : Betfair n&apos;est pas agréé par l&apos;ANJ, et les opérateurs n&apos;ouvrent pas de flux de données.</li>
-              <li>Aucun « {PROFILE_LABELS.cache.toLowerCase()} » ou « value » présenté comme un pari gagnant : ce sont des désaccords entre l&apos;IA et le marché, dont nous mesurons la valeur.</li>
+              <li>Aucun « {PROFILE_LABELS.cache.toLowerCase()} », « value » ou « surprise » présenté comme un pari gagnant : ce sont des désaccords entre l&apos;IA et le marché, dont nous mesurons la valeur.</li>
             </ul>
           </Section>
         </div>

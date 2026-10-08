@@ -16,6 +16,7 @@ import { MagicSquarePanel } from "@/components/course/magic-square";
 import { MarketPanel } from "@/components/course/market-panel";
 import { NonRunners } from "@/components/course/non-runners";
 import { SectionNavBar, SectionNavRail } from "@/components/course/section-nav";
+import { SurprisePanel } from "@/components/course/surprise-panel";
 import { PostRacePanel, SimulationPanel } from "@/components/course/side-panels";
 import { TicketShare } from "@/components/course/ticket-share";
 import { TicketTools } from "@/components/course/tools";
@@ -46,8 +47,10 @@ import type { RaceAnalysis } from "@/lib/types";
  *      « Analyse réactualisée » après une relance ;
  *   2. verdict : une phrase pour débutant, puis la lecture et les tuiles ;
  *   3. notre sélection et un ticket par stratégie ;
- *   4. le tableau unique (Classement IA, IA × Marché, MVT, Cotes & Marché,
- *      Forme), puis le comparateur et le carré magique 16 partants ;
+ *   3 bis. « Chevaux cachés · Surprise IA » : les trois meilleures alertes du
+ *      score de surprise, expliquées (lib/surprise) ;
+ *   4. le tableau unique (Classement IA, Analyse complète, IA × Marché, MVT,
+ *      Cotes & Marché, Forme), puis le comparateur et le carré magique 16 partants ;
  *   5. la fiche du cheval sélectionné ; à côté, son marché, les cotes de tous
  *      les partants et la simulation ;
  *   6. les tickets : copie au format PMU, partage en image, outils repliés.
@@ -215,6 +218,9 @@ export function CourseDetail({ race, history = EMPTY_HISTORY, signals = NO_SIGNA
             <div className="mt-0 grid grid-cols-[minmax(0,1fr)] gap-x-4 xl:grid-cols-[minmax(0,1fr)_360px]">
               <div className="min-w-0">
                 <RaceSelectionPanel onSelect={select} selectedNumber={selected} selection={selection} signals={signalMap} />
+                <div className={SECTION_SCROLL} id="surprises">
+                  <SurprisePanel onSelect={select} selectedNumber={selected} signals={signalMap} vm={vm} />
+                </div>
                 <FieldTable
                   compare={compare}
                   onSelect={select}
