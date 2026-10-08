@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { adjacentDay, racesOfDay, type ProgrammeDay } from "@/lib/home/days";
 import { buildDayInsights, featuredRace, groupRacesByMeeting } from "@/lib/home/meetings";
-import { hasValueBet, raceOpportunity, selectTimelineRace } from "@/lib/home/race-signals";
+import { hasAiMarketGap, raceOpportunity, selectTimelineRace } from "@/lib/home/race-signals";
 import { minutesActuellesParis } from "@/lib/paris-time";
 import { betHighlights } from "@/lib/race-status";
 import type { RaceAnalysis } from "@/lib/types";
@@ -66,7 +66,7 @@ export function useHomeProgramme(races: RaceAnalysis[], nowMs: number | null) {
     // Le filtre discipline écartait les réunions sans la discipline, mais
     // laissait passer les courses des autres disciplines d'une réunion mixte.
     if (disciplineFilter !== "Tous" && r.discipline !== disciplineFilter) return false;
-    if (valueBetsOnly && !hasValueBet(r)) return false;
+    if (valueBetsOnly && !hasAiMarketGap(r)) return false;
     if (!normalizedQuery) return true;
     return `${r.programCode} ${r.name} ${r.specialty} ${r.startTime}`.toLowerCase().includes(normalizedQuery);
   });

@@ -41,7 +41,8 @@ export type PronosticRace = {
   /** Ordre probable de l'IA (numéros), cinq premiers. */
   arrival: number[];
   base: { number: number; name: string } | null;
-  valueBet: { number: number; name: string; valueIndex: number } | null;
+  /** Partant au plus fort écart IA − marché (points), au-delà du seuil d'affichage. */
+  aiGap: { number: number; name: string; points: number } | null;
   /** Trois premiers de l'ordre probable, avec leur probabilité de victoire (%). */
   top3: Array<{ number: number; name: string; winProbability: number }>;
   favoriIa: FavoriIa | null;
@@ -146,7 +147,7 @@ export function statusOf(race: PronosticRace, now: Date): RaceStatus {
 export function matchesFilters(race: PronosticRace, filters: PronosticFilters, now: Date): boolean {
   if (filters.disciplines.length > 0 && !filters.disciplines.includes(race.discipline)) return false;
   if (filters.quinte && !race.bets.includes("QUINTE_PLUS")) return false;
-  if (filters.value && !race.valueBet) return false;
+  if (filters.value && !race.aiGap) return false;
   if (filters.lisible && race.reading !== "lisible") return false;
   if (filters.upcoming && !isUpcoming(statusOf(race, now))) return false;
   return matchesQuery(race, filters.query);
@@ -172,7 +173,7 @@ export type SortKey = "heure" | "reunion" | "value" | "lisibilite";
 export const SORT_LABELS: Record<SortKey, string> = {
   heure: "Heure de départ",
   reunion: "Réunion",
-  value: "Value bets d’abord",
+  value: "Écarts IA / marché d’abord",
   lisibilite: "Courses lisibles d’abord",
 };
 
@@ -186,10 +187,10 @@ function compareReunion(a: PronosticRace, b: PronosticRace): number {
   return a.reunionNumber - b.reunionNumber || a.courseNumber - b.courseNumber;
 }
 
-/** Plus fort indice value d'abord ; les courses sans value bet suivent, à l'heure. */
+/** Plus fort écart IA / marché d'abord ; les courses sans écart suivent, à l'heure. */
 function compareValue(a: PronosticRace, b: PronosticRace): number {
-  const va = a.valueBet?.valueIndex ?? -Infinity;
-  const vb = b.valueBet?.valueIndex ?? -Infinity;
+  const va = a.aiGap?.points ?? -Infinity;
+  const vb = b.aiGap?.points ?? -Infinity;
   return vb === va ? compareTime(a, b) : vb > va ? 1 : -1;
 }
 

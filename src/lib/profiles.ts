@@ -24,7 +24,9 @@ export const PROFILE_ORDER: Profile[] = ["eviter", "base", "cache", "value", "fa
 export const PROFILE_LABELS: Record<Profile, string> = {
   base: "Base",
   cache: "Caché",
-  value: "Value",
+  // « Écart IA » et non « Value » : le profil compare l'IA au marché, il ne
+  // calcule aucune espérance à la cote finale (src/lib/value-signal.ts).
+  value: "Écart IA",
   favori: "Favori",
   outsider: "Outsider",
   tocard: "Tocard",

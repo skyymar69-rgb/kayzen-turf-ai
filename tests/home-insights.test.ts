@@ -13,18 +13,20 @@ describe("résumé du jour", () => {
     assert.deepEqual(buildDaySummary([]).sentences, []);
   });
 
-  it("courses lisibles, course piège la plus fournie, meilleure value", () => {
-    const lisible = race("l", { programCode: "R1C1", horses: [...clearField().slice(0, 7), horse(8, { valueIndex: 22, horse: "BELLE VALUE" })] });
+  // Le résumé cite désormais l'écart IA / marché (points de probabilité), et
+  // plus une « espérance » : contre la cote finale, aucune n'est établie.
+  it("courses lisibles, course piège la plus fournie, plus fort écart IA / marché", () => {
+    const lisible = race("l", { programCode: "R1C1", horses: [...clearField().slice(0, 7), horse(8, { fundamentalProbability: 14, marketProbability: 6, horse: "BELLE VALUE" })] });
     const petitPiege = race("p1", { programCode: "R1C2", name: "PRIX COURT", horses: openField(10) });
     const grandPiege = race("p2", { programCode: "R2C4", name: "PRIX LONG", horses: openField(14) });
     const [first, second, third] = buildDaySummary([lisible, petitPiege, grandPiege]).sentences;
     assert.equal(first, "1 course sur 3 se lit avec une base nette.");
     assert.match(second, /^Course piège à surveiller : R2C4 Prix Long, 14 partants, aucun à 20 % de chances \(et 1 autre piège\)\.$/);
-    assert.match(third, /n° 8 Belle Value en R1C1, espérance \+22 %/);
+    assert.match(third, /n° 8 Belle Value en R1C1, \+8 pts de probabilité/);
   });
 
   it("ne cite pas de value sans cote publiée, ni de piège inexistant", () => {
-    const sansCote = race("s", { oddsAvailable: false, horses: clearField().map((h) => ({ ...h, valueIndex: 30 })) });
+    const sansCote = race("s", { oddsAvailable: false, horses: clearField().map((h) => ({ ...h, valueIndex: 30, marketProbability: 1 })) });
     const sentences = buildDaySummary([sansCote]).sentences;
     assert.equal(sentences.length, 2);
     assert.equal(sentences[0], "La seule course du programme se lit avec une base nette.");
@@ -97,12 +99,15 @@ describe("ligne du temps", () => {
 });
 
 describe("aperçu d'une course", () => {
-  it("Top 3 de l'IA et value bet", () => {
-    const peek = racePeek(race("a", { horses: [...clearField().slice(0, 7), horse(8, { valueIndex: 14 })] }));
+  it("Top 3 de l'IA et écart IA / marché", () => {
+    const peek = racePeek(race("a", { horses: [...clearField().slice(0, 7), horse(8, { fundamentalProbability: 12, marketProbability: 5 })] }));
     assert.equal(peek.top3.length, 3);
     assert.equal(peek.top3[0].number, 1);
-    assert.equal(peek.valueBet?.number, 8);
-    assert.equal(racePeek(race("b", { oddsAvailable: false, horses: [horse(1, { valueIndex: 30 })] })).valueBet, null);
+    assert.equal(peek.aiGap?.number, 8);
+    assert.equal(peek.aiGap?.points, 7);
+    // Un indice « value » seul ne suffit plus : sans écart mesuré, rien n'est signalé.
+    assert.equal(racePeek(race("c", { horses: [...clearField().slice(0, 7), horse(8, { valueIndex: 30 })] })).aiGap, null);
+    assert.equal(racePeek(race("b", { oddsAvailable: false, horses: [horse(1, { fundamentalProbability: 40, marketProbability: 5 })] })).aiGap, null);
   });
 });
 

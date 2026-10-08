@@ -30,6 +30,12 @@ qu'un visiteur peut constater, vit dans `src/lib/changelog.ts` et s'affiche sur
 - `.env.example` documentant chaque variable d'environnement.
 - Tests unitaires de `src/lib/rate-limit.ts`.
 
+### Modifié
+- Probabilités recalibrées au maximum de vraisemblance (`scripts/fit-market.ts`, coefficients et mesures dans `src/lib/market-calibration.json`, version `2026.10-marche-gamma-henery`) sur 1 562 courses (ajustement avant le 16/09/2026, validation sur 795 courses après) : marge retirée par un exposant γ = 1,076 au lieu du retrait proportionnel ; mélange de Benter α/β par discipline, β fixé à 0 faute de gain hors échantillon (la probabilité servie est le marché recalibré) ; ordre d'arrivée corrigé de Henery (λ2 = 0,774, λ3 = 0,526), qui ramène le réel / attendu du Top 3 de 0,87-1,65 à 0,86-1,04.
+- « Value » calculée à la cote finale attendue (`src/lib/value-signal.ts`), seuil unique de +10 %, jamais affichée à plus de 30 minutes du départ ni sans cote ; ailleurs « écart IA / marché » en points de probabilité (accueil, /pronostics, profil « Écart IA »).
+- Simulation de mise : plus de cote inventée sans cote publiée, plus de bankroll fictive ; mise de Kelly affichée seulement si l'espérance à la cote finale attendue est positive, en théorique. Fiche du modèle (`/api/model-card`) réécrite sur la chaîne réelle.
+- Tickets : retour estimé pour 1 € (« Retour estimé ×0,82 · en dessous de la mise »), P_modèle × (1 − prélèvement) / P_public. Carré magique présenté comme lecture ludique.
+
 ### Corrigé
 - Non-partants jamais retirés dans les petits pelotons : la garde « réponse tronquée » de `planScratches` comparait les seuls partants à 70 % des chevaux connus (6 chevaux dont 2 retirés : 4 < 4,2). Elle juge désormais la liste PMU complète, et retire toujours les non-partants déclarés.
 - Relance des cotes : le verrou `odds_refreshed_at` est rendu si une étape SQL échoue après la lecture PMU.

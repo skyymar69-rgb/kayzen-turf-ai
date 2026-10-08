@@ -1,84 +1,124 @@
-import type { HorsePrediction } from "@/lib/types";
+import type { HorsePrediction, RaceAnalysis } from "@/lib/types";
+import calibration from "@/lib/market-calibration.json";
+import {
+  conditionalLogit,
+  exponentDevig,
+  impliedFromOdds,
+  normalize,
+  placeStrengths,
+  proportionalDevig,
+  safeLog,
+} from "@/lib/market-model";
+import { expectedValueAtStart } from "@/lib/value-signal";
 
 /**
  * CALIBRATION DES PROBABILITÉS — source unique de vérité.
  *
- * Contexte : le script d'import calcule une probabilité par cheval de façon
- * isolée, sans normalisation à l'échelle de la course. Résultat en base :
- * Σ(win) ≈ 185 % et Σ(top3) ≈ 510 % au lieu de 100 % et 300 %. Le kzScore étant
- * dérivé de ces valeurs, il en hérite le biais.
+ * Tout consommateur (page course, accueil, tickets, API) passe par ici, ce qui
+ * garantit qu'un même cheval affiche la même probabilité partout. Trois étages,
+ * tous ajustés au maximum de vraisemblance sur des arrivées réelles par
+ * scripts/fit-market.ts (coefficients et mesures : market-calibration.json) :
  *
- * Ce module recalcule les probabilités au moment de la lecture, pour toute la
- * course d'un coup. Tout consommateur (page course, dashboard, tickets, API)
- * passe par ici, ce qui garantit qu'un même cheval affiche la même probabilité
- * partout.
+ *   1. Marché : cotes PMU → probabilités, marge retirée par un exposant γ.
+ *   2. Mélange de Benter : p ∝ exp(α·log p_marché + β·log p_IA).
+ *   3. Ordre d'arrivée : Plackett-Luce corrigé de Henery/Stern (forces p^λ aux
+ *      places d'honneur), d'où Top 3 / Top 5 et la probabilité des tickets.
  *
- * Méthode : le marché (cotes dé-viggées) sert d'ancrage, le modèle ne fait que
- * le corriger — mélange log-linéaire p ∝ p_marché^(1-w) · p_modèle^w. Les
- * probabilités Top 3 / Top 5 sont ensuite tirées du même vecteur par
- * échantillonnage Plackett-Luce, ce qui impose par construction
- * Σ(top3) = 300 %, Σ(top5) = 500 % et p_win ≤ p_top3 ≤ p_top5.
+ * Période de mesure : 1 562 courses françaises courues du 24/08 au 07/10/2026,
+ * ajustement sur les 767 courses avant le 16/09, validation sur les 795
+ * suivantes. Le log loss est la moyenne de −ln(probabilité du gagnant).
  */
 
 /**
- * Poids du modèle face au marché. 0 = on recopie le marché, 1 = modèle seul.
+ * ÉTAGE 1 — retrait de la marge. Comparaison sur la validation (log loss) :
  *
- * Valeur fixée par la mesure, pas par intuition. Évaluation sur 6 557 courses
- * réelles (scripts/evaluate-model.mjs) :
+ *     proportionnel  q_i / Σq                      1,9747   (référence)
+ *     puissance      q_i^k, k résolu par course    1,9757
+ *     Shin (1993)                                   1,9776
+ *     exposant γ par discipline                    1,9738
+ *     exposant γ unique = 1,076 ± 0,046            1,9737   ← retenu
  *
- *     marché seul     logLoss 1.7514   Top1 36,8 %   Top3 70,8 %
- *     modèle seul     logLoss 2.0278   Top1 32,7 %   Top3 60,1 %
- *     w = 0.30        logLoss 1.7847   (-1,90 % vs marché)
- *     w = 0.10        logLoss 1.7576   (-0,36 %, dans le bruit)
+ * L'écart avec le proportionnel est faible (−0,0010, IC 95 % [−0,005 ; +0,003]) :
+ * le biais favori-tocard du PMU est modeste sur cette période. L'exposant
+ * unique est retenu parce qu'il est le meilleur et le plus parcimonieux
+ * (les γ par discipline, 1,055 / 1,087 / 1,065, ne s'écartent pas de lui au
+ * regard de leurs erreurs types). Réel / attendu des gagnants (validation) :
  *
- * Le kzScore actuel dégrade la prédiction, de façon monotone : chaque part de
- * modèle ajoutée coûte de la précision. La raison est structurelle — il est
- * calculé à partir de probabilités elles-mêmes dérivées des cotes, il ré-encode
- * donc le marché en y ajoutant du bruit.
+ *     cote         1-3    3-5    5-10   10-20  20-50  50+
+ *     proportionnel 1,03   1,12   0,92   0,89   1,13   0,88
+ *     exposant γ    0,97   1,08   0,92   0,93   1,26   1,06
  *
- * 0.10 est retenu plutôt que 0 : statistiquement équivalent au marché, mais
- * conserve l'expression du modèle (donc la détection de value) sans coût de
- * précision mesurable. À remonter dès qu'une variable aura démontré un gain sur
- * le banc de mesure — et pas avant.
- *
- * Mesure du 30/08/2026 (scripts/evaluate-weight-by-field.mjs, 7 552 courses) :
- * le modèle dégrade le log loss dans TOUTES les tranches de peloton, de 5-8
- * partants à 18 et plus. Il n'existe donc aucun segment où le relever se
- * justifierait, et la piste « poids variable selon la taille du peloton » est
- * close. Le coût du réglage actuel est mesuré : 0,11 cheval par Quinté
- * (2,41 contre 2,52 pour le marché seul, sur 56 Quintés).
- *
- * Passer à 0 rendrait la prédiction strictement meilleure, mais annulerait
- * `valueRatio` — donc la détection de value et le tocard signalé, qui n'ont
- * elles-mêmes aucune base mesurée. C'est un arbitrage produit, pas technique :
- * il n'est pas tranché ici.
+ * Les favoris ne sont plus sous-estimés ; la tranche 20-50 reste bruitée
+ * (73 gagnants). Les deux méthodes restent dans l'erreur d'échantillonnage.
  */
-export const MODEL_WEIGHT = 0.1;
+export const MARKET_GAMMA: number = calibration.devig.gammaGlobal;
 
-/*
- * Octobre 2026 — le modèle mélangé au marché est désormais le modèle
- * FONDAMENTAL (src/lib/fundamental), qui n'utilise aucune cote. Le poids 0.10
- * est conservé, sur deux mesures hors échantillon (juin-septembre 2026) :
+type DisciplineName = RaceAnalysis["discipline"];
+type BlendCoefficients = { alpha: number; beta: number };
+
+/**
+ * ÉTAGE 2 — mélange de Benter, p ∝ exp(α·log p_marché + β·log p_IA), α et β
+ * par discipline, logit conditionnel ajusté avant le 16/09, testé après :
  *
- *   contre les cotes de CLÔTURE (scripts/train-fundamental.ts), le mélange
- *   coûte 0,1 à 0,4 % de log loss selon la discipline — dans le bruit au trot
- *   et en obstacle ;
- *   contre les cotes connues 15 min avant le départ (scripts/backtest.ts), il
- *   GAGNE 0,5 % de log loss (2,0869 contre 2,0978) et 0,8 point de gagnants
- *   trouvés, parce que ces cotes avaient en médiane 3 h 30 d'âge.
+ *                β ajusté        log loss validation   gain du mélange (IC 95 %)
+ *     Plat      0,077 ± 0,150    1,9229 → 1,9253       −0,0024 [−0,0058 ; +0,0010]
+ *     Trot      0,012 ± 0,071    2,0356 → 2,0356       +0,0000 [−0,0008 ; +0,0008]
+ *     Obstacle −0,220 ± 0,261    1,8525 → 1,8763       −0,0238 [−0,0447 ; −0,0024]
  *
- * Avec la boucle de rafraîchissement d'octobre, les cotes servies seront
- * fraîches et le premier cas deviendra la norme : le poids sera revu sur le
- * suivi en direct (pronostics gelés), pas avant.
+ * β n'est significatif nulle part et n'améliore la validation nulle part : il
+ * est donc fixé à 0, et la probabilité servie EST le marché recalibré
+ * (α ≈ 1). Le modèle fondamental reste affiché à part (« avis IA », écart
+ * IA / marché), sans prétendre corriger la cote.
+ *
+ * Limite : les cotes de ces données sont les DERNIÈRES (≈ finales). Contre des
+ * cotes anciennes (3 h 30 d'âge médian, scripts/backtest.ts), l'IA apportait
+ * +0,5 % de log loss ; avec le rafraîchissement continu, la cote servie se
+ * rapproche de la finale et ce gain disparaît. Relancer l'ajustement sur les
+ * cotes de décision quand elles seront exportables.
  */
+export const BLEND_COEFFICIENTS: Record<DisciplineName, BlendCoefficients> = {
+  Plat: { alpha: calibration.blend.Plat.alpha, beta: calibration.blend.Plat.beta },
+  Trot: { alpha: calibration.blend.Trot.alpha, beta: calibration.blend.Trot.beta },
+  Obstacle: { alpha: calibration.blend.Obstacle.alpha, beta: calibration.blend.Obstacle.beta },
+};
+
+/** Discipline inconnue : marché recalibré tel quel. */
+export const DEFAULT_BLEND: BlendCoefficients = { alpha: 1, beta: 0 };
+
+/**
+ * ÉTAGE 3 — ordre d'arrivée. Harville tire chaque place avec la probabilité de
+ * victoire et surestime les favoris aux places. Forces p^λ2 pour la 2e place,
+ * p^λ3 pour les suivantes, ajustées sur les 2e et 3e réels (avant le 16/09) :
+ *
+ *     λ2 = 0,774 ± 0,039     λ3 = 0,526 ± 0,037
+ *
+ * Validation, réel / attendu d'une place dans les 3 premiers :
+ *
+ *     cote       1-3    3-5    5-10   10-20  20-50  50+
+ *     Harville   0,87   0,88   0,94   1,07   1,40   1,65
+ *     Henery     0,99   1,01   1,00   1,00   1,04   0,86
+ *
+ * Log loss de l'ordre 1-2-3 exact : 6,167 (Harville) → 6,079 (Henery).
+ */
+export const PLACE_LAMBDAS: readonly number[] = calibration.henery.lambdas;
+
+/**
+ * Ancien poids géométrique du modèle, p ∝ marché^(1−w) · modèle^w.
+ *
+ * Conservé pour scripts/backtest.ts, qui balaie plusieurs poids et compare au
+ * servi : la valeur équivalente au mélange retenu (β = 0) est 0. L'ancienne
+ * valeur 0,10 coûtait du log loss sur toutes les mesures contre la cote
+ * finale (1,7576 contre 1,7514 sur 6 557 courses ; 30/08/2026).
+ */
+export const MODEL_WEIGHT = 0;
 
 /**
  * Version de la chaîne de calcul servie, gravée dans chaque pronostic gelé
- * (`prediction_snapshots.model_version`). À changer dès que `MODEL_WEIGHT`,
+ * (`prediction_snapshots.model_version`). À changer dès que la calibration,
  * les entrées du modèle ou les règles de profil changent : le suivi de
  * performance sépare les résultats par version.
  */
-export const MODEL_VERSION = "2026.10-fondamental-w0.10";
+export const MODEL_VERSION = "2026.10-marche-gamma-henery";
 
 /**
  * Étalement du modèle, appliqué sur des scores centrés-réduits.
@@ -101,23 +141,41 @@ const round1 = (v: number) => Math.round(v * 10) / 10;
 const round2 = (v: number) => Number(v.toFixed(2));
 
 /**
- * Probabilités implicites du marché, overround retiré.
+ * Probabilités implicites du marché, marge retirée par l'exposant calibré
+ * (p_i ∝ (1/cote_i)^γ, voir MARKET_GAMMA) puis, si la discipline est connue,
+ * recalibrées par son α (étage 2 avec β = 0). Signature historique conservée :
+ * `devig(cotes)` sert aussi scripts/backtest.ts et evaluate-confrontation.ts.
  *
  * Une cote absente ou ≤ 1 est une information manquante. Elle recevait la
  * probabilité MOYENNE du peloton : un cheval sans cote — le plus souvent un
  * non-partant ou un cheval que le marché ignore — pouvait ainsi finir deuxième
- * de la sélection. Il reçoit désormais la plus PETITE probabilité connue de la
+ * de la sélection. Il reçoit la plus PETITE probabilité implicite connue de la
  * course : sans prix, il n'est pas un prétendant.
  */
-export function devig(odds: number[]): number[] {
-  const raw = odds.map((o) => (Number.isFinite(o) && o > 1 ? 1 / o : 0));
-  const known = raw.filter((r) => r > 0);
-  if (known.length === 0) return odds.map(() => 1 / Math.max(odds.length, 1));
+export function devig(odds: number[], discipline?: DisciplineName): number[] {
+  const filled = fillMissingImplied(odds);
+  if (!filled) return odds.map(() => 1 / Math.max(odds.length, 1));
+  const market = exponentDevig(filled, MARKET_GAMMA);
+  const alpha = discipline ? BLEND_COEFFICIENTS[discipline]?.alpha ?? 1 : 1;
+  return alpha === 1 ? market : normalize(market.map((p) => (p > 0 ? p ** alpha : 0)));
+}
 
+/**
+ * Probabilités que le PUBLIC prête aux chevaux : retrait proportionnel de la
+ * marge, sans recalibrage. C'est sur elles que se forment les rapports des
+ * paris combinés (voir src/lib/bet-recommendations.ts).
+ */
+export function publicProbabilities(odds: number[]): number[] {
+  const filled = fillMissingImplied(odds);
+  return filled ? proportionalDevig(filled) : odds.map(() => 1 / Math.max(odds.length, 1));
+}
+
+function fillMissingImplied(odds: number[]): number[] | null {
+  const raw = impliedFromOdds(odds);
+  const known = raw.filter((r) => r > 0);
+  if (known.length === 0) return null;
   const minKnown = Math.min(...known);
-  const filled = raw.map((r) => (r > 0 ? r : minKnown));
-  const total = filled.reduce((a, b) => a + b, 0);
-  return filled.map((r) => r / total);
+  return raw.map((r) => (r > 0 ? r : minKnown));
 }
 
 /**
@@ -165,130 +223,129 @@ export function modelProbabilities(scores: number[], spread = MODEL_SPREAD): num
   return exps.map((e) => e / total);
 }
 
-/** Mélange log-linéaire marché × modèle, renormalisé. */
-export function blendProbabilities(market: number[], model: number[], weight = MODEL_WEIGHT): number[] {
-  const eps = 1e-9;
-  const raw = market.map((m, i) => Math.max(m, eps) ** (1 - weight) * Math.max(model[i] ?? eps, eps) ** weight);
-  const total = raw.reduce((a, b) => a + b, 0);
-  return total > 0 ? raw.map((r) => r / total) : market;
+/**
+ * Mélange marché × modèle, renormalisé.
+ *
+ *   - avec des coefficients { alpha, beta } : mélange de Benter ajusté,
+ *     p ∝ exp(α·log p_marché + β·log p_modèle) — c'est le mélange servi ;
+ *   - avec un nombre w (ancienne API, scripts/backtest.ts) : mélange
+ *     géométrique p ∝ marché^(1−w) · modèle^w, cas particulier α = 1−w, β = w.
+ */
+export function blendProbabilities(
+  market: number[],
+  model: number[],
+  weight: number | BlendCoefficients = MODEL_WEIGHT,
+): number[] {
+  const { alpha, beta } = typeof weight === "number" ? { alpha: 1 - weight, beta: weight } : weight;
+  if (beta === 0 && alpha === 1) return market;
+  const features = market.map((m, i) => [safeLog(m), safeLog(model[i] ?? 0)]);
+  const blended = conditionalLogit(features, [alpha, beta]);
+  return blended.every(Number.isFinite) ? blended : market;
 }
 
+/** Options du modèle d'ordre d'arrivée. */
+export type OrderModelOptions = {
+  /** Exposants de Henery pour la 2e place puis les suivantes ; [1, 1] = Harville. */
+  lambdas?: readonly number[];
+  /** Graine imposée : deux simulations de même graine partagent leurs tirages (variance réduite des rapports). */
+  seed?: number;
+};
+
 /**
- * Probabilités Top-K par échantillonnage Plackett-Luce (tirage sans remise
- * pondéré par p_win). Garantit Σ(topK) = K × 100 % et la monotonie
- * p_win ≤ p_top3 ≤ p_top5.
- *
- * Le générateur est déterministe (LCG semé sur la taille du peloton) : deux
- * rendus de la même course donnent le même chiffre, sinon l'affichage bougerait
- * à chaque rafraîchissement et deviendrait invérifiable.
+ * Tire des ordres d'arrivée partiels selon Plackett-Luce corrigé de
+ * Henery/Stern : la 1re place est tirée avec p, la 2e avec p^λ2, les suivantes
+ * avec p^λ3 (PLACE_LAMBDAS). `visit(pos, cheval)` reçoit chaque place tirée.
  */
-export function monteCarloTopK(pWin: number[], ks: number[], nSim = N_SIM): Map<number, number[]> {
+function sampleOrders(
+  pWin: number[],
+  depth: number,
+  nSim: number,
+  seed: number,
+  lambdas: readonly number[],
+  visit: (sim: number, pos: number, horse: number) => void,
+) {
   const n = pWin.length;
-  const result = new Map<number, number[]>();
-  if (n === 0) return result;
-
-  const maxK = Math.max(...ks);
-  const counts = new Map(ks.map((k) => [k, new Array<number>(n).fill(0)]));
-
-  let seed = seedFrom(pWin, 1013904223);
+  const strengths = placeStrengths(pWin, lambdas, Math.max(depth, 1));
+  let state = seed >>> 0;
   const rand = () => {
-    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-    return seed / 4294967296;
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return state / 4294967296;
   };
-
   const idx = new Array<number>(n);
-  const weights = new Array<number>(n);
-
   for (let sim = 0; sim < nSim; sim++) {
-    for (let i = 0; i < n; i++) {
-      idx[i] = i;
-      weights[i] = pWin[i];
-    }
+    for (let i = 0; i < n; i++) idx[i] = i;
     let remaining = n;
-    let total = weights.reduce((a, b) => a + b, 0);
-
-    for (let pos = 0; pos < maxK && remaining > 0 && total > 0; pos++) {
+    for (let pos = 0; pos < depth && remaining > 0; pos++) {
+      const row = strengths[pos];
+      let total = 0;
+      for (let j = 0; j < remaining; j++) total += row[idx[j]];
+      if (!(total > 0)) break;
       const target = rand() * total;
       let acc = 0;
       let picked = remaining - 1;
       for (let j = 0; j < remaining; j++) {
-        acc += weights[j];
+        acc += row[idx[j]];
         if (acc >= target) {
           picked = j;
           break;
         }
       }
-      const horse = idx[picked];
-      for (const k of ks) if (pos < k) counts.get(k)![horse]++;
-
-      total -= weights[picked];
+      visit(sim, pos, idx[picked]);
       idx[picked] = idx[remaining - 1];
-      weights[picked] = weights[remaining - 1];
       remaining--;
     }
   }
+}
 
+/**
+ * Probabilités Top-K par échantillonnage (modèle d'ordre de Henery/Stern).
+ * Garantit Σ(topK) = K × 100 % et la monotonie p_win ≤ p_top3 ≤ p_top5.
+ *
+ * Le générateur est déterministe (LCG semé sur le vecteur de probabilités) :
+ * deux rendus de la même course donnent le même chiffre, sinon l'affichage
+ * bougerait à chaque rafraîchissement et deviendrait invérifiable.
+ */
+export function monteCarloTopK(
+  pWin: number[],
+  ks: number[],
+  nSim = N_SIM,
+  options: OrderModelOptions = {},
+): Map<number, number[]> {
+  const n = pWin.length;
+  const result = new Map<number, number[]>();
+  if (n === 0) return result;
+  const counts = new Map(ks.map((k) => [k, new Array<number>(n).fill(0)]));
+  const seed = options.seed ?? seedFrom(pWin, 1013904223);
+  sampleOrders(pWin, Math.max(...ks), nSim, seed, options.lambdas ?? PLACE_LAMBDAS, (_sim, pos, horse) => {
+    for (const k of ks) if (pos < k) counts.get(k)![horse]++;
+  });
   for (const k of ks) result.set(k, counts.get(k)!.map((c) => (c / nSim) * 100));
   return result;
 }
 
 /**
  * Tire `nSim` ordres d'arrivée partiels (les `depth` premières places) selon le
- * même modèle Plackett-Luce que `monteCarloTopK`. Chaque ligne contient les
- * indices des chevaux, dans l'ordre d'arrivée.
+ * même modèle que `monteCarloTopK`. Chaque ligne contient les indices des
+ * chevaux, dans l'ordre d'arrivée.
  *
  * Sert à estimer la probabilité qu'un ticket passe : il suffit de compter la
- * fraction des ordres simulés qui le satisfont. C'est la seule façon d'obtenir
- * une confiance qui discrimine un Simple Gagnant d'un Trio dans l'ordre, là où
- * une moyenne de scores les rendait tous équivalents.
- *
- * `depth` = 5 couvre tous les paris PMU jusqu'au Quinté.
+ * fraction des ordres simulés qui le satisfont. `depth` = 5 couvre tous les
+ * paris PMU jusqu'au Quinté.
  */
-export function simulateTopOrders(pWin: number[], depth = 5, nSim = 4000): number[][] {
+export function simulateTopOrders(pWin: number[], depth = 5, nSim = 4000, options: OrderModelOptions = {}): number[][] {
   const n = pWin.length;
   if (n === 0) return [];
-  const realDepth = Math.min(depth, n);
-
-  let seed = seedFrom(pWin, 2463534242);
-  const rand = () => {
-    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-    return seed / 4294967296;
-  };
-
-  const orders: number[][] = new Array(nSim);
-  const idx = new Array<number>(n);
-  const weights = new Array<number>(n);
-
-  for (let sim = 0; sim < nSim; sim++) {
-    for (let i = 0; i < n; i++) {
-      idx[i] = i;
-      weights[i] = pWin[i];
-    }
-    let remaining = n;
-    let total = weights.reduce((a, b) => a + b, 0);
-    const order: number[] = [];
-
-    for (let pos = 0; pos < realDepth && remaining > 0 && total > 0; pos++) {
-      const target = rand() * total;
-      let acc = 0;
-      let picked = remaining - 1;
-      for (let j = 0; j < remaining; j++) {
-        acc += weights[j];
-        if (acc >= target) {
-          picked = j;
-          break;
-        }
-      }
-      order.push(idx[picked]);
-      total -= weights[picked];
-      idx[picked] = idx[remaining - 1];
-      weights[picked] = weights[remaining - 1];
-      remaining--;
-    }
-    orders[sim] = order;
-  }
-
+  const orders: number[][] = Array.from({ length: nSim }, () => []);
+  const seed = options.seed ?? seedFrom(pWin, 2463534242);
+  sampleOrders(pWin, Math.min(depth, n), nSim, seed, options.lambdas ?? PLACE_LAMBDAS, (sim, _pos, horse) => {
+    orders[sim].push(horse);
+  });
   return orders;
+}
+
+/** Graine d'une course, exposée pour partager les tirages entre deux simulations (variance réduite). */
+export function orderSeed(pWin: number[]): number {
+  return seedFrom(pWin, 2463534242);
 }
 
 /**
@@ -319,15 +376,27 @@ export function ticketProbability(orders: number[][], picks: number[], places: n
   return (hits / orders.length) * 100;
 }
 
+/** Contexte facultatif d'une recalibration. */
+export type CalibrationOptions = {
+  /** Discipline de la course : choisit α et β du mélange ; absente → marché recalibré seul (α = 1, β = 0). */
+  discipline?: DisciplineName;
+  /** Minutes avant le départ, pour la cote finale attendue ; absentes → hypothèse la plus prudente. */
+  minutesToStart?: number | null;
+};
+
 /**
  * Recalibre tout un peloton d'un coup et renvoie les chevaux enrichis.
  * Les champs `winProbability`, `top3Probability`, `top5Probability`,
  * `fairOdds`, `marketEdge` et `valueIndex` sont écrasés par des valeurs
  * cohérentes entre elles.
  *
+ * `marketEdge` / `valueIndex` = espérance (%) d'un simple gagnant à la cote
+ * FINALE attendue (src/lib/value-signal.ts), pas à la cote affichée : sans
+ * délai connu, toute l'espérance apparente est supposée rattrapée.
+ *
  * L'ordre du tableau d'entrée est préservé — le tri relève de l'appelant.
  */
-export function calibrateField(horses: HorsePrediction[]): CalibratedHorse[] {
+export function calibrateField(horses: HorsePrediction[], options: CalibrationOptions = {}): CalibratedHorse[] {
   if (horses.length === 0) return [];
 
   // Peloton d'un seul partant : la normalisation n'a pas de sens.
@@ -342,14 +411,17 @@ export function calibrateField(horses: HorsePrediction[]): CalibratedHorse[] {
   // revenait à mélanger le marché avec lui-même. Repli sur l'ancien score pour
   // une discipline sans modèle ajusté.
   const fundamental = horses.map((h) => Number(h.fundamentalProbability));
-  const model = fundamental.every((p) => Number.isFinite(p) && p > 0)
-    ? fundamental.map((p) => p / 100)
-    : modelProbabilities(horses.map((h) => h.kzScore));
+  const hasFundamental = fundamental.every((p) => Number.isFinite(p) && p > 0);
+  const model = hasFundamental ? fundamental.map((p) => p / 100) : modelProbabilities(horses.map((h) => h.kzScore));
   // Aucune cote publiée : le « marché » n'est qu'une répartition uniforme, et
-  // le mélanger (à 90 %) écrasait l'IA — 30 % devenait 11,6 % sur 10 partants
-  // — alors que la page annonce un classement « sur l'IA seule ».
+  // le mélanger écrasait l'IA — 30 % devenait 11,6 % sur 10 partants — alors
+  // que la page annonce un classement « sur l'IA seule ».
   const noMarket = horses.every((h) => !(Number.isFinite(h.odds) && h.odds > 1));
-  const pWin = noMarket ? model : blendProbabilities(market, model);
+  // Le mélange n'a été ajusté qu'avec le modèle fondamental : sans lui, β = 0.
+  const coefficients = (options.discipline && BLEND_COEFFICIENTS[options.discipline]) || DEFAULT_BLEND;
+  const pWin = noMarket
+    ? model
+    : blendProbabilities(market, model, hasFundamental ? coefficients : { alpha: coefficients.alpha, beta: 0 });
 
   const topK = monteCarloTopK(pWin, [3, 5]);
   const pTop3 = topK.get(3)!;
@@ -362,9 +434,8 @@ export function calibrateField(horses: HorsePrediction[]): CalibratedHorse[] {
 
     // Cote juste = inverse de la probabilité retenue.
     const fairOdds = win > 0 ? 100 / win : horse.odds;
-    // Edge = espérance d'un enjeu unitaire à la cote proposée, en %.
-    // Plus de plafond artificiel à +95 % : la valeur reste lisible et comparable.
-    const edge = horse.odds > 1 ? horse.odds * (win / 100) * 100 - 100 : 0;
+    // Espérance d'un enjeu unitaire à la cote finale attendue, en %.
+    const edge = expectedValueAtStart(horse.odds, options.minutesToStart, win) ?? 0;
 
     return {
       ...horse,

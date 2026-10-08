@@ -2,7 +2,7 @@ import { properName } from "@/lib/format";
 import { READING_MIN_TOP } from "@/lib/profiles";
 import { buildSelection } from "@/lib/selection";
 import type { RaceAnalysis } from "@/lib/types";
-import { VALUE_THRESHOLD } from "./race-signals";
+import { bestAiMarketGap, formatGap } from "@/lib/value-signal";
 
 /**
  * RÉSUMÉ DU JOUR — trois phrases au plus, construites uniquement à partir des
@@ -37,19 +37,19 @@ function trapSentence(traps: RaceAnalysis[]): string {
   return `Course piège à surveiller : ${trap.programCode} ${properName(trap.name)}, ${trap.horses.length} partants, aucun à ${READING_MIN_TOP.ouverte} % de chances${tail}.`;
 }
 
-/** Meilleure value du jour, seulement sur une course dont les cotes sont publiées. */
+/**
+ * Plus fort écart IA / marché du jour, seulement sur une course dont les cotes
+ * sont publiées. Un écart, pas une espérance de gain : aucune n'est établie.
+ */
 function valueSentence(races: RaceAnalysis[]): string | null {
-  let best: { race: RaceAnalysis; number: number; name: string; value: number } | null = null;
+  let best: { race: RaceAnalysis; number: number; name: string; points: number } | null = null;
   for (const race of races) {
     if (race.oddsAvailable === false) continue;
-    for (const h of race.horses) {
-      if (h.valueIndex > VALUE_THRESHOLD && (!best || h.valueIndex > best.value)) {
-        best = { race, number: h.number, name: h.horse, value: h.valueIndex };
-      }
-    }
+    const gap = bestAiMarketGap(race.horses);
+    if (gap && (!best || gap.points > best.points)) best = { race, number: gap.horse.number, name: gap.horse.horse, points: gap.points };
   }
   if (!best) return null;
-  return `Plus fort écart entre l'IA et la cote : n° ${best.number} ${properName(best.name)} en ${best.race.programCode}, espérance +${Math.round(best.value)} %.`;
+  return `Plus fort écart entre l'IA et le marché : n° ${best.number} ${properName(best.name)} en ${best.race.programCode}, ${formatGap(best.points)} de probabilité.`;
 }
 
 export function buildDaySummary(races: RaceAnalysis[]): DaySummary {

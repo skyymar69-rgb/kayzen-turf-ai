@@ -16,6 +16,31 @@ import type { BetOffer } from "@/lib/types";
 
 type TicketMode = "agressif" | "equilibre" | "securise";
 
+const RETURN_EXPLANATION =
+  "Retour estimé pour 1 € misé : probabilité du ticket selon nos calculs × rapport estimé, (1 − prélèvement PMU) ÷ probabilité que lui prête le public. Hypothèse non vérifiée sur les rapports réels.";
+
+/** « ×0,82 » — retour estimé pour 1 € misé. */
+export function formatReturn(value: number): string {
+  return `×${value.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+/**
+ * Retour estimé d'un ticket. Sous 1, il est dit « en dessous de la mise »
+ * plutôt que caché : c'est le cas normal au pari mutuel, prélèvement oblige.
+ */
+function ReturnBadge({ value }: { value: number | null | undefined }) {
+  if (value == null) {
+    return <span className="text-muted" title="Pas de cote publiée, ou combinaison trop rare pour estimer son rapport.">Retour non estimé</span>;
+  }
+  const below = value < 1;
+  return (
+    <span className={`font-bold ${below ? "text-warn" : "text-accent-text"}`} title={RETURN_EXPLANATION}>
+      Retour estimé {formatReturn(value)}
+      {below ? " · en dessous de la mise" : " · théorique"}
+    </span>
+  );
+}
+
 const BET_COLORS: Record<string, string> = {
   SIMPLE_GAGNANT:  "bg-cyan-700",
   SIMPLE_PLACE:    "bg-cyan-700",
@@ -71,10 +96,13 @@ function TicketVariantCloud({ recommendation }: { recommendation: ReturnType<typ
         <span
           key={`${recommendation.type}-${v.ticket}`}
           className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2 py-1 font-mono text-xs font-bold text-fg"
-          title={`${v.confidence}/99 — ${v.rationale}`}
+          title={`${v.confidence}/99 — ${v.rationale}${v.expectedReturn != null ? ` Retour estimé ${formatReturn(v.expectedReturn)} pour 1 €.` : ""}`}
         >
           {v.ticket}
           <span className="font-sans text-[10px] font-semibold text-accent-text">{v.confidence}</span>
+          {v.expectedReturn != null && (
+            <span className={`font-sans text-[10px] font-semibold ${v.expectedReturn < 1 ? "text-warn" : "text-accent-text"}`}>{formatReturn(v.expectedReturn)}</span>
+          )}
         </span>
       ))}
       {hidden > 0 && (
@@ -112,7 +140,7 @@ function XTicketsSection({ xTickets }: { xTickets: XTicket[] }) {
         <p className="mb-4 rounded-xl border border-border bg-surface-sub px-4 py-3 text-xs leading-5 text-muted">
           <strong className="text-fg">Base</strong> = cheval sélectionné fixe ·{" "}
           <strong className="text-fg">X</strong> = n’importe quel cheval du champ ·{" "}
-          Le coût estimé correspond au nombre de combinaisons × mise de base PMU.
+          Le coût estimé correspond au nombre de combinaisons × mise de base PMU. Le retour estimé n&apos;est calculé que pour les tickets à une seule combinaison.
         </p>
         <div className="grid gap-5">
           {byType.map(([betType, tickets]) => (
@@ -151,13 +179,19 @@ function XTicketCard({ ticket: t }: { ticket: XTicket }) {
         <span>~{formatEuros(t.costEuros)}</span>
         <span>·</span>
         <span className={`font-bold ${confColor}`}>Conf. {t.confidence}/99</span>
+        {t.combinations === 1 && (
+          <>
+            <span>·</span>
+            <ReturnBadge value={t.expectedReturn} />
+          </>
+        )}
       </div>
     </div>
   );
 }
 
-function TicketCard({ label, ticket, confidence, strategy }: {
-  label: string; ticket: string; confidence: number; strategy: string;
+function TicketCard({ label, ticket, confidence, strategy, expectedReturn }: {
+  label: string; ticket: string; confidence: number; strategy: string; expectedReturn?: number | null;
 }) {
   const { etat, copier } = useClipboard();
 
@@ -173,6 +207,9 @@ function TicketCard({ label, ticket, confidence, strategy }: {
       <p className="mt-1 text-[10px] text-muted">
         <span className={`font-bold ${confColor}`}>Conf. {confidence}/99</span>
         {" · "}{strategy}
+      </p>
+      <p className="mt-1 text-[10px]">
+        <ReturnBadge value={expectedReturn} />
       </p>
     </div>
   );
@@ -356,10 +393,14 @@ export function TicketTools({
         </summary>
         <div className="grid gap-2 px-5 pb-5 sm:grid-cols-2 xl:grid-cols-3">
           {recommendations.map((r) => (
-            <TicketCard key={r.type} label={r.label} ticket={r.ticket} confidence={r.confidence} strategy={formatStrategyLabel(r.strategy)} />
+            <TicketCard key={r.type} label={r.label} ticket={r.ticket} confidence={r.confidence} strategy={formatStrategyLabel(r.strategy)} expectedReturn={r.expectedReturn} />
           ))}
         </div>
-        <p className="px-5 pb-5 text-[11px] text-muted">Conf. = probabilité estimée que le ticket passe, en %, selon nos probabilités. Aucun gain n&apos;est garanti.</p>
+        <p className="px-5 pb-5 text-[11px] leading-5 text-muted">
+          Conf. = probabilité estimée que le ticket passe, en %, selon nos probabilités. Retour estimé = ce que rend en moyenne 1 € misé
+          (×0,80 : 80 centimes) ; sous ×1, le ticket rend moins que la mise — c&apos;est le cas normal, le PMU prélevant 15 à 27 % des enjeux.
+          Nos probabilités suivant aujourd&apos;hui le marché, aucun ticket n&apos;a d&apos;espérance positive établie.
+        </p>
       </details>
 
       {xTickets.length > 0 && <XTicketsSection xTickets={xTickets} />}

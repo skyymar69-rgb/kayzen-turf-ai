@@ -14,7 +14,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Kayzen Turf",
     short_name: "Kayzen Turf",
-    description: "Pronostics hippiques PMU assistés par IA — analyses, value bets, tickets Quinté+",
+    description: "Pronostics hippiques PMU assistés par IA — analyses, avis IA face au marché, tickets Quinté+",
     start_url: "/",
     scope: "/",
     display: "standalone",

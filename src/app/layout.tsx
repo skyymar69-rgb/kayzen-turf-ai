@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     template: "%s — Kayzen Turf",
   },
   description:
-    "Analysez les courses PMU avec l'intelligence artificielle : probabilités, value bets, tickets optimisés et suivi de performance. Hier, aujourd'hui, demain.",
+    "Analysez les courses PMU avec l'intelligence artificielle : probabilités calibrées, avis IA face au marché, tickets et suivi de performance. Hier, aujourd'hui, demain.",
   keywords: ["pronostics PMU", "turf IA", "value bet", "courses hippiques", "Quinte+", "analyse turf"],
   authors: [{ name: "Kayzen Lyon", url: "https://kayzen-lyon.fr" }],
   robots: { index: true, follow: true },
@@ -33,13 +33,13 @@ export const metadata: Metadata = {
     url: "/",
     title: "Kayzen Turf — Pronostics PMU assistés par IA",
     description:
-      "Analysez les courses PMU avec l'intelligence artificielle : probabilités, value bets, tickets optimisés et suivi de performance.",
+      "Analysez les courses PMU avec l'intelligence artificielle : probabilités calibrées, avis IA face au marché, tickets et suivi de performance.",
   },
   twitter: {
     card: "summary_large_image",
     title: "Kayzen Turf — Pronostics PMU assistés par IA",
     description:
-      "Analysez les courses PMU avec l'intelligence artificielle : probabilités, value bets, tickets optimisés et suivi de performance.",
+      "Analysez les courses PMU avec l'intelligence artificielle : probabilités calibrées, avis IA face au marché, tickets et suivi de performance.",
   },
   // Next génère lui-même les balises depuis src/app/icon.png et
   // src/app/apple-icon.png : rien à déclarer ici.

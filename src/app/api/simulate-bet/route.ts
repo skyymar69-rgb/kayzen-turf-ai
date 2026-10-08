@@ -25,6 +25,9 @@ const schemaSimulation = z.object({
   // En pourcentage (0 à 100), comme l'attend `getDrawdownMultiplier` : la
   // borne 0-1 laissait le multiplicateur à 1 quelle que soit la baisse.
   drawdown: z.coerce.number().finite().gte(0).lte(100).default(0),
+  // Minutes avant le départ : la cote fournie est alors ramenée à la cote
+  // finale attendue. 0 (défaut) = la cote fournie est celle qui sera payée.
+  minutesToStart: z.coerce.number().finite().gte(0).lte(7 * 24 * 60).default(0),
 });
 
 export async function POST(request: Request) {
@@ -53,12 +56,12 @@ export async function POST(request: Request) {
     );
   }
 
-  const { stake, odds, winProbability, bankroll, drawdown } = resultat.data;
+  const { stake, odds, winProbability, bankroll, drawdown, minutesToStart } = resultat.data;
 
   return NextResponse.json(
     {
       generatedAt: new Date().toISOString(),
-      data: simulateBet(stake, odds, winProbability, bankroll, drawdown),
+      data: simulateBet(stake, odds, winProbability, bankroll, drawdown, minutesToStart),
     },
     { headers: { "Cache-Control": "no-store" } },
   );

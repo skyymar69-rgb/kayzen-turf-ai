@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { BetBadge, RaceStatusPill, titleCase } from "@/components/badges";
-import { formatPct } from "@/lib/format";
+import { formatGap } from "@/lib/value-signal";
 import type { PronosticRace } from "@/lib/pronostics-filters";
 import type { RaceStatus } from "@/lib/race-status";
 import { DisciplineDot, ReadingPill } from "./race-bits";
@@ -35,8 +35,8 @@ export function RaceRow({ race, status, active }: Props) {
       <span className="order-5 col-span-2 min-w-0 truncate text-xs text-muted sm:order-none sm:col-span-1">
         Base <span className="font-semibold text-fg">{race.base ? `n° ${race.base.number} ${titleCase(race.base.name)}` : "—"}</span>
       </span>
-      <span className={`order-6 whitespace-nowrap text-xs sm:order-none ${race.valueBet ? "font-bold text-accent-text" : "text-muted"}`}>
-        {race.valueBet ? `Value n° ${race.valueBet.number} ${formatPct(race.valueBet.valueIndex, 0, true)}` : "Pas de value"}
+      <span className={`order-6 whitespace-nowrap text-xs sm:order-none ${race.aiGap ? "font-bold text-accent-text" : "text-muted"}`}>
+        {race.aiGap ? `Écart IA n° ${race.aiGap.number} ${formatGap(race.aiGap.points)}` : "Pas d'écart IA"}
       </span>
       <span className="hidden sm:inline">
         <ReadingPill reading={race.reading} />

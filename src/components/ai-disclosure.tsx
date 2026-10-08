@@ -19,7 +19,7 @@ export function AiDisclosure() {
       <div className="min-w-0 text-sm leading-6 text-muted">
         <p className="font-bold text-fg">Contenus générés par intelligence artificielle</p>
         <p className="mt-1">
-          Ordres probables, probabilités, value bets et tickets de cette page sont calculés
+          Ordres probables, probabilités, écarts IA / marché et tickets de cette page sont calculés
           automatiquement par nos modèles à partir de données publiques. Ils ne sont pas relus
           course par course par un humain, peuvent contenir des erreurs et ne constituent ni un
           conseil en investissement ni une garantie de gain.{" "}

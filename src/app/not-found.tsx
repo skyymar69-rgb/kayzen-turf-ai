@@ -24,7 +24,7 @@ const PISTES = [
     href: "/pronostics",
     icon: Flag,
     title: "Pronostics PMU",
-    body: "Ordre probable, base IA et value bets, course par course.",
+    body: "Ordre probable, base IA et écarts IA / marché, course par course.",
   },
   {
     href: "/methode",

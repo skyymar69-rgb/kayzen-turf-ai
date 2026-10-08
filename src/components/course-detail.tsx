@@ -255,7 +255,7 @@ export function CourseDetail({ race, history = EMPTY_HISTORY, signals = NO_SIGNA
                   <AllOddsChart history={history} rows={vm.rows} selectedNumber={selected} />
                 </div>
                 <div className={SECTION_SCROLL} id="simulation">
-                  <SimulationPanel row={selectedRow} />
+                  <SimulationPanel race={race} row={selectedRow} />
                 </div>
                 <div className={SECTION_SCROLL} id="apres-course">
                   <PostRacePanel analysis={postRace} />

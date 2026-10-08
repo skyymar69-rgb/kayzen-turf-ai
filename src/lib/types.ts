@@ -80,6 +80,12 @@ export type BetRecommendation = {
   rationale: string;
   variants: BetTicketVariant[];
   variantCount: number;
+  /**
+   * Retour estimé pour 1 € misé (0,82 = on récupère 82 centimes en moyenne),
+   * `null` quand il n'est pas estimable (pas de cote, combinaison trop rare).
+   * Voir `expectedTicketReturn` dans src/lib/bet-recommendations.ts.
+   */
+  expectedReturn?: number | null;
 };
 
 export type BetTicketVariant = {
@@ -87,6 +93,8 @@ export type BetTicketVariant = {
   numbers: number[];
   confidence: number;
   rationale: string;
+  /** Retour estimé pour 1 € misé, comme `BetRecommendation.expectedReturn`. */
+  expectedReturn?: number | null;
 };
 
 export type PostRaceAnalysis = {

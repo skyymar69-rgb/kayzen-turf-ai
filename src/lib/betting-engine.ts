@@ -1,20 +1,25 @@
+import { MARKET_GAMMA, MODEL_VERSION, PLACE_LAMBDAS } from "@/lib/probability";
 import type { BetSimulation, HorsePrediction, ModelCard, RaceAnalysis } from "@/lib/types";
+import { VALUE_EDGE_THRESHOLD, canLabelValue, expectedFinalOdds } from "@/lib/value-signal";
 
 // ─────────────────────────────────────────────────────────────
-// PRÉLÈVEMENTS PMU PAR TYPE DE PARI (indicatifs)
-// Source : règlement PMU — 16,5 % simple, 21,5 % couplé, 24-27 % paris à
-// bonus.
+// PRÉLÈVEMENTS PMU PAR TYPE DE PARI — ORDRES DE GRANDEUR
 //
-// Ces taux servent UNIQUEMENT à décrire le rendement théorique d'un pool. Le
-// rapport PMU affiché (`dernierRapportDirect`) est déjà NET de prélèvement :
-// c'est ce que touche le parieur pour 1 € misé. Appliquer `(1 − takeout)` à
-// une cote nette compterait le prélèvement deux fois — c'est ce que faisait
-// l'ancienne `expectedValuePMU`, jamais branchée, et corrigé ci-dessous.
+// Taux publics approximatifs (communication PMU et presse hippique), qui
+// varient selon les années et les paris à bonus ; ils ne sont PAS tirés d'un
+// règlement en vigueur vérifié. Seul le simple est recoupé par la mesure :
+// marge médiane des cotes gagnant 1,184 sur 1 564 courses (24/08 → 07/10/2026),
+// soit ≈ 15,5 % (voir WIN_TAKEOUT, src/lib/value-signal.ts).
+//
+// Usage unique : estimer le rapport d'un ticket combiné, ≈ (1 − prélèvement)
+// / P_public (src/lib/bet-recommendations.ts, `expectedTicketReturn`). Les
+// cotes et rapports PMU affichés sont déjà NETS de prélèvement : ne jamais
+// appliquer (1 − prélèvement) à une cote affichée.
 // ─────────────────────────────────────────────────────────────
 
 export const PMU_TAKEOUT: Record<string, number> = {
-  SIMPLE_GAGNANT: 0.165,
-  SIMPLE_PLACE: 0.165,
+  SIMPLE_GAGNANT: 0.155,
+  SIMPLE_PLACE: 0.155,
   COUPLE_GAGNANT: 0.215,
   COUPLE_PLACE: 0.215,
   COUPLE_ORDRE: 0.215,
@@ -23,28 +28,13 @@ export const PMU_TAKEOUT: Record<string, number> = {
   TRIO_ORDRE: 0.245,
   TIERCE: 0.245,
   MULTI: 0.270,
+  MINI_MULTI: 0.270,
   SUPER_QUATRE: 0.270,
   QUARTE_PLUS: 0.260,
   QUINTE_PLUS: 0.260,
   PICK5: 0.260,
   TIC_TROIS: 0.245,
 };
-
-/**
- * Espérance d'un enjeu unitaire au rapport PMU, en %.
- *
- * Le rapport est net de prélèvement : EV = p × rapport − 1. Le type de pari
- * n'entre pas dans le calcul, il est conservé pour documenter le pool visé.
- */
-export function expectedValuePMU(
-  winProbability: number,
-  decimalOdds: number,
-  betType: string = "SIMPLE_GAGNANT",
-): number {
-  void betType;
-  const p = winProbability / 100;
-  return round((p * decimalOdds - 1) * 100, 1);
-}
 
 /**
  * Closing Line Value — primary edge measurement for pari-mutuel.
@@ -68,9 +58,15 @@ export function marketEdgePercent(winProbability: number, decimalOdds: number) {
   return round((decimalOdds * probability - 1) * 100, 1);
 }
 
-export function classifyValueSignal(edgePercent: number): BetSimulation["recommendation"] {
-  if (edgePercent > 22) return "Value bet";
-  if (edgePercent > 8) return "Miser prudemment";
+/**
+ * Lecture d'une espérance (%) à la cote finale attendue. « Value bet » exige
+ * le seuil unique du site (VALUE_EDGE_THRESHOLD) ET le droit d'employer le
+ * mot (cote publiée, 30 minutes du départ ou moins) ; sinon la lecture
+ * plafonne à « Observer ».
+ */
+export function classifyValueSignal(edgePercent: number, valueAllowed = true): BetSimulation["recommendation"] {
+  if (edgePercent > VALUE_EDGE_THRESHOLD) return valueAllowed ? "Value bet" : "Observer";
+  if (edgePercent > 0) return valueAllowed ? "Miser prudemment" : "Observer";
   if (edgePercent > -5) return "Observer";
   return "Éviter";
 }
@@ -102,7 +98,7 @@ export function fractionalKellyStake({
   const netOdds = decimalOdds - 1;
   const edge = netOdds * probability - (1 - probability);
 
-  if (edge <= 0 || netOdds <= 0) {
+  if (!(edge > 0) || !(netOdds > 0)) {
     return {
       baseStake: 0,
       adjustedStake: 0,
@@ -124,23 +120,36 @@ export function fractionalKellyStake({
   };
 }
 
+/**
+ * Simulation THÉORIQUE d'un simple gagnant.
+ *
+ * L'espérance, l'edge et la mise de Kelly sont calculés à la cote FINALE
+ * attendue (`expectedFinalOdds`), pas à la cote affichée : loin du départ,
+ * l'écart apparent est supposé rattrapé par le marché. `minutesToStart` = 0
+ * signifie « la cote fournie est celle qui sera payée » (usage de l'API) ;
+ * `null` = délai inconnu, hypothèse la plus prudente.
+ */
 export function simulateBet(
   stake: number,
   odds: number,
   winProbability: number,
   bankroll = 500,
   drawdown = 0,
+  minutesToStart: number | null = 0,
 ): BetSimulation {
   const probability = winProbability / 100;
+  const finalOdds = expectedFinalOdds(odds, minutesToStart, winProbability);
+  const priceOdds = Number.isFinite(finalOdds) ? finalOdds : odds;
   const potentialReturn = stake * odds;
-  const expectedValue = potentialReturn * probability - stake;
-  const marketEdge = marketEdgePercent(winProbability, odds);
+  const expectedValue = stake * (priceOdds * probability - 1);
+  const marketEdge = marketEdgePercent(winProbability, priceOdds);
   const kelly = fractionalKellyStake({
     bankroll,
-    decimalOdds: odds,
+    decimalOdds: priceOdds,
     drawdown,
     winProbability,
   });
+  const valueAllowed = minutesToStart === 0 || canLabelValue(odds, minutesToStart);
 
   return {
     stake,
@@ -152,7 +161,7 @@ export function simulateBet(
     drawdownAdjustedStake: kelly.adjustedStake,
     fairOdds: probabilityToFairOdds(winProbability),
     marketEdge,
-    recommendation: classifyValueSignal(marketEdge),
+    recommendation: classifyValueSignal(marketEdge, valueAllowed),
   };
 }
 
@@ -175,29 +184,36 @@ export function classifyRaceTier(score: number): RaceAnalysis["bettingTier"] {
   return "Avoid";
 }
 
+const fr = (v: number, d = 3) => v.toLocaleString("fr-FR", { maximumFractionDigits: d });
+
+/** Fiche du modèle publiée par /api/model-card : décrit la chaîne réellement servie. */
 export const modelCard: ModelCard = {
-  version: "0.3.0-arrival-correlation",
-  purpose: "Aide à la décision pour analyser une course, estimér les probabilités et controler le risque de mise.",
-  modelStack: ["Race pre-filtering", "Horse win probability", "Top 3 upset detection", "Favorite failure risk", "Value bet scoring", "Fractional Kelly bankroll policy"],
+  version: MODEL_VERSION,
+  purpose:
+    "Aide à la lecture d'une course : probabilités de victoire et de place cohérentes entre elles, avis d'un modèle fondamental indépendant des cotes, et estimation honnête de ce que rapporte un ticket. Aucun gain n'est promis.",
+  modelStack: [
+    `Marché : cotes PMU, marge retirée par un exposant calibré (p ∝ (1/cote)^γ, γ = ${fr(MARKET_GAMMA)})`,
+    "Mélange de Benter p ∝ exp(α·log p_marché + β·log p_IA), α et β par discipline — β = 0 aujourd'hui (aucun gain hors échantillon)",
+    `Ordre d'arrivée : Plackett-Luce corrigé de Henery (forces p^λ, λ2 = ${fr(PLACE_LAMBDAS[0])}, λ3 = ${fr(PLACE_LAMBDAS[1])}) → Top 3, Top 5, tickets`,
+    "Modèle fondamental (src/lib/fundamental) : musique, entourage, historique — sans aucune cote, affiché comme « avis IA »",
+    "Retour estimé des tickets combinés : P_modèle × (1 − prélèvement) / P_public",
+  ],
   featureFamilies: [
-    "Forme recente cheval/jockey/entraîneur",
-    "Contexte course: distance, piste, terrain, taille du peloton",
-    "Historique course et categorie",
-    "Signal marché: cote, cote juste, edge",
-    "Correlation prediction/resultat: ecart gagnant-place, rang PronoScore, rang cote, stabilite des rangs",
-    "Tocard surveille: cote outsider, edge positif, reservoir Top 5 et probabilite Top 3",
-    "Favori fragile: cote courte, Top 3 insuffisant, edge negatif et volatilite course",
-    "Garde-fous bankroll: drawdown et plafond de mise",
+    "Marché : cote PMU gagnant (dernier relevé)",
+    "Forme : musique (cinq dernières courses)",
+    "Entourage : réussite du jockey/driver et de l'entraîneur, rétrécie vers la moyenne",
+    "Historique du cheval",
   ],
   calibration: {
-    method: "Shrinkage vers le prior de peloton, detection des favoris fragiles, remontee des outsiders surveilles puis calibration temporelle en backtest",
-    rationale: "Les modèles de classement hippique deviennent vite trop confiants. La calibration doit ramener les favoris vers des probabilités realistes et mesurer quand un tocard peut entrer dans les trois premiers.",
+    method:
+      "Maximum de vraisemblance sur arrivées réelles (scripts/fit-market.ts) : exposant γ du marché, mélange α/β par discipline (logit conditionnel), exposants de Henery λ2/λ3 sur les 2e et 3e. Ajustement avant le 16/09/2026, validation après (795 courses).",
+    rationale:
+      "Contre la cote finale, le modèle fondamental n'améliore pas le log loss (β non significatif) : la probabilité servie est le marché recalibré. La correction de Henery ramène le réel / attendu des places dans les 3 premiers de 0,87-1,65 (Harville) à 0,86-1,04 selon la tranche de cote.",
   },
   leakageControls: [
-    "Split temporel obligatoire pour validation, jamais de split aleatoire comme preuve principale.",
-    "Features historiques calculees avec decalage temporel: shift(1), expanding window ou date filtering.",
-    "Aucune statistique globale cheval, jockey, entraîneur ou pedigree ne doit utiliser des courses futures.",
-    "Les cotes de marché ne doivent être jointes qu'au timestamp disponible pour l'utilisateur.",
+    "Séparation temporelle : ajustement sur les courses antérieures, validation sur les suivantes, jamais de tirage aléatoire.",
+    "Variables d'entourage calculées avec les seules courses antérieures.",
+    "Les cotes utilisées pour ajuster le mélange sont les dernières connues (≈ finales) : elles décrivent le marché au départ, pas celui disponible plus tôt.",
   ],
   bankrollPolicy: {
     kellyFraction: 0.25,
@@ -211,10 +227,10 @@ export const modelCard: ModelCard = {
     ],
   },
   limitations: [
-    "Aucune prediction ne garantit un gain.",
-    "Les performances doivent être jugees sur un grand volume de paris et en conditions live.",
-    "Une value bet peut perdre meme si la decision était mathematiquement correcte.",
-    "Les données hippiques et les cotes peuvent changer rapidement avant le départ.",
+    "Aucune rentabilité n'est établie : l'espérance d'un simple gagnant vaut environ −15 %, le prélèvement du PMU.",
+    "La mise de Kelly n'est proposée que si l'espérance à la cote finale attendue est positive, à titre théorique.",
+    "Le rattrapage des cotes avant le départ est une hypothèse prudente, pas encore ajustée sur des relevés horodatés.",
+    "Le retour estimé des tickets combinés suppose que le public joue les combinaisons comme le simple gagnant ; il n'est pas vérifié sur les rapports réels.",
   ],
 };
 

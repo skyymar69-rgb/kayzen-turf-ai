@@ -9,7 +9,7 @@ import {
   meetingScore,
   meetingStrategy,
   racePriorityScore,
-  valueRaceCount,
+  gapRaceCount,
 } from "../src/lib/home/meetings";
 import { raceOpportunity, raceStatusAt, selectTimelineRace, sortByStart, startMinutes, statusLabel } from "../src/lib/home/race-signals";
 import type { BetOffer } from "../src/lib/types";
@@ -69,22 +69,25 @@ describe("réunions", () => {
     assert.equal(meetingScore([]), 0);
   });
 
-  it("compte les courses à value d'une réunion", () => {
-    const withValue = race("v", { horses: [horse(1, { valueIndex: 15 }), horse(2)] });
-    assert.equal(valueRaceCount({ races: [withValue, race("n")] }), 1);
+  // Les courses se comptent à l'écart IA / marché (≥ 4 points), plus à
+  // l'indice value, calculé contre une cote finale où il est négatif partout.
+  it("compte les courses à écart IA / marché d'une réunion", () => {
+    const withGap = race("v", { horses: [horse(1, { fundamentalProbability: 15, marketProbability: 9 }), horse(2)] });
+    const valueOnly = race("w", { horses: [horse(1, { valueIndex: 15 }), horse(2)] });
+    assert.equal(gapRaceCount({ races: [withGap, valueOnly, race("n")] }), 1);
   });
 });
 
 describe("indicateurs du jour", () => {
   it("lit les courses à partir des profils et retient la course phare", () => {
-    const strong = race("fort", { raceQualityScore: 90, horses: [...clearField().slice(0, 7), horse(8, { valueIndex: 16 })] });
+    const strong = race("fort", { raceQualityScore: 90, horses: [...clearField().slice(0, 7), horse(8, { fundamentalProbability: 16, marketProbability: 6 })] });
     const trap = race("piege", { horses: openField() });
     const insights = buildDayInsights([trap, strong]);
     assert.equal(insights.readable, 1);
     assert.equal(insights.traps, 1);
-    assert.equal(insights.valueRaces, 1);
+    assert.equal(insights.gapRaces, 1);
     assert.equal(insights.nextPriority?.id, "fort");
-    assert.equal(insights.bestAlert, "Value bet forte");
+    assert.equal(insights.bestAlert, "Écart IA / marché fort");
     assert.equal(featuredRace([trap, strong])?.id, "fort");
     assert.equal(buildDayInsights([]).bestAlert, "En attente");
   });
@@ -127,6 +130,9 @@ describe("signaux et ligne du temps", () => {
     const fragile = race("f", { horses: clearField().map((h) => (h.number === 1 ? { ...h, top3Probability: 30 } : h)) });
     assert.equal(raceOpportunity(fragile), "Favori fragile #1");
     assert.equal(raceOpportunity(race("s")), "À surveiller #1");
+    const gap = race("g", { horses: [...clearField().slice(0, 4), horse(5, { odds: 9, top3Probability: 30, fundamentalProbability: 14, marketProbability: 8 }), ...clearField().slice(5)] });
+    // Le marché est recalculé depuis la cote (9/1) par la calibration : seuls le numéro et le signe sont fixés.
+    assert.match(raceOpportunity(gap), /^Écart IA \/ marché #5 \(\+[\d,]+ pts\)$/);
     assert.equal(raceOpportunity(race("vide", { horses: [] })), "Signal indisponible");
   });
 });
