@@ -165,9 +165,12 @@ export async function getRaces(filters?: { date?: string | null; day?: string | 
         races.risk_level,
         races.bet_types,
         to_char(races.odds_refreshed_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as odds_refreshed_at,
-        races.start_type,
-        races.prize,
-        to_char(races.going_updated_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as going_updated_at
+        -- Colonnes ajoutées en octobre 2026, lues par to_jsonb : tant que le
+        -- schéma n'est pas appliqué, elles valent null au lieu de faire
+        -- échouer la page (le site peut être déployé avant la migration).
+        to_jsonb(races) ->> 'start_type' as start_type,
+        (to_jsonb(races) ->> 'prize')::int as prize,
+        to_char((to_jsonb(races) ->> 'going_updated_at')::timestamptz at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as going_updated_at
       from races
       left join racecourses on racecourses.id = races.racecourse_id
       where
@@ -234,12 +237,12 @@ async function fetchEntriesByRace(raceIds: string[]) {
       entries.speed_figure::text,
       entries.draw,
       entries.equipment,
-      entries.blinkers,
+      to_jsonb(entries) ->> 'blinkers' as blinkers,
       entries.silks_url,
       jockeys.name as jockey,
       trainers.name as trainer,
       entries.odds::text,
-      entries.odds_source,
+      to_jsonb(entries) ->> 'odds_source' as odds_source,
       entries.fair_odds::text,
       entries.market_edge::text,
       entries.win_probability::text,
@@ -259,10 +262,10 @@ async function fetchEntriesByRace(raceIds: string[]) {
       ts.wins as trainer_wins,
       -- Totaux figés avant la course ; la règle de lecture (figé, sinon courant
       -- pour une course à venir, sinon rien) est dans src/lib/point-in-time.ts.
-      entries.jockey_runs_pre,
-      entries.jockey_wins_pre,
-      entries.trainer_runs_pre,
-      entries.trainer_wins_pre
+      (to_jsonb(entries) ->> 'jockey_runs_pre')::int as jockey_runs_pre,
+      (to_jsonb(entries) ->> 'jockey_wins_pre')::int as jockey_wins_pre,
+      (to_jsonb(entries) ->> 'trainer_runs_pre')::int as trainer_runs_pre,
+      (to_jsonb(entries) ->> 'trainer_wins_pre')::int as trainer_wins_pre
     from entries
     join horses on horses.id = entries.horse_id
     left join jockeys on jockeys.id = entries.jockey_id
@@ -326,9 +329,12 @@ export async function getRaceById(id?: string | null): Promise<RaceAnalysis | nu
         races.risk_level,
         races.bet_types,
         to_char(races.odds_refreshed_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as odds_refreshed_at,
-        races.start_type,
-        races.prize,
-        to_char(races.going_updated_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as going_updated_at
+        -- Colonnes ajoutées en octobre 2026, lues par to_jsonb : tant que le
+        -- schéma n'est pas appliqué, elles valent null au lieu de faire
+        -- échouer la page (le site peut être déployé avant la migration).
+        to_jsonb(races) ->> 'start_type' as start_type,
+        (to_jsonb(races) ->> 'prize')::int as prize,
+        to_char((to_jsonb(races) ->> 'going_updated_at')::timestamptz at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as going_updated_at
       from races
       left join racecourses on racecourses.id = races.racecourse_id
       where races.id = ${id}

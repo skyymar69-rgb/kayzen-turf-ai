@@ -156,7 +156,8 @@ async function applyRefresh(raceId: string, running: PmuParticipant[], listedNum
   if (toRemove.length > 0) {
     // Suppression et trace dans la même instruction : le retrait d'un partant
     // ne disparaît plus sans laisser de traces (cheval, numéro, heure).
-    const removed = (await sql.query(
+    const removed = (await queryWithLegacy(
+      sql,
       `with removed as (
          delete from entries where race_id = $1 and number = any($2::int[]) returning number, horse_id
        ), logged as (
@@ -165,6 +166,7 @@ async function applyRefresh(raceId: string, running: PmuParticipant[], listedNum
          on conflict (race_id, number) do nothing
        )
        select number, horse_id from removed`,
+      `delete from entries where race_id = $1 and number = any($2::int[]) returning number, horse_id`,
       [raceId, toRemove],
     )) as Array<{ number: number; horse_id: string }>;
     scratched = removed.map((r) => r.number);
@@ -179,11 +181,16 @@ async function applyRefresh(raceId: string, running: PmuParticipant[], listedNum
   // minutes de la boucle), elle remplacerait la dernière cote d'avant-course.
   let oddsChanged = 0;
   if (oddsRows.length > 0 && minutesToStart > 0) {
-    const changed = await sql.query(
+    const changed = await queryWithLegacy(
+      sql,
       `update entries e set odds = v.odds, odds_source = v.source
          from unnest($2::int[], $3::numeric[], $4::text[]) as v(number, odds, source)
         where e.race_id = $1 and e.number = v.number
           and (e.odds is distinct from v.odds or e.odds_source is distinct from v.source)
+        returning e.id`,
+      `update entries e set odds = v.odds
+         from unnest($2::int[], $3::numeric[], $4::text[]) as v(number, odds, source)
+        where e.race_id = $1 and e.number = v.number and e.odds is distinct from v.odds
         returning e.id`,
       [raceId, oddsRows.map((r) => r.number), oddsRows.map((r) => r.odds), oddsRows.map((r) => r.source)],
     );
@@ -225,9 +232,9 @@ async function applyRefresh(raceId: string, running: PmuParticipant[], listedNum
   // Les relevés restent permis juste après le départ : horodatés, ils disent
   // honnêtement quand la cote a été lue (contrairement à `entries.odds`, gelée).
   if (oddsRows.length > 0) {
-    const inserted = await sql.query(
-      `insert into odds_snapshots (race_id, horse_id, odds, source, odds_source, observed_at)
-       select e.race_id, e.horse_id, v.odds, 'PMU', v.source, now()
+    const snapshotSql = (withSource: boolean) =>
+      `insert into odds_snapshots (race_id, horse_id, odds, source${withSource ? ", odds_source" : ""}, observed_at)
+       select e.race_id, e.horse_id, v.odds, 'PMU'${withSource ? ", v.source" : ""}, now()
          from unnest($2::int[], $3::numeric[], $5::text[]) as v(number, odds, source)
          join entries e on e.race_id = $1 and e.number = v.number
         where not exists (
@@ -237,7 +244,11 @@ async function applyRefresh(raceId: string, running: PmuParticipant[], listedNum
                 select previous.odds from odds_snapshots previous
                  where previous.race_id = e.race_id and previous.horse_id = e.horse_id and previous.source = 'PMU'
                  order by previous.observed_at desc limit 1)
-       returning 1`,
+       returning 1`;
+    const inserted = await queryWithLegacy(
+      sql,
+      snapshotSql(true),
+      snapshotSql(false),
       [raceId, oddsRows.map((r) => r.number), oddsRows.map((r) => r.odds), gap, oddsRows.map((r) => r.source)],
     );
     snapshotRecorded = inserted.length > 0;
@@ -256,6 +267,27 @@ async function applyRefresh(raceId: string, running: PmuParticipant[], listedNum
   const frozen = minutesToStart > 0 ? await freezePrediction(raceId, minutesToStart) : [];
 
   return { status: "refreshed", oddsChanged, runners: running.length, scratched, scratchedHorseIds, snapshotRecorded, frozen };
+}
+
+/**
+ * Écriture tolérante à un schéma en retard : si une colonne ou une table
+ * d'octobre 2026 (`odds_source`, `scratches`) n'existe pas encore — site
+ * déployé avant `npm run db:schema` —, la requête d'avant la migration prend
+ * le relais au lieu de bloquer le rafraîchissement des cotes.
+ */
+async function queryWithLegacy(
+  sql: ReturnType<typeof getSql>,
+  primary: string,
+  legacy: string,
+  params: unknown[],
+): Promise<unknown[]> {
+  try {
+    return (await sql.query(primary, params)) as unknown[];
+  } catch (error) {
+    const code = (error as { code?: string }).code;
+    if (code !== "42703" && code !== "42P01") throw error;
+    return (await sql.query(legacy, params)) as unknown[];
+  }
 }
 
 /**
