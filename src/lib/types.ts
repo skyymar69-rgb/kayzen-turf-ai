@@ -1,3 +1,6 @@
+import type { FundamentalRaceContext } from "@/lib/fundamental/features";
+import type { HorseHistory } from "@/lib/fundamental/history";
+
 export type Confidence = "Faible" | "Moyenne" | "Forte";
 
 export type HorsePrediction = {
@@ -49,6 +52,16 @@ export type HorsePrediction = {
   /** Part des enjeux PMU sur ce cheval, au dernier relevé (%). */
   poolWin?: number | null;
   poolPlace?: number | null;
+  /** Poids porté (entries.weight), lu par le modèle fondamental (plat/obstacle). */
+  weight?: number | null;
+  /** Code de déferrage (entries.shoeing), lu par le modèle fondamental (trot). */
+  shoeing?: string | null;
+  /** Code d'œillères (entries.blinkers). */
+  blinkers?: string | null;
+  /** Données de la course utiles au modèle fondamental (spécialité, départ, distance, allocation, terrain). */
+  raceContext?: FundamentalRaceContext | null;
+  /** Historique en base du cheval, strictement antérieur à la course (src/lib/fundamental/history.ts). */
+  history?: HorseHistory | null;
 };
 
 export type BetOffer = {

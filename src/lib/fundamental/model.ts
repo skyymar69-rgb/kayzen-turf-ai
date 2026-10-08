@@ -1,23 +1,72 @@
 import modelFile from "@/lib/fundamental/model.json";
-import { FEATURE_LABELS, FEATURE_NAMES, fieldFeatures, type Discipline, type FeatureName, type FundamentalInput } from "@/lib/fundamental/features";
+import {
+  ALL_FEATURE_LABELS,
+  computeFeatures,
+  isFeatureName,
+  type Discipline,
+  type FeatureName,
+  type FundamentalInput,
+  type FundamentalRaceContext,
+} from "@/lib/fundamental/features";
 
 /**
  * MODÈLE FONDAMENTAL — probabilité de victoire estimée SANS la cote.
  *
  * Logit conditionnel ajusté par scripts/train-fundamental.ts sur les courses
- * antérieures à `trainCutoff`. Mesure hors échantillon (juin-septembre 2026) :
- * il trouve le gagnant bien plus souvent que le hasard (trot : 25 % contre 5 %),
- * mais moins souvent que le marché (33 %), et le mélanger aux cotes de clôture
- * ne les améliore pas. C'est une seconde opinion indépendante, pas un oracle :
- * elle sert à repérer les désaccords avec le marché, dont le backtest mesure la
- * valeur réelle (page /track-record).
+ * antérieures à `trainCutoff`. C'est une seconde opinion indépendante, pas un
+ * oracle : elle sert à repérer les désaccords avec le marché, dont le backtest
+ * mesure la valeur réelle (page /track-record).
+ *
+ * Deux formats de model.json sont lus :
+ *   - format 1 (historique) : une liste `features` commune aux disciplines,
+ *     logit sur le gagnant seul ;
+ *   - format 2 : `formatVersion: 2`, une liste `features` PAR discipline
+ *     (groupes retenus par validation glissante), logit « éclaté » sur les
+ *     trois premiers.
+ * Dans les deux cas les variables calculées sont exactement celles que liste
+ * le fichier, dans son ordre : un ancien modèle donne les mêmes probabilités
+ * qu'avant l'ajout des nouvelles variables.
  */
 
-type DisciplineModel = { means: number[]; sds: number[]; coef: number[] };
-const MODELS = (modelFile as { disciplines: Partial<Record<Discipline, DisciplineModel>> }).disciplines;
+type RawDisciplineModel = { features?: string[]; means: number[]; sds: number[]; coef: number[] };
+type RawModelFile = {
+  formatVersion?: number;
+  version: string;
+  trainCutoff: string;
+  features?: string[];
+  disciplines: Partial<Record<Discipline, RawDisciplineModel>>;
+};
 
-export const FUNDAMENTAL_VERSION: string = (modelFile as { version: string }).version;
-export const FUNDAMENTAL_TRAIN_CUTOFF: string = (modelFile as { trainCutoff: string }).trainCutoff;
+export type DisciplineModel = { features: FeatureName[]; means: number[]; sds: number[]; coef: number[] };
+export type LoadedModel = { formatVersion: number; version: string; trainCutoff: string; disciplines: Partial<Record<Discipline, DisciplineModel>> };
+
+/** Lit un model.json (format 1 ou 2) ; lève une erreur si une variable est inconnue ou si les tailles divergent. */
+export function loadModel(raw: unknown): LoadedModel {
+  const file = raw as RawModelFile;
+  const disciplines: Partial<Record<Discipline, DisciplineModel>> = {};
+  for (const [discipline, m] of Object.entries(file.disciplines ?? {}) as Array<[Discipline, RawDisciplineModel | undefined]>) {
+    if (!m) continue;
+    const names = m.features ?? file.features ?? [];
+    const unknown = names.filter((n) => !isFeatureName(n));
+    if (unknown.length) throw new Error(`model.json (${discipline}) : variables inconnues ${unknown.join(", ")}`);
+    if (m.coef.length !== names.length || m.means.length !== names.length || m.sds.length !== names.length) {
+      throw new Error(`model.json (${discipline}) : ${names.length} variables mais ${m.coef.length} coefficients`);
+    }
+    disciplines[discipline] = { features: names as FeatureName[], means: m.means, sds: m.sds, coef: m.coef };
+  }
+  return { formatVersion: file.formatVersion ?? 1, version: file.version, trainCutoff: file.trainCutoff, disciplines };
+}
+
+const MODEL = loadModel(modelFile);
+
+export const FUNDAMENTAL_VERSION: string = MODEL.version;
+export const FUNDAMENTAL_TRAIN_CUTOFF: string = MODEL.trainCutoff;
+export const FUNDAMENTAL_FORMAT: number = MODEL.formatVersion;
+
+/** Variables réellement utilisées par le modèle chargé, par discipline (pour l'affichage). */
+export function fundamentalFeatureNames(discipline: Discipline): FeatureName[] {
+  return MODEL.disciplines[discipline]?.features ?? [];
+}
 
 function softmax(logits: number[]) {
   const max = Math.max(...logits);
@@ -26,12 +75,30 @@ function softmax(logits: number[]) {
   return e.map((v) => v / sum);
 }
 
-/** Probabilités (0-1) du peloton, ou `null` si la discipline n'a pas de modèle. */
-export function fundamentalProbabilities(field: FundamentalInput[], discipline: Discipline): number[] | null {
-  const model = MODELS[discipline];
-  if (!model || field.length === 0) return null;
-  const x = fieldFeatures(field, discipline);
+/** Probabilités d'un peloton pour un modèle donné (utilisé aussi par l'entraînement et les tests). */
+export function probabilitiesWith(
+  model: DisciplineModel,
+  field: FundamentalInput[],
+  discipline: Discipline,
+  context?: FundamentalRaceContext | null,
+): number[] {
+  const x = computeFeatures(field, discipline, model.features, context);
   return softmax(x.map((row) => row.reduce((acc, v, j) => acc + model.coef[j] * ((v - model.means[j]) / model.sds[j]), 0)));
+}
+
+/**
+ * Probabilités (0-1) du peloton, ou `null` si la discipline n'a pas de modèle.
+ * `context` (spécialité, départ, distance…) est facultatif : à défaut, le
+ * `raceContext` porté par les partants est utilisé.
+ */
+export function fundamentalProbabilities(
+  field: FundamentalInput[],
+  discipline: Discipline,
+  context?: FundamentalRaceContext | null,
+): number[] | null {
+  const model = MODEL.disciplines[discipline];
+  if (!model || field.length === 0) return null;
+  return probabilitiesWith(model, field, discipline, context);
 }
 
 export type Contribution = { feature: FeatureName; label: string; value: number; contribution: number };
@@ -42,15 +109,19 @@ export type Contribution = { feature: FeatureName; label: string; value: number;
  * adversaires. La somme des contributions d'un cheval est exactement l'écart de
  * son logit à la moyenne : c'est une décomposition, pas une illustration.
  */
-export function fundamentalContributions(field: FundamentalInput[], discipline: Discipline): Contribution[][] | null {
-  const model = MODELS[discipline];
+export function fundamentalContributions(
+  field: FundamentalInput[],
+  discipline: Discipline,
+  context?: FundamentalRaceContext | null,
+): Contribution[][] | null {
+  const model = MODEL.disciplines[discipline];
   if (!model || field.length === 0) return null;
-  const x = fieldFeatures(field, discipline);
-  const means = FEATURE_NAMES.map((_, j) => x.reduce((s, row) => s + row[j], 0) / x.length);
+  const x = computeFeatures(field, discipline, model.features, context);
+  const means = model.features.map((_, j) => x.reduce((s, row) => s + row[j], 0) / x.length);
   return x.map((row) =>
-    FEATURE_NAMES.map((feature, j) => ({
+    model.features.map((feature, j) => ({
       feature,
-      label: FEATURE_LABELS[feature],
+      label: ALL_FEATURE_LABELS[feature],
       value: row[j],
       contribution: (model.coef[j] * (row[j] - means[j])) / model.sds[j],
     })),
