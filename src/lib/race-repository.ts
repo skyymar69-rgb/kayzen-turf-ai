@@ -1,7 +1,8 @@
 import { getSql, hasDatabase } from "@/lib/db";
 import { probableArrival, raceToContext } from "@/lib/bet-recommendations";
 import { raceCards, valueBets } from "@/lib/mock-data";
-import { fundamentalProbabilities } from "@/lib/fundamental/model";
+import { computeHorseHistory, fetchHorseHistories, type HorseHistory, type SqlTag } from "@/lib/fundamental/history";
+import { fundamentalFeatureNames, fundamentalProbabilities } from "@/lib/fundamental/model";
 import type { MarketHistory } from "@/lib/market";
 import { calibrateField } from "@/lib/probability";
 import { parseOddsSource } from "@/lib/odds-freshness";
@@ -64,6 +65,7 @@ type RaceRow = {
   bet_types: BetOffer[] | string | null;
   odds_refreshed_at: string | null;
   start_type: string | null;
+  racecourse_id: string | null;
   prize: number | null;
   going_updated_at: string | null;
 };
@@ -81,6 +83,9 @@ type EntryRow = {
   reduction_km: string | null;
   speed_figure: string | null;
   draw: number | null;
+  weight: string | null;
+  shoeing: string | null;
+  jockey_id: string | null;
   equipment: string | null;
   blinkers: string | null;
   silks_url: string | null;
@@ -169,6 +174,7 @@ export async function getRaces(filters?: { date?: string | null; day?: string | 
         -- schéma n'est pas appliqué, elles valent null au lieu de faire
         -- échouer la page (le site peut être déployé avant la migration).
         to_jsonb(races) ->> 'start_type' as start_type,
+        races.racecourse_id::text as racecourse_id,
         (to_jsonb(races) ->> 'prize')::int as prize,
         to_char((to_jsonb(races) ->> 'going_updated_at')::timestamptz at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as going_updated_at
       from races
@@ -200,12 +206,13 @@ export async function getRaces(filters?: { date?: string | null; day?: string | 
     throw new ErreurSourceDonnees("lecture des partants", cause);
   }
 
+  const histories = await loadHistories(getSql() as unknown as SqlTag, rows, entriesByRace);
   const hydratedRaces = rows.flatMap((row) => {
     const entries = entriesByRace.get(row.id);
     // Une course sans partant n'est pas affichable. L'ancien code lui
     // substituait la course de démonstration, qui apparaissait alors dans le
     // programme réel — autant de doublons que de courses vides.
-    return entries?.length ? [mapRace(row, entries)] : [];
+    return entries?.length ? [mapRace(row, entries, histories)] : [];
   });
 
   return sortByStartTime(hydratedRaces);
@@ -236,6 +243,9 @@ async function fetchEntriesByRace(raceIds: string[]) {
       entries.reduction_km,
       entries.speed_figure::text,
       entries.draw,
+      entries.weight::text,
+      entries.shoeing,
+      entries.jockey_id::text,
       entries.equipment,
       to_jsonb(entries) ->> 'blinkers' as blinkers,
       entries.silks_url,
@@ -333,6 +343,7 @@ export async function getRaceById(id?: string | null): Promise<RaceAnalysis | nu
         -- schéma n'est pas appliqué, elles valent null au lieu de faire
         -- échouer la page (le site peut être déployé avant la migration).
         to_jsonb(races) ->> 'start_type' as start_type,
+        races.racecourse_id::text as racecourse_id,
         (to_jsonb(races) ->> 'prize')::int as prize,
         to_char((to_jsonb(races) ->> 'going_updated_at')::timestamptz at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as going_updated_at
       from races
@@ -351,7 +362,9 @@ export async function getRaceById(id?: string | null): Promise<RaceAnalysis | nu
 
   // Une course sans partant n'est pas affichable : elle vaut 404, pas une
   // page de démonstration.
-  return entries.length > 0 ? mapRace(row, entries) : null;
+  if (entries.length === 0) return null;
+  const histories = await loadHistories(getSql() as unknown as SqlTag, [row], new Map([[row.id, entries]]));
+  return mapRace(row, entries, histories);
 }
 
 export async function getPredictions() {
@@ -370,14 +383,30 @@ export async function getValueBets() {
     .sort((a, b) => b.valueIndex - a.valueIndex || a.arrivalRank - b.arrivalRank);
 }
 
-function mapRace(row: RaceRow, entries: EntryRow[]): RaceAnalysis {
+function mapRace(row: RaceRow, entries: EntryRow[], histories?: Map<string, PastRunsByHorse>): RaceAnalysis {
   // Course partie : les statistiques jockey/entraîneur courantes contiennent
   // l'avenir (et ce résultat-ci) — seules les valeurs figées sont lues.
   const started = raceHasStarted(
     { raceDate: row.race_date, startTime: row.start_time },
     entries.some((entry) => entry.finish_position != null && entry.finish_position > 0),
   );
-  const horses = withFundamental(entries.map((entry) => mapHorse(entry, started)), row.discipline);
+  // Contexte de course et historique : lus par le modèle fondamental v2
+  // (corde, spécialité, type de départ, aptitudes). L'ancien modèle les ignore.
+  const raceContext = {
+    specialty: row.specialty,
+    startType: row.start_type,
+    distance: Number.parseInt(String(row.distance), 10) || null,
+    prize: row.prize != null ? Number(row.prize) : null,
+    going: row.going,
+  };
+  const horses = withFundamental(
+    entries.map((entry) => ({
+      ...mapHorse(entry, started),
+      raceContext,
+      history: historyFor(histories?.get(row.race_date), entry, row, raceContext),
+    })),
+    row.discipline,
+  );
   return {
     id: row.id,
     name: row.name,
@@ -411,6 +440,62 @@ function mapRace(row: RaceRow, entries: EntryRow[]): RaceAnalysis {
     prize: row.prize != null ? Number(row.prize) : null,
     goingUpdatedAt: row.going_updated_at,
   };
+}
+
+type PastRunsByHorse = Awaited<ReturnType<typeof fetchHorseHistories>>;
+
+/** Variables du modèle v2 qui ont besoin de l'historique en base. */
+const HISTORY_FEATURES = new Set([
+  "daysSinceLog", "longBreak", "runs90d", "historyMissing", "bestRelFinish", "avgRelFinish",
+  "distAptitude", "goingAptitude", "courseAptitude", "classChange", "classMissing", "comboRuns", "comboRate", "shoeFirstTime",
+]);
+
+/**
+ * Vrai si le modèle chargé lit l'historique : tant que l'ancien modèle tourne,
+ * la requête d'historique (coûteuse) n'est pas faite.
+ */
+const MODEL_USES_HISTORY = (["Plat", "Trot", "Obstacle"] as const).some((d) =>
+  fundamentalFeatureNames(d).some((f) => HISTORY_FEATURES.has(f)),
+);
+
+/**
+ * Historique des partants d'un lot de courses, une requête par jour de
+ * course : chaque course ne voit que les sorties strictement antérieures à
+ * sa date (aucune fuite). Échec non bloquant : le modèle prend alors
+ * l'indicateur « historique manquant ».
+ */
+async function loadHistories(sql: SqlTag, rows: RaceRow[], entriesByRace: Map<string, EntryRow[]>) {
+  const byDate = new Map<string, PastRunsByHorse>();
+  if (!MODEL_USES_HISTORY) return byDate;
+  const dates = [...new Set(rows.map((r) => r.race_date))];
+  await Promise.all(
+    dates.map(async (date) => {
+      const ids = rows.filter((r) => r.race_date === date).flatMap((r) => (entriesByRace.get(r.id) ?? []).map((e) => e.horse_id));
+      try {
+        byDate.set(date, await fetchHorseHistories(sql, ids, date));
+      } catch (cause) {
+        console.error("Historique des partants du %s illisible", date, cause instanceof Error ? cause.message : cause);
+      }
+    }),
+  );
+  return byDate;
+}
+
+function historyFor(
+  runs: PastRunsByHorse | undefined,
+  entry: EntryRow,
+  row: RaceRow,
+  context: { distance: number | null; going: string; prize: number | null },
+): HorseHistory | null {
+  if (!runs) return null;
+  return computeHorseHistory(runs.get(entry.horse_id) ?? [], {
+    date: row.race_date,
+    distance: context.distance,
+    going: context.going,
+    racecourse: row.racecourse_id,
+    prize: context.prize,
+    jockeyId: entry.jockey_id,
+  });
 }
 
 /** Ajoute l'avis du modèle fondamental (sans cote), en %, à chaque partant. */
@@ -482,6 +567,8 @@ function mapHorse(row: EntryRow, raceStarted: boolean): HorsePrediction {
     reductionKm: row.reduction_km,
     speedFigure: row.speed_figure != null ? Number(row.speed_figure) : null,
     draw: row.draw,
+    weight: row.weight != null ? Number(row.weight) : null,
+    shoeing: row.shoeing,
     equipment: row.equipment,
     blinkers: row.blinkers,
     silksUrl: row.silks_url,

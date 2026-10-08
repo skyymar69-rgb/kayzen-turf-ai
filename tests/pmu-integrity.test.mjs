@@ -67,8 +67,11 @@ describe("tokenizeMusic — portage identique au site", () => {
 
   for (const music of samples) {
     it(`même lecture que prediction-math pour « ${music} »`, () => {
-      assert.deepEqual(tokenizeMusic(music), tokenizeMusicTs(music));
-      assert.deepEqual(tokenizeMusic(music, 5), tokenizeMusicTs(music, 5));
+      // La version du site garde aussi la lettre de discipline (modèle v2) ;
+      // l'import n'en a pas besoin : on compare places et incidents.
+      const strip = (tokens) => tokens.map(({ discipline: _discipline, ...rest }) => rest);
+      assert.deepEqual(tokenizeMusic(music), strip(tokenizeMusicTs(music)));
+      assert.deepEqual(tokenizeMusic(music, 5), strip(tokenizeMusicTs(music, 5)));
     });
   }
 

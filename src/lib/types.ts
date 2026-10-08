@@ -68,8 +68,6 @@ export type HorsePrediction = {
   weight?: number | null;
   /** Code de déferrage (entries.shoeing), lu par le modèle fondamental (trot). */
   shoeing?: string | null;
-  /** Code d'œillères (entries.blinkers). */
-  blinkers?: string | null;
   /** Données de la course utiles au modèle fondamental (spécialité, départ, distance, allocation, terrain). */
   raceContext?: FundamentalRaceContext | null;
   /** Historique en base du cheval, strictement antérieur à la course (src/lib/fundamental/history.ts). */
