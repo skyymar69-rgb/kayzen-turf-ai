@@ -73,6 +73,7 @@ Ajustement : `scripts/fit-market.ts`, sur 1 562 courses (24/08 → 07/10/2026), 
   - Groupes : forme regroupée (une note pondérée par spécialité), spécialité, corde réelle (`draw`), poids, équipement et déferrage (dont le premier déferrage), récence, places relatives, aptitudes distance / terrain / hippodrome, changement de catégorie, couple cheval-jockey.
   - L'historique est calculé strictement avant la date de la course (`src/lib/fundamental/history.ts`) ; le site ne le charge que si le modèle en service le lit.
 - `model.ts` lit les deux formats et calcule exactement les variables listées dans `model.json`.
+- **Entraînement du 08/10/2026** (rapport : `docs/entrainement-fondamental-v2-2026-10-08.txt`) : sur le banc final après le 01/06, le format 2 ne bat pas le format 1 (log-loss Plat 2,1563 contre 2,1561, Trot 2,2077 contre 2,2035, Obstacle 2,0170 contre 2,0124). **Le format 1 reste en service.** Groupes retenus par l'ablation : spécialité et places relatives au plat ; spécialité, récence et aptitudes au trot ; équipement, récence, places relatives et couple cheval-jockey en obstacle. À relancer quand les colonnes d'octobre 2026 (corde, poids, déferrage, statistiques figées) auront quelques mois d'historique.
 
 ## 6. Mesure (scripts/backtest.ts, /track-record)
 

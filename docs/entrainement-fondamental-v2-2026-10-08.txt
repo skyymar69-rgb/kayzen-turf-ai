@@ -1,0 +1,123 @@
+13501 courses chargées — sélection par validation glissante avant le 2026-06-01, banc final après
+
+══ Plat : 2956 courses avant le 2026-06-01, 1463 après (avec cotes), 4 plis mensuels
+   λ=0.0003  (toutes variables)  logLoss glissant 2.2313
+   λ=0.001  (toutes variables)  logLoss glissant 2.2313
+   λ=0.003  (toutes variables)  logLoss glissant 2.2314
+   λ=0.01  (toutes variables)  logLoss glissant 2.2316
+   λ=0.03  (toutes variables)  logLoss glissant 2.2324
+   ablation (λ=0.0003) — base seule : logLoss glissant 2.2308
+   + specialty  2.2308 → 2.2303  gain +0.0005  GARDÉ
+   + stall      2.2303 → 2.2303  gain +0.0000  rejeté
+   + weight     2.2303 → 2.2303  gain +0.0000  rejeté
+   + equipment  2.2303 → 2.2300  gain +0.0003  rejeté
+   + recency    2.2303 → 2.2317  gain -0.0013  rejeté
+   + finish     2.2303 → 2.2298  gain +0.0006  GARDÉ
+   + aptitude   2.2298 → 2.2302  gain -0.0004  rejeté
+   + class      2.2298 → 2.2298  gain +0.0000  rejeté
+   + combo      2.2298 → 2.2304  gain -0.0006  rejeté
+   λ=0.0003  (groupes base+specialty+finish)  logLoss glissant 2.2298
+   λ=0.001  (groupes base+specialty+finish)  logLoss glissant 2.2298
+   λ=0.003  (groupes base+specialty+finish)  logLoss glissant 2.2299
+   λ=0.01  (groupes base+specialty+finish)  logLoss glissant 2.2302
+   λ=0.03  (groupes base+specialty+finish)  logLoss glissant 2.2312
+   plis mensuels (λ=0.0003) :
+     2026-01  fondamental 2.2889 (n=260)  | sur courses avec cotes : fondamental 2.2889  marché 2.0572 (n=260)
+     2026-02  fondamental 2.2522 (n=41)  | sur courses avec cotes : fondamental 2.2522  marché 2.0847 (n=41)
+     2026-04  fondamental 2.1930 (n=172)  | sur courses avec cotes : fondamental 2.1930  marché 1.9123 (n=172)
+     2026-05  fondamental 2.2053 (n=406)  | sur courses avec cotes : fondamental 2.2053  marché 1.9446 (n=406)
+   coefficients : formScore +0.367, incidentsLast5 -0.002, experience -0.057, noMusic +0.097, earningsRel +0.210, age -0.081, female -0.075, male +0.042, jockeyRate +0.142, trainerRate +0.158, sameSpecShare -0.067, bestRelFinish +0.083, avgRelFinish +0.015
+   BANC FINAL (après 2026-06-01, 1463 courses) :
+     hasard          logLoss 2.3223  gagnant trouvé 13.7 %
+     ancien modèle   logLoss 2.1561  gagnant trouvé 21.9 %
+     fondamental v2  logLoss 2.1563  gagnant trouvé 21.4 %
+     marché (clôt.)  logLoss 1.9284  gagnant trouvé 31.4 %
+     mélange w=0.00   logLoss 1.9284  gagnant trouvé 31.4 %
+     mélange w=0.05   logLoss 1.9315  gagnant trouvé 31.2 %
+     mélange w=0.10   logLoss 1.9354  gagnant trouvé 31.2 %
+     mélange w=0.15   logLoss 1.9401  gagnant trouvé 30.8 %
+     mélange w=0.20   logLoss 1.9457  gagnant trouvé 31.0 %
+     mélange w=0.30   logLoss 1.9594  gagnant trouvé 30.5 %
+     Plat           fondamental 2.1563  marché 1.9284  (n=1463)
+
+══ Trot : 5403 courses avant le 2026-06-01, 2493 après (avec cotes), 4 plis mensuels
+   λ=0.0003  (toutes variables)  logLoss glissant 2.1977
+   λ=0.001  (toutes variables)  logLoss glissant 2.1977
+   λ=0.003  (toutes variables)  logLoss glissant 2.1977
+   λ=0.01  (toutes variables)  logLoss glissant 2.1981
+   λ=0.03  (toutes variables)  logLoss glissant 2.1999
+   ablation (λ=0.0003) — base seule : logLoss glissant 2.2015
+   + specialty  2.2015 → 2.2007  gain +0.0008  GARDÉ
+   + stall      2.2007 → 2.2007  gain +0.0000  rejeté
+   + weight     2.2007 → 2.2007  gain +0.0000  rejeté
+   + equipment  2.2007 → 2.2007  gain +0.0000  rejeté
+   + recency    2.2007 → 2.1986  gain +0.0021  GARDÉ
+   + finish     2.1986 → 2.1983  gain +0.0003  rejeté
+   + aptitude   2.1986 → 2.1978  gain +0.0008  GARDÉ
+   + class      2.1978 → 2.1978  gain +0.0000  rejeté
+   + combo      2.1978 → 2.1974  gain +0.0005  rejeté
+   λ=0.0003  (groupes base+specialty+recency+aptitude)  logLoss glissant 2.1978
+   λ=0.001  (groupes base+specialty+recency+aptitude)  logLoss glissant 2.1979
+   λ=0.003  (groupes base+specialty+recency+aptitude)  logLoss glissant 2.1979
+   λ=0.01  (groupes base+specialty+recency+aptitude)  logLoss glissant 2.1984
+   λ=0.03  (groupes base+specialty+recency+aptitude)  logLoss glissant 2.2004
+   plis mensuels (λ=0.0003) :
+     2026-01  fondamental 2.1443 (n=583)  | sur courses avec cotes : fondamental 2.1443  marché 1.8624 (n=583)
+     2026-02  fondamental 2.2247 (n=97)  | sur courses avec cotes : fondamental 2.2247  marché 1.8644 (n=97)
+     2026-04  fondamental 2.3040 (n=280)  | sur courses avec cotes : fondamental 2.3040  marché 2.0293 (n=280)
+     2026-05  fondamental 2.1960 (n=604)  | sur courses avec cotes : fondamental 2.1960  marché 1.9359 (n=604)
+   coefficients : formScore +0.482, incidentsLast5 +0.156, experience +0.014, noMusic +0.152, earningsRel +0.077, age -0.614, female -0.090, male +0.035, jockeyRate +0.267, trainerRate +0.161, recul +0.071, sameSpecShare +0.118, daysSinceLog +0.008, longBreak -0.072, runs90d +0.016, historyMissing -0.098, distAptitude +0.016, goingAptitude +0.014, courseAptitude +0.017
+   BANC FINAL (après 2026-06-01, 2493 courses) :
+     hasard          logLoss 2.5091  gagnant trouvé 5.5 %
+     ancien modèle   logLoss 2.2035  gagnant trouvé 24.8 %
+     fondamental v2  logLoss 2.2077  gagnant trouvé 25.2 %
+     marché (clôt.)  logLoss 1.9433  gagnant trouvé 33.4 %
+     mélange w=0.00   logLoss 1.9433  gagnant trouvé 33.4 %
+     mélange w=0.05   logLoss 1.9448  gagnant trouvé 33.4 %
+     mélange w=0.10   logLoss 1.9475  gagnant trouvé 33.1 %
+     mélange w=0.15   logLoss 1.9512  gagnant trouvé 33.0 %
+     mélange w=0.20   logLoss 1.9562  gagnant trouvé 32.7 %
+     mélange w=0.30   logLoss 1.9697  gagnant trouvé 32.2 %
+     Attele         fondamental 2.2037  marché 1.9420  (n=2150)
+     Monte          fondamental 2.2326  marché 1.9514  (n=343)
+
+══ Obstacle : 845 courses avant le 2026-06-01, 341 après (avec cotes), 3 plis mensuels
+   λ=0.0003  (toutes variables)  logLoss glissant 2.0771
+   λ=0.001  (toutes variables)  logLoss glissant 2.0771
+   λ=0.003  (toutes variables)  logLoss glissant 2.0771
+   λ=0.01  (toutes variables)  logLoss glissant 2.0770
+   λ=0.03  (toutes variables)  logLoss glissant 2.0769
+   ablation (λ=0.03) — base seule : logLoss glissant 2.0924
+   + specialty  2.0924 → 2.0924  gain -0.0001  rejeté
+   + stall      2.0924 → 2.0924  gain +0.0000  rejeté
+   + weight     2.0924 → 2.0924  gain +0.0000  rejeté
+   + equipment  2.0924 → 2.0888  gain +0.0035  GARDÉ
+   + recency    2.0888 → 2.0841  gain +0.0047  GARDÉ
+   + finish     2.0841 → 2.0712  gain +0.0129  GARDÉ
+   + aptitude   2.0712 → 2.0782  gain -0.0070  rejeté
+   + class      2.0712 → 2.0712  gain +0.0000  rejeté
+   + combo      2.0712 → 2.0679  gain +0.0033  GARDÉ
+   λ=0.0003  (groupes base+equipment+recency+finish+combo)  logLoss glissant 2.0670
+   λ=0.001  (groupes base+equipment+recency+finish+combo)  logLoss glissant 2.0670
+   λ=0.003  (groupes base+equipment+recency+finish+combo)  logLoss glissant 2.0670
+   λ=0.01  (groupes base+equipment+recency+finish+combo)  logLoss glissant 2.0673
+   λ=0.03  (groupes base+equipment+recency+finish+combo)  logLoss glissant 2.0679
+   plis mensuels (λ=0.0003) :
+     2026-01  fondamental 1.9962 (n=83)  | sur courses avec cotes : fondamental 1.9962  marché 1.8078 (n=83)
+     2026-04  fondamental 2.2010 (n=47)  | sur courses avec cotes : fondamental 2.2010  marché 2.1884 (n=47)
+     2026-05  fondamental 2.0634 (n=119)  | sur courses avec cotes : fondamental 2.0634  marché 1.8625 (n=119)
+   coefficients : formScore +0.285, incidentsLast5 +0.033, experience +0.020, noMusic +0.132, earningsRel +0.239, age -0.039, female -0.103, male +0.010, jockeyRate +0.198, trainerRate +0.209, blinkersOn -0.059, daysSinceLog -0.005, longBreak +0.025, runs90d +0.107, historyMissing -0.002, bestRelFinish -0.152, avgRelFinish +0.196, comboRuns -0.010, comboRate +0.050
+   BANC FINAL (après 2026-06-01, 341 courses) :
+     hasard          logLoss 2.1796  gagnant trouvé 18.2 %
+     ancien modèle   logLoss 2.0124  gagnant trouvé 27.3 %
+     fondamental v2  logLoss 2.0170  gagnant trouvé 27.0 %
+     marché (clôt.)  logLoss 1.8408  gagnant trouvé 35.8 %
+     mélange w=0.00   logLoss 1.8408  gagnant trouvé 35.8 %
+     mélange w=0.05   logLoss 1.8416  gagnant trouvé 35.8 %
+     mélange w=0.10   logLoss 1.8432  gagnant trouvé 35.8 %
+     mélange w=0.15   logLoss 1.8455  gagnant trouvé 35.2 %
+     mélange w=0.20   logLoss 1.8487  gagnant trouvé 34.6 %
+     mélange w=0.30   logLoss 1.8575  gagnant trouvé 34.3 %
+     Obstacle       fondamental 2.0170  marché 1.8408  (n=341)
+
+Écrit : src/lib/fundamental/model.json
