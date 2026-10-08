@@ -1,0 +1,98 @@
+name: Train fundamental model
+
+# Réentraîne le modèle fondamental (sans cote) sur la base Neon et publie
+# src/lib/fundamental/model.json en ARTEFACT. Le workflow n'écrit rien dans le
+# dépôt : le mainteneur télécharge l'artefact, relit le rapport (log du job,
+# étape « Train »), puis commite le fichier lui-même.
+on:
+  workflow_dispatch:
+    inputs:
+      cutoff:
+        description: "Date de coupure YYYY-MM-DD (ajustement avant, banc final après)"
+        required: false
+        default: "2026-06-01"
+        type: string
+      folds:
+        description: "Nombre de plis mensuels de validation glissante avant la coupure"
+        required: false
+        default: "4"
+        type: string
+      dry_run:
+        description: "Rapport seulement (n'écrit pas model.json, pas d'artefact)"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+# Lecture seule sur la base, mais longue : on évite de tourner pendant la
+# compaction (VACUUM FULL), comme l'import.
+concurrency:
+  group: pmu-database
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      # Les entrées passent par l'environnement, jamais interpolées dans `run:`.
+      TRAIN_CUTOFF: ${{ inputs.cutoff }}
+      TRAIN_FOLDS: ${{ inputs.folds }}
+      TRAIN_DRY_RUN: ${{ inputs.dry_run }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+        # Les secrets de la base ne sont pas exposés aux scripts d'installation.
+        env:
+          DATABASE_URL: ""
+
+      - name: Apply database schema
+        run: npm run db:schema
+
+      - name: Validate inputs
+        run: |
+          [[ "$TRAIN_CUTOFF" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || { echo "cutoff invalide : $TRAIN_CUTOFF"; exit 1; }
+          [[ "$TRAIN_FOLDS" =~ ^[0-9]{1,2}$ ]] || { echo "folds invalide : $TRAIN_FOLDS"; exit 1; }
+
+      - name: Train
+        timeout-minutes: 100
+        # `shell: bash` active pipefail : un échec de l'entraînement n'est pas masqué par `tee`.
+        shell: bash
+        run: |
+          args=(--cutoff "$TRAIN_CUTOFF" --folds "$TRAIN_FOLDS")
+          if [ "$TRAIN_DRY_RUN" = "true" ]; then args+=(--dry-run); fi
+          NODE_OPTIONS=--max-old-space-size=6144 npx tsx scripts/train-fundamental.ts "${args[@]}" | tee training-report.txt
+
+      - name: Check model loads
+        if: ${{ !inputs.dry_run }}
+        run: npx tsx -e 'import("./src/lib/fundamental/model.ts").then((m) => console.log("modèle chargé :", m.FUNDAMENTAL_VERSION, "format", m.FUNDAMENTAL_FORMAT))'
+
+      - name: Upload model artifact
+        if: ${{ !inputs.dry_run }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: fundamental-model-${{ github.run_id }}
+          path: |
+            src/lib/fundamental/model.json
+            training-report.txt
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload report
+        if: ${{ inputs.dry_run }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: fundamental-report-${{ github.run_id }}
+          path: training-report.txt
+          retention-days: 30

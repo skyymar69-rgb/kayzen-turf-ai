@@ -126,7 +126,15 @@ type ObstacleMusicProfile = {
  * `value` vaut 10 pour un cheval non placé (« 0 » = 10e et au-delà) — c'est la
  * valeur la plus défavorable de l'échelle, pas une absence de course.
  */
-export type MusicToken = { kind: "pos"; value: number } | { kind: "inc"; code: string };
+/**
+ * Une course lue dans la musique. `discipline` est la lettre qui suivait le
+ * résultat, en minuscule (a attelé, m monté, p plat, h haies, s steeple,
+ * c cross) ; absente quand la musique ne la donne pas. Champ optionnel : les
+ * consommateurs historiques (`kind`, `value`, `code`) ne changent pas.
+ */
+export type MusicToken =
+  | { kind: "pos"; value: number; discipline?: string }
+  | { kind: "inc"; code: string; discipline?: string };
 
 /** Lettres qui suivent un résultat pour indiquer la discipline (a, m, p, h, s, c…). */
 const MUSIC_DISCIPLINE_LETTER = /[a-z]/i;
@@ -185,8 +193,13 @@ export function tokenizeMusic(music?: string | null, maxRaces = 10): MusicToken[
       continue;
     }
 
-    // Lettre de discipline optionnelle après un résultat.
-    if (i < raw.length && MUSIC_DISCIPLINE_LETTER.test(raw[i])) i += 1;
+    // Lettre de discipline optionnelle après un résultat : conservée dans le
+    // jeton (sans changer le découpage) pour pondérer les courses de même
+    // spécialité.
+    if (i < raw.length && MUSIC_DISCIPLINE_LETTER.test(raw[i])) {
+      tokens[tokens.length - 1] = { ...tokens[tokens.length - 1], discipline: raw[i].toLowerCase() };
+      i += 1;
+    }
   }
 
   return tokens;
