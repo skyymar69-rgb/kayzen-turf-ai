@@ -33,3 +33,20 @@ describe("payoutRows", () => {
     assert.deepEqual(payoutRows("R", [{ typePari: "SIMPLE_GAGNANT", rapports: [{ combinaison: "", dividendePourUnEuro: 100 }] }]), []);
   });
 });
+
+describe("payoutRows — 2 sur 4 et multi", () => {
+  it("garde le 2 sur 4 et porte la formule du multi dans le type", () => {
+    const rows = payoutRows("R", [
+      { typePari: "DEUX_SUR_QUATRE", audience: "NATIONAL", rapports: [{ libelle: "2sur4", combinaison: "2-11", dividendePourUnEuro: 980 }] },
+      {
+        typePari: "MULTI",
+        audience: "NATIONAL",
+        rapports: [
+          { libelle: "Multi en 4", combinaison: "2-11-16-4", dividendePourUnEuro: 144900 },
+          { libelle: "Multi en 5", combinaison: "2-11-16-4", dividendePourUnEuro: 28980 },
+        ],
+      },
+    ]);
+    assert.deepEqual(rows.map((r) => r.betType).sort(), ["DEUX_SUR_QUATRE", "MULTI_EN_4", "MULTI_EN_5"]);
+  });
+});

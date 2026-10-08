@@ -80,3 +80,21 @@ describe("raceTickets", () => {
     assert.deepEqual(raceTickets(runners, undefined, {}), []);
   });
 });
+
+describe("2 sur 4 et multi", () => {
+  const book = payoutBooks([
+    { race_id: "R", bet_type: "DEUX_SUR_QUATRE", combination: "2-11", dividend: 9.8 },
+    { race_id: "R", bet_type: "DEUX_SUR_QUATRE", combination: "2-16", dividend: 9.8 },
+    { race_id: "R", bet_type: "MULTI_EN_5", combination: "2-11-16-4", dividend: 289.8 },
+  ]).get("R");
+
+  it("paie le 2 sur 4 sur la paire publiée", () => {
+    assert.deepEqual(priceTicket(book, "DEUX_SUR_QUATRE", [2, 11], 0, 16), { stake: 1, returned: 9.8, hit: true });
+  });
+
+  it("paie le multi en 5 quand les quatre premiers sont dans la sélection", () => {
+    assert.deepEqual(priceTicket(book, "MULTI", [2, 11, 16, 4, 9], 0, 16), { stake: 1, returned: 289.8, hit: true });
+    assert.deepEqual(priceTicket(book, "MULTI", [2, 11, 16, 3, 9], 0, 16), { stake: 1, returned: 0, hit: false });
+    assert.equal(priceTicket(book, "MULTI", [2, 11, 16, 4], 0, 16), null);
+  });
+});

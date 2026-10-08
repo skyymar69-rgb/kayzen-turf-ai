@@ -4,13 +4,15 @@
  *
  * `race_payouts` ne conserve que les paris dont le suivi a besoin
  * (scripts/lib/payouts.mjs) : simple gagnant, simple placé, couplé gagnant,
- * couplé placé et trio — tous en désordre. Un ticket d'un autre type (couplé
- * ordre, 2 sur 4, tiercé, quarté+, quinté+, multi, pick 5…) n'est pas chiffrable :
- * il est écarté, et le rapport le dit.
+ * couplé placé, trio, 2 sur 4 (depuis octobre 2026) et multi, tous en
+ * désordre. Un ticket d'un autre type (couplé ordre, tiercé, quarté+,
+ * quinté+, pick 5…) n'est pas chiffrable : il est écarté, et le rapport le dit.
+ * Les courses antérieures à l'ajout du 2 sur 4 et du multi n'en ont pas les
+ * rapports : leurs tickets de ce type sont simplement non chiffrés.
  */
 
 /** Paris chiffrables : ceux que `race_payouts` conserve. Tous se jouent en désordre. */
-export const PRICEABLE_BET_TYPES = ["SIMPLE_GAGNANT", "SIMPLE_PLACE", "COUPLE_GAGNANT", "COUPLE_PLACE", "TRIO"] as const;
+export const PRICEABLE_BET_TYPES = ["SIMPLE_GAGNANT", "SIMPLE_PLACE", "COUPLE_GAGNANT", "COUPLE_PLACE", "TRIO", "DEUX_SUR_QUATRE", "MULTI"] as const;
 export type PriceableBetType = (typeof PRICEABLE_BET_TYPES)[number];
 
 export const BET_TYPE_LABELS: Record<string, string> = {
@@ -33,13 +35,17 @@ export const BET_TYPE_LABELS: Record<string, string> = {
 };
 
 /** Nombre de chevaux d'une combinaison, par type chiffrable. */
-const COMBINATION_SIZE: Record<PriceableBetType, number> = {
+const COMBINATION_SIZE: Record<Exclude<PriceableBetType, "MULTI">, number> = {
   SIMPLE_GAGNANT: 1,
   SIMPLE_PLACE: 1,
   COUPLE_GAGNANT: 2,
   COUPLE_PLACE: 2,
   TRIO: 3,
+  DEUX_SUR_QUATRE: 2,
 };
+
+/** Type stocké d'un rapport de multi (`MULTI_EN_4` … `MULTI_EN_7`), voir payouts.mjs. */
+const MULTI_STORED = /^MULTI_EN_[4-7]$/;
 
 export function isPriceable(betType: string): betType is PriceableBetType {
   return (PRICEABLE_BET_TYPES as readonly string[]).includes(betType);
@@ -65,7 +71,7 @@ export type PayoutRow = { race_id: string; bet_type: string; combination: string
 export function payoutBooks(rows: PayoutRow[]): Map<string, PayoutBook> {
   const books = new Map<string, PayoutBook>();
   for (const row of rows) {
-    if (!isPriceable(row.bet_type)) continue;
+    if (!isPriceable(row.bet_type) && !MULTI_STORED.test(row.bet_type)) continue;
     const numbers = parseCombination(row.combination);
     const dividend = Number(row.dividend);
     if (!numbers || !(dividend > 0)) continue;
@@ -99,6 +105,7 @@ export type PricedTicket = { stake: number; returned: number; hit: boolean };
  */
 export function priceTicket(book: PayoutBook | undefined, betType: string, bases: number[], xPositions: number, runners: number): PricedTicket | null {
   if (!book || !isPriceable(betType)) return null;
+  if (betType === "MULTI") return priceMulti(book, bases, xPositions);
   const table = book.get(betType);
   if (!table || table.size === 0) return null;
   const size = COMBINATION_SIZE[betType];
@@ -113,4 +120,20 @@ export function priceTicket(book: PayoutBook | undefined, betType: string, bases
     })
     .reduce((sum, [, dividend]) => sum + dividend, 0);
   return { stake, returned: Math.round(returned * 100) / 100, hit: returned > 0 };
+}
+
+/**
+ * Multi : une sélection de 4 à 7 chevaux gagne si les quatre premiers en font
+ * tous partie, au rapport de sa formule (« Multi en 5 » pour 5 chevaux). Mise
+ * comptée 1 € par ticket, comme le rapport publié pour 1 €.
+ */
+function priceMulti(book: PayoutBook, bases: number[], xPositions: number): PricedTicket | null {
+  const n = bases.length;
+  if (xPositions !== 0 || n < 4 || n > 7 || new Set(bases).size !== n) return null;
+  const table = book.get(`MULTI_EN_${n}`);
+  if (!table || table.size === 0) return null;
+  const returned = [...table.entries()]
+    .filter(([key]) => key.split("-").map(Number).every((h) => bases.includes(h)))
+    .reduce((sum, [, dividend]) => sum + dividend, 0);
+  return { stake: 1, returned: Math.round(returned * 100) / 100, hit: returned > 0 };
 }

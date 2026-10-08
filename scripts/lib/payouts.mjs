@@ -6,10 +6,21 @@
  * le rapport après la clôture des enjeux).
  *
  * Seuls les paris dont le suivi a besoin sont gardés — simple gagnant, simple
- * placé, couplés, trio — soit quatre à huit lignes par course.
+ * placé, couplés, trio, 2 sur 4 et multi — une dizaine de lignes par course.
+ *
+ * Le multi publie une ligne par formule (« Multi en 4 » à « Multi en 7 ») avec
+ * la même combinaison (les quatre premiers) : la formule est donc portée par
+ * le type, `MULTI_EN_4` … `MULTI_EN_7`, pour que chaque rapport ait sa ligne.
  */
 
-const KEPT_TYPES = new Set(["SIMPLE_GAGNANT", "SIMPLE_PLACE", "COUPLE_GAGNANT", "COUPLE_PLACE", "TRIO"]);
+const KEPT_TYPES = new Set(["SIMPLE_GAGNANT", "SIMPLE_PLACE", "COUPLE_GAGNANT", "COUPLE_PLACE", "TRIO", "DEUX_SUR_QUATRE", "MULTI"]);
+
+/** Type stocké : la formule du multi (« Multi en 5 ») devient `MULTI_EN_5`. */
+export function storedBetType(typePari, libelle) {
+  if (typePari !== "MULTI") return typePari;
+  const n = String(libelle ?? "").match(/en\s*(\d)/i)?.[1];
+  return n ? `MULTI_EN_${n}` : null;
+}
 
 /** Lignes à écrire à partir de la réponse de l'API. Fonction pure, testée. */
 export function payoutRows(raceId, rapports) {
@@ -29,7 +40,9 @@ export function payoutRows(raceId, rapports) {
       const combination = String(rapport?.combinaison ?? "").trim();
       // « 3-NP » : combinaison de remboursement liée à un non-partant, inutile au suivi.
       if (!combination || combination.includes("NP") || !Number.isFinite(centimes) || centimes <= 0) continue;
-      rows.push({ raceId, betType: bloc.typePari, combination, dividend: centimes / 100 });
+      const betType = storedBetType(bloc.typePari, rapport?.libelle);
+      if (!betType) continue;
+      rows.push({ raceId, betType, combination, dividend: centimes / 100 });
     }
   }
   return rows;
