@@ -262,12 +262,15 @@ export async function fetchHorseHistories(
   const out = new Map<string, PastRun[]>();
   if (ids.length === 0) return out;
   const rows = (await sql`
-    select horse_id, race_date, position, field_size, distance, going, racecourse, prize, jockey_id, shoeing
+    select horse_id, race_date, position,
+           -- Taille du peloton calculée après le filtre rn : seulement pour les sorties gardées.
+           (select count(*) from entries c where c.race_id = t.race_id)::int as field_size,
+           distance, going, racecourse, prize, jockey_id, shoeing
       from (
         select e.horse_id,
                r.race_date::text as race_date,
                res.finish_position as position,
-               (select count(*) from entries c where c.race_id = e.race_id)::int as field_size,
+               e.race_id,
                r.distance,
                r.going,
                r.racecourse_id::text as racecourse,

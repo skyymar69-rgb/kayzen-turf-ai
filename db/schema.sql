@@ -224,6 +224,8 @@ create index if not exists races_race_date_idx on races (race_date);
 create index if not exists races_relative_day_idx on races (relative_day);
 create index if not exists races_program_order_idx on races (race_date, reunion_number, course_number);
 create index if not exists entries_race_id_idx on entries (race_id);
+-- Historique d'un cheval (src/lib/fundamental/history.ts) : lecture par cheval.
+create index if not exists entries_horse_id_idx on entries (horse_id);
 create index if not exists odds_snapshots_race_horse_observed_idx on odds_snapshots (race_id, horse_id, observed_at desc);
 create index if not exists prediction_runs_generated_at_idx on prediction_runs (generated_at desc);
 create index if not exists predictions_race_id_idx on predictions (race_id);
@@ -438,9 +440,10 @@ alter table entries add column if not exists odds_source text;
 alter table odds_snapshots add column if not exists odds_source text;
 
 -- Nettoyage idempotent des anciennes lignes où `equipment` contient un code
--- de déferrage (repli `oeilleres ?? deferre`). Dès le premier passage, la
--- condition ne trouve plus rien.
-update entries set equipment = null
+-- de déferrage (repli `oeilleres ?? deferre`) : le code est d'abord recopié
+-- dans `shoeing` (seule trace du déferrage sur les lignes anciennes), puis
+-- retiré d'`equipment`. Dès le premier passage, la condition ne trouve plus rien.
+update entries set shoeing = coalesce(shoeing, equipment), equipment = null
  where equipment is not null
    and equipment not like '%OEILLERES%'
    and (equipment like '%DEFERR%' or equipment like 'PROTEGE%');

@@ -249,12 +249,12 @@ async function fetchEntriesByRace(raceIds: string[]) {
       entries.shoeing,
       entries.jockey_id::text,
       entries.equipment,
-      to_jsonb(entries) ->> 'blinkers' as blinkers,
+      ej.j ->> 'blinkers' as blinkers,
       entries.silks_url,
       jockeys.name as jockey,
       trainers.name as trainer,
       entries.odds::text,
-      to_jsonb(entries) ->> 'odds_source' as odds_source,
+      ej.j ->> 'odds_source' as odds_source,
       entries.fair_odds::text,
       entries.market_edge::text,
       entries.win_probability::text,
@@ -274,11 +274,14 @@ async function fetchEntriesByRace(raceIds: string[]) {
       ts.wins as trainer_wins,
       -- Totaux figés avant la course ; la règle de lecture (figé, sinon courant
       -- pour une course à venir, sinon rien) est dans src/lib/point-in-time.ts.
-      (to_jsonb(entries) ->> 'jockey_runs_pre')::int as jockey_runs_pre,
-      (to_jsonb(entries) ->> 'jockey_wins_pre')::int as jockey_wins_pre,
-      (to_jsonb(entries) ->> 'trainer_runs_pre')::int as trainer_runs_pre,
-      (to_jsonb(entries) ->> 'trainer_wins_pre')::int as trainer_wins_pre
+      (ej.j ->> 'jockey_runs_pre')::int as jockey_runs_pre,
+      (ej.j ->> 'jockey_wins_pre')::int as jockey_wins_pre,
+      (ej.j ->> 'trainer_runs_pre')::int as trainer_runs_pre,
+      (ej.j ->> 'trainer_wins_pre')::int as trainer_wins_pre
     from entries
+    -- Ligne sérialisée une seule fois, pour lire les colonnes d'octobre 2026
+    -- même avant la migration (null si absentes).
+    cross join lateral (select to_jsonb(entries) as j offset 0) ej
     join horses on horses.id = entries.horse_id
     left join jockeys on jockeys.id = entries.jockey_id
     left join trainers on trainers.id = entries.trainer_id
