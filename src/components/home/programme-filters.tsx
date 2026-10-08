@@ -4,7 +4,7 @@ import { Search, Zap } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { DISCIPLINES, type DisciplineFilter } from "./types";
 
-/** Filtre discipline, value bets et recherche (saisie temporisée de 200 ms). */
+/** Filtre discipline, écarts IA / marché et recherche (saisie temporisée de 200 ms). */
 export function ProgrammeFilters({ disciplineFilter, onDiscipline, valueBetsOnly, onToggleValue, strategy, query, onQuery, resultCount }: {
   disciplineFilter: DisciplineFilter;
   onDiscipline: (d: DisciplineFilter) => void;
@@ -59,7 +59,7 @@ export function ProgrammeFilters({ disciplineFilter, onDiscipline, valueBetsOnly
           onClick={onToggleValue}
           type="button"
         >
-          <Zap size={12} /> Value bets
+          <Zap size={12} /> Écarts IA / marché
         </button>
         <span className="hidden text-sm text-muted sm:inline">{strategy}</span>
       </div>

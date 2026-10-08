@@ -95,7 +95,7 @@ export async function generateMetadata({ params }: RacePageProps): Promise<Metad
     `le ${formatDate(race.raceDate)} à ${race.startTime} — ${race.discipline}, ${formatMeters(race.distance)}, ` +
     `${race.horses.length} partants.` +
     (favori ? ` Favori du modèle : ${favori.number} ${favori.horse}.` : "") +
-    " Probabilités, top 3 et value bets.";
+    " Probabilités, top 3 et avis IA face au marché.";
 
   // Déclarer un bloc `openGraph` dans `generateMetadata` remplace celui du
   // layout — image comprise. Les cent et quelques pages de course, la surface

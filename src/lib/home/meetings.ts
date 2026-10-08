@@ -1,7 +1,8 @@
 import { betHighlights, type BetHighlight } from "@/lib/race-status";
 import { buildSelection } from "@/lib/selection";
 import type { RaceAnalysis } from "@/lib/types";
-import { hasValueBet } from "./race-signals";
+import { aiMarketGap, AI_MARKET_GAP_POINTS } from "@/lib/value-signal";
+import { hasAiMarketGap } from "./race-signals";
 
 export type MeetingDifficulty = "Facile" | "Ouverte" | "Complexe";
 
@@ -18,14 +19,17 @@ export type RaceMeeting = {
   races: RaceAnalysis[];
 };
 
-/** Score de priorité d'une course (consensus, qualité, meilleure value, volatilité). */
+/**
+ * Score de priorité d'une course (consensus, qualité, volatilité). La
+ * « meilleure value » n'y entre plus : calculée contre la cote finale
+ * attendue, elle est négative partout (src/lib/probability.ts).
+ */
 export function racePriorityScore(race: RaceAnalysis): number {
-  const bestValue = Math.max(...race.horses.map((h) => h.valueIndex), 0);
-  return race.modelConsensus + race.raceQualityScore + bestValue - race.marketVolatility - (race.riskLevel === "Speculatif" ? 10 : 0);
+  return race.modelConsensus + race.raceQualityScore - race.marketVolatility - (race.riskLevel === "Speculatif" ? 10 : 0);
 }
 
 export function priorityLabel(race: RaceAnalysis): string {
-  if (race.horses.some((h) => h.valueIndex > 14)) return "Value bet forte";
+  if (race.oddsAvailable !== false && race.horses.some((h) => (aiMarketGap(h) ?? 0) >= 2 * AI_MARKET_GAP_POINTS)) return "Écart IA / marché fort";
   if (race.raceQualityScore >= 75) return "Course prioritaire";
   return "Surveillance";
 }
@@ -45,8 +49,8 @@ export function meetingDifficulty(score: number, races: RaceAnalysis[]): Meeting
 export function meetingStrategy(score: number, races: RaceAnalysis[]): string {
   const d = meetingDifficulty(score, races);
   if (d === "Facile") return "Bases simples et couples";
-  if (d === "Complexe") return "Mises réduites, value uniquement";
-  return "Mix place/value, tickets flexi";
+  if (d === "Complexe") return "Mises réduites, prudence";
+  return "Placés et tickets flexi";
 }
 
 function unique<T>(values: T[]): T[] {
@@ -78,13 +82,13 @@ export function groupRacesByMeeting(races: RaceAnalysis[]): RaceMeeting[] {
   }).sort((a, b) => a.reunionNumber - b.reunionNumber);
 }
 
-/** Nombre de courses d'une réunion où un partant ressort en value. */
-export function valueRaceCount(meeting: Pick<RaceMeeting, "races">): number {
-  return meeting.races.filter(hasValueBet).length;
+/** Nombre de courses d'une réunion où l'IA et le marché divergent nettement sur un partant. */
+export function gapRaceCount(meeting: Pick<RaceMeeting, "races">): number {
+  return meeting.races.filter(hasAiMarketGap).length;
 }
 
 export type DayInsights = {
-  valueRaces: number;
+  gapRaces: number;
   topRaces: RaceAnalysis[];
   readable: number;
   open: number;
@@ -101,7 +105,7 @@ export function buildDayInsights(races: RaceAnalysis[]): DayInsights {
   const readings = races.map((r) => buildSelection(r.horses).verdict.reading);
   const count = (reading: string) => readings.filter((x) => x === reading).length;
   return {
-    valueRaces: races.filter(hasValueBet).length,
+    gapRaces: races.filter(hasAiMarketGap).length,
     topRaces,
     readable: count("lisible"),
     open: count("ouverte"),

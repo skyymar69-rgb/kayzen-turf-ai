@@ -7,6 +7,7 @@ import { betHighlights, compareRaceTime, raceAnchor } from "@/lib/race-status";
 import { getRaces } from "@/lib/race-repository";
 import { buildSelection } from "@/lib/selection";
 import type { RaceAnalysis } from "@/lib/types";
+import { bestAiMarketGap } from "@/lib/value-signal";
 
 /** Tickets montrés sur la carte ; le reste est résumé en « +N autres ». */
 const TICKETS_SHOWN = 6;
@@ -20,7 +21,7 @@ function toPronosticRace(race: RaceAnalysis): PronosticRace {
   const ctx = raceToContext(race);
   const arrival = probableArrival(race.horses, ctx);
   const recommendations = buildBetRecommendations(race.horses, race.betTypes, ctx);
-  const valueBet = arrival.find((h) => h.valueIndex > 10) ?? null;
+  const gap = race.oddsAvailable === false ? null : bestAiMarketGap(arrival);
   const base = arrival[0] ?? null;
 
   return {
@@ -38,7 +39,7 @@ function toPronosticRace(race: RaceAnalysis): PronosticRace {
     reading: buildSelection(race.horses).verdict.reading,
     arrival: arrival.slice(0, 5).map((h) => h.number),
     base: base ? { number: base.number, name: base.horse } : null,
-    valueBet: valueBet ? { number: valueBet.number, name: valueBet.horse, valueIndex: valueBet.valueIndex } : null,
+    aiGap: gap ? { number: gap.horse.number, name: gap.horse.horse, points: gap.points } : null,
     top3: arrival.slice(0, 3).map((h) => ({ number: h.number, name: h.horse, winProbability: h.winProbability })),
     favoriIa: pickFavoriIa(race.horses),
     tickets: recommendations.slice(0, TICKETS_SHOWN).map((r) => ({ type: r.type, label: r.label, ticket: r.ticket })),

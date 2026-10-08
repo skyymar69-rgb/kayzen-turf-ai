@@ -23,6 +23,21 @@ export type EntreeChangelog = {
 export const CHANGELOG: readonly EntreeChangelog[] = [
   {
     date: "2026-10-08",
+    titre: "Probabilités recalibrées, value plus honnête",
+    changements: [
+      {
+        categorie: "Modifié",
+        elements: [
+          "Probabilités de victoire et de place ajustées sur 1 562 arrivées réelles : les favoris ne sont plus surestimés à la place, ni les outsiders sous-estimés.",
+          "« Value » n'apparaît plus qu'à 30 minutes du départ au plus, calculée sur la cote finale attendue ; ailleurs, le site parle d'« écart IA / marché ».",
+          "Simulation de mise : plus de cote inventée ni de mise de Kelly affichée sans espérance positive.",
+          "Tickets : retour estimé pour 1 € misé, signalé « en dessous de la mise » quand c'est le cas. Carré magique présenté comme une lecture ludique.",
+        ],
+      },
+    ],
+  },
+  {
+    date: "2026-10-08",
     titre: "Chevaux cachés · Surprise IA",
     changements: [
       {

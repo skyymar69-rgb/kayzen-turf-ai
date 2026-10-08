@@ -52,8 +52,8 @@ export const FOOTNOTES: Record<Tab, ReactNode> = {
   "Classement IA": (
     <>
       IA : probabilité de victoire estimée sans jamais voir la cote (forme, gains, entourage). Marché : cote PMU,{" "}
-      <Term name="Marge du PMU (devig)">marge du PMU retirée</Term>. Retenue : marché corrigé à 10 % par l&apos;IA — c&apos;est elle qui fait le
-      classement.
+      <Term name="Marge du PMU (devig)">marge du PMU retirée</Term>. Retenue : le marché recalibré sur les arrivées réelles — l&apos;IA ne l&apos;améliore pas
+      contre la cote finale, elle est affichée à part. C&apos;est la retenue qui fait le classement.
     </>
   ),
   "Analyse complète": (

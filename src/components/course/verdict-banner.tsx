@@ -48,7 +48,7 @@ export function VerdictBanner({
   const tiles: Tile[] = [
     { key: "base", title: "Bases", icon: ShieldCheck, rows: vm.byProfile.base, signal: signals.get("base-sp"), empty: "Aucune base solide", hint: "en simple placé" },
     { key: "cache", title: "Cachés", icon: Eye, rows: vm.byProfile.cache, signal: signals.get("cache-sg"), empty: "Aucun", hint: "en simple gagnant" },
-    { key: "value", title: "Value", icon: Gem, rows: vm.byProfile.value, signal: signals.get("value-sg"), empty: "Aucune", hint: "en simple gagnant" },
+    { key: "value", title: "Écart IA", icon: Gem, rows: vm.byProfile.value, signal: signals.get("value-sg"), empty: "Aucune", hint: "en simple gagnant" },
     { key: "outsider", title: "Outsiders", icon: Compass, rows: vm.byProfile.outsider, signal: signals.get("outsider-sp"), empty: "Aucun", hint: "en simple placé" },
     { key: "eviter", title: "À éviter", icon: CircleSlash, rows: vm.byProfile.eviter, signal: signals.get("eviter-sg"), empty: "Aucun", hint: "s'ils étaient joués gagnants" },
     { key: "money", title: "Argent fort", icon: Banknote, rows: vm.strongMoney, empty: "Pas de mouvement net", hint: "" },
@@ -88,7 +88,7 @@ export function VerdictBanner({
           <li key={tile.key} className="flex min-h-[132px] flex-col gap-2 p-4">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted">
               <tile.icon aria-hidden="true" size={14} />
-              {tile.key === "value" ? <Term name="Value Bet">{tile.title}</Term> : tile.key === "money" ? <Term name="Argent entrant / sortant">{tile.title}</Term> : tile.title}
+              {tile.key === "value" ? <Term name="Écart IA / marché">{tile.title}</Term> : tile.key === "money" ? <Term name="Argent entrant / sortant">{tile.title}</Term> : tile.title}
             </div>
             {tile.rows.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">

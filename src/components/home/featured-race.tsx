@@ -3,6 +3,7 @@ import { Star, Zap } from "lucide-react";
 import { probableArrival, raceToContext } from "@/lib/bet-recommendations";
 import { formatMeters } from "@/lib/format";
 import type { RaceAnalysis } from "@/lib/types";
+import { bestAiMarketGap, formatGap } from "@/lib/value-signal";
 import { raceHref } from "./types";
 
 const capitalize = (v: string) => v.charAt(0).toUpperCase() + v.slice(1).toLowerCase();
@@ -10,7 +11,8 @@ const capitalize = (v: string) => v.charAt(0).toUpperCase() + v.slice(1).toLower
 /* amélioration #24 — course phare : meilleur score parmi les courses du jour */
 export function FeaturedRace({ race }: { race: RaceAnalysis }) {
   const top3 = probableArrival(race.horses, raceToContext(race)).slice(0, 3);
-  const best = top3[0];
+  // Écart IA / marché, jamais « Value » : la carte ne connaît pas l'heure de consultation.
+  const gap = race.oddsAvailable === false ? null : bestAiMarketGap(top3);
   return (
     <section aria-label="Course phare du jour" className="mb-4">
       <Link
@@ -36,9 +38,9 @@ export function FeaturedRace({ race }: { race: RaceAnalysis }) {
               <span className="font-mono">#{h.number}</span> {h.horse.split(" ")[0]}
             </span>
           ))}
-          {best && best.valueIndex > 8 && (
+          {gap && (
             <span className="flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-bold text-accent-text">
-              <Zap size={11} /> Value +{Math.round(best.valueIndex)}%
+              <Zap size={11} /> Écart IA / marché n° {gap.horse.number} {formatGap(gap.points)}
             </span>
           )}
         </div>

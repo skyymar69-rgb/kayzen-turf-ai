@@ -37,7 +37,7 @@ function race(extra: Partial<PronosticRace> & Pick<PronosticRace, "reunionNumber
     reading: "ouverte",
     arrival: [1, 2, 3],
     base: { number: 1, name: "Alpha" },
-    valueBet: null,
+    aiGap: null,
     top3: [{ number: 1, name: "Alpha", winProbability: 20 }],
     favoriIa: null,
     tickets: [],
@@ -55,8 +55,8 @@ const r1c1 = race({ reunionNumber: 1, courseNumber: 1, startTime: "13:50", horse
   { number: 2, horse: "Beta", jockey: "A", trainer: "B", finishPosition: 1 },
 ] });
 const r1c4 = race({ reunionNumber: 1, courseNumber: 4, startTime: "15:40", discipline: "Plat", racecourse: "ParisLongchamp", reading: "lisible", top3: [{ number: 1, name: "Alpha", winProbability: 35 }] });
-const r2c2 = race({ reunionNumber: 2, courseNumber: 2, startTime: "15:10", bets: ["QUINTE_PLUS"], valueBet: { number: 5, name: "Gamma", valueIndex: 18 } });
-const r2c3 = race({ reunionNumber: 2, courseNumber: 3, startTime: "16:20", valueBet: { number: 7, name: "Delta", valueIndex: 25 }, reading: "lisible", top3: [{ number: 7, name: "Delta", winProbability: 22 }] });
+const r2c2 = race({ reunionNumber: 2, courseNumber: 2, startTime: "15:10", bets: ["QUINTE_PLUS"], aiGap: { number: 5, name: "Gamma", points: 5 } });
+const r2c3 = race({ reunionNumber: 2, courseNumber: 3, startTime: "16:20", aiGap: { number: 7, name: "Delta", points: 9 }, reading: "lisible", top3: [{ number: 7, name: "Delta", winProbability: 22 }] });
 const ALL = [r2c3, r1c1, r2c2, r1c4];
 
 describe("parseDayParam", () => {

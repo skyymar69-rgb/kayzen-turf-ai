@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Fragment, useEffect, useMemo, useRef } from "react";
 import { DISCIPLINE_STYLES, titleCase } from "@/components/badges";
-import { hasValueBet } from "@/lib/home/race-signals";
+import { hasAiMarketGap } from "@/lib/home/race-signals";
 import { buildTimeline, formatMinute, type TimelineState } from "@/lib/home/timeline";
 import type { RaceAnalysis } from "@/lib/types";
 import { useRacePeek } from "./race-peek";
@@ -74,7 +74,7 @@ export function RaceTimeline({ races, nowMs }: { races: RaceAnalysis[]; nowMs: n
 
       <ol ref={stripRef} className="flex gap-2 overflow-x-auto kz-scroll px-4 py-3">
         {timeline.items.map(({ race, state }, index) => {
-          const isValue = hasValueBet(race);
+          const isValue = hasAiMarketGap(race);
           const discipline = DISCIPLINE_STYLES[race.discipline] ?? DISCIPLINE_STYLES.Plat;
           return (
             <Fragment key={race.id}>
@@ -90,7 +90,7 @@ export function RaceTimeline({ races, nowMs }: { races: RaceAnalysis[]; nowMs: n
                   <span className="max-w-[80px] truncate text-[10px] text-muted">{titleCase(race.name).split(" ")[0]}</span>
                   <span className="sr-only">{titleCase(race.name)}, {STATE_LABELS[state]}</span>
                   {state === "imminente" && <span aria-hidden="true" className="mx-auto h-1 w-1 animate-pulse rounded-full bg-cta" />}
-                  {isValue && state !== "imminente" && <span className="text-[11px] font-bold text-warn">Value</span>}
+                  {isValue && state !== "imminente" && <span className="text-[11px] font-bold text-warn">Écart IA</span>}
                 </Link>
               </li>
             </Fragment>

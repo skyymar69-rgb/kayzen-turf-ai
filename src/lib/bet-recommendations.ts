@@ -1,5 +1,6 @@
 import { coverageArrival, exactArrival, watchedLongshot } from "@/lib/prediction-math";
-import { calibrateField, simulateTopOrders, ticketProbability } from "@/lib/probability";
+import { PMU_TAKEOUT } from "@/lib/betting-engine";
+import { calibrateField, orderSeed, publicProbabilities, simulateTopOrders, ticketProbability } from "@/lib/probability";
 import type { RaceContext } from "@/lib/prediction-math";
 import type { BetOffer, BetRecommendation, BetTicketVariant, HorsePrediction, RaceAnalysis } from "@/lib/types";
 
@@ -57,16 +58,73 @@ type RaceMaterial = {
   calibrated: HorsePrediction[];
   /** Ordres d'arrivée simulés sur `calibrated` (indices dans ce tableau). */
   orders: number[][];
+  /**
+   * Ordres simulés avec le même modèle d'ordre et les MÊMES tirages, mais sur
+   * les probabilités du public (cotes, marge retirée proportionnellement).
+   * Vide sans cote publiée.
+   */
+  publicOrders: number[][];
   fieldSize: number;
 };
+
+/** Ordres simulés par course : 6 000 → un ticket à 0,25 % compte ~15 tirages (≈ 150 ms pour 16 partants, tickets et X compris). */
+const ORDER_SIMULATIONS = 6_000;
 
 function prepareRace(horses: HorsePrediction[], context: RaceContext): RaceMaterial {
   const exact = probableArrival(horses, context);
   const coverage = coverageArrival(horses, context).map((item) => item.horse);
   const longshot = watchedLongshot(horses, context);
-  const calibrated = calibrateField(coverage);
-  const orders = simulateTopOrders(calibrated.map((h) => h.winProbability));
-  return { exact, coverage, longshot, calibrated, orders, fieldSize: horses.length };
+  const calibrated = calibrateField(coverage, { discipline: context.discipline });
+  const pWin = calibrated.map((h) => h.winProbability);
+  // Même graine pour les deux simulations : les écarts de tirage s'annulent
+  // dans le rapport P_modèle / P_public (variables aléatoires communes).
+  const seed = orderSeed(pWin);
+  const orders = simulateTopOrders(pWin, 5, ORDER_SIMULATIONS, { seed });
+  const odds = calibrated.map((h) => h.odds);
+  const publicOrders = odds.some((o) => Number.isFinite(o) && o > 1)
+    ? simulateTopOrders(publicProbabilities(odds), 5, ORDER_SIMULATIONS, { seed })
+    : [];
+  return { exact, coverage, longshot, calibrated, orders, publicOrders, fieldSize: horses.length };
+}
+
+/** Sous ce nombre de tirages gagnants côté public, le rapport estimé serait du bruit. */
+const MIN_PUBLIC_HITS = 15;
+
+/**
+ * RETOUR ESTIMÉ D'UN TICKET, pour 1 € misé.
+ *
+ * Au pari mutuel, le rapport d'une combinaison vaut à peu près
+ * (1 − prélèvement) / P_public, où P_public est la probabilité que le public
+ * lui prête — la part des enjeux qu'il y place. On estime P_public avec le
+ * même modèle d'ordre (Henery) appliqué aux cotes gagnant, marge retirée
+ * proportionnellement. Le retour attendu est alors :
+ *
+ *     retour ≈ P_modèle(ticket) × (1 − prélèvement) / P_public(ticket)
+ *
+ * < 1 : le ticket rend en moyenne moins que la mise (le cas normal, puisque
+ * le prélèvement est payé par les parieurs). La probabilité servie étant
+ * aujourd'hui le marché recalibré (β = 0, src/lib/probability.ts), les retours
+ * restent proches de 1 − prélèvement : AUCUN ticket n'a d'espérance positive
+ * établie.
+ *
+ * Hypothèses non vérifiées sur rapports réels faute de données locales : le
+ * public répartit ses enjeux combinés comme ses enjeux gagnant ; bonus,
+ * reports et arrondis du PMU ignorés. Ticket à une seule combinaison
+ * uniquement.
+ */
+export function expectedTicketReturn(
+  type: string,
+  material: Pick<RaceMaterial, "orders" | "publicOrders">,
+  picks: number[],
+  places: number,
+  ordered: boolean,
+): number | null {
+  const takeout = PMU_TAKEOUT[type];
+  if (takeout == null || material.publicOrders.length === 0 || picks.length === 0) return null;
+  const pPublic = ticketProbability(material.publicOrders, picks, places, ordered);
+  if ((pPublic / 100) * material.publicOrders.length < MIN_PUBLIC_HITS) return null;
+  const pModel = ticketProbability(material.orders, picks, places, ordered);
+  return Math.round(((pModel * (1 - takeout)) / pPublic) * 100) / 100;
 }
 
 export function buildBetRecommendations(
@@ -92,6 +150,7 @@ export function buildBetRecommendations(
         audience: offer.audience,
         baseStake: offer.baseStake,
         confidence: confidenceFor(type, selection, material),
+        expectedReturn: ticketReturn(type, selection, material, isOrderedType(type)),
         horses: selection.map((horse) => ({ name: horse.horse, number: horse.number })),
         label: offer.label,
         rationale: rationaleFor(type, selection, material, context),
@@ -179,6 +238,7 @@ function variantFor(
 
   return {
     confidence,
+    expectedReturn: ticketReturn(type, horses, material, ordered),
     numbers,
     rationale: ordered ? "Ordre le plus probable selon nos probabilités." : "Combinaison la plus probable selon nos probabilités.",
     ticket: ordered ? `${numbers.join("-")} ordre` : numbers.join("-"),
@@ -222,10 +282,19 @@ function placesCoveredFor(type: string, picks: number, fieldSize: number): numbe
  * Elle est exprimée avec une décimale au-dessous de 10 %, sinon les paris
  * combinés (Tiercé, Quarté, Quinté) s'écrasaient tous sur le plancher 1.
  */
+function picksOf(selection: HorsePrediction[], material: RaceMaterial): number[] {
+  return selection.map((horse) => material.calibrated.findIndex((h) => h.id === horse.id)).filter((i) => i >= 0);
+}
+
+/** Retour estimé (pour 1 €) d'un ticket à une combinaison, `null` si non estimable. */
+function ticketReturn(type: string, selection: HorsePrediction[], material: RaceMaterial, ordered: boolean): number | null {
+  const picks = picksOf(selection, material);
+  if (picks.length !== selection.length) return null;
+  return expectedTicketReturn(type, material, picks, placesCoveredFor(type, picks.length, material.fieldSize), ordered);
+}
+
 function ticketConfidence(type: string, selection: HorsePrediction[], material: RaceMaterial, ordered: boolean): number {
-  const picks = selection
-    .map((horse) => material.calibrated.findIndex((h) => h.id === horse.id))
-    .filter((i) => i >= 0);
+  const picks = picksOf(selection, material);
   if (picks.length === 0) return 0;
 
   const probability = ticketProbability(material.orders, picks, placesCoveredFor(type, picks.length, material.fieldSize), ordered);
@@ -318,6 +387,8 @@ export type XTicket = {
   xPositions: number;  // number of X (field) positions
   combinations: number; // number of combinations this represents
   confidence: number;   // 0.1-99, probabilité estimée que le ticket passe
+  /** Retour estimé pour 1 € (ticket à une seule combinaison), `null` sinon — voir `expectedTicketReturn`. */
+  expectedReturn: number | null;
   costEuros: number;    // estimated total cost in euros
 };
 
@@ -375,6 +446,7 @@ export function buildXTickets(
     out.push({
       betType, label, ticket, bases: bn, xPositions: xCount,
       combinations: combos, confidence: conf,
+      expectedReturn: xCount === 0 && picks.length === bn.length ? expectedTicketReturn(betType, material, picks, positions, ordered) : null,
       costEuros: +(combos * (offer.baseStake || 1.5)).toFixed(2),
     });
   }
@@ -428,6 +500,8 @@ export function buildXTickets(
         xPositions: 0,
         combinations: combosCount,
         confidence: roundConfidence(coverProbability(orders, picks, 4)),
+        // Multi en 5, 6, 7 : rapports distincts du Multi en 4, non estimés.
+        expectedReturn: n === 4 && picks.size === 4 ? expectedTicketReturn("MULTI", material, [...picks], 4, false) : null,
         costEuros: +(combosCount * (mOffer.baseStake || 1.5)).toFixed(2),
       });
     }
@@ -447,6 +521,7 @@ export function buildXTickets(
       xPositions: 0,
       combinations: 1,
       confidence: roundConfidence(coverProbability(orders, picks, 4)),
+      expectedReturn: picks.size === 4 ? expectedTicketReturn("MULTI", material, [...picks], 4, false) : null,
       costEuros: +(mOffer.baseStake || 1.5),
     });
   }

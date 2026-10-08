@@ -2,7 +2,7 @@
 
 import { BET_HIGHLIGHT_LABELS } from "@/lib/race-status";
 import { titleCase } from "@/components/badges";
-import { valueRaceCount, type RaceMeeting } from "@/lib/home/meetings";
+import { gapRaceCount, type RaceMeeting } from "@/lib/home/meetings";
 import { DifficultyPip } from "./ui";
 
 /** Tuiles des réunions du jour, défilement horizontal. */
@@ -16,7 +16,7 @@ export function MeetingTiles({ meetings, selectedKey, onSelect }: {
       <div className="flex overflow-x-auto kz-scroll">
         {meetings.map((meeting) => {
           const active = meeting.key === selectedKey;
-          const vbCount = valueRaceCount(meeting);
+          const vbCount = gapRaceCount(meeting);
           return (
             <button
               key={meeting.key}
@@ -43,7 +43,7 @@ export function MeetingTiles({ meetings, selectedKey, onSelect }: {
                 ))}
                 {vbCount > 0 && (
                   <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${active ? "bg-accent-fg/15 text-accent-fg" : "bg-warn-lo text-warn"}`}>
-                    {vbCount} value
+                    {vbCount} écart{vbCount > 1 ? "s" : ""} IA
                   </span>
                 )}
               </div>

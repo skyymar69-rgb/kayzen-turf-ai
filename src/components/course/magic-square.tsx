@@ -61,12 +61,16 @@ export function MagicSquarePanel({
   return (
     <section className="@container mt-4 overflow-hidden rounded-2xl border border-border bg-surface shadow-sm" aria-label="Carré magique 16 partants">
       <header className="border-b border-border px-5 py-4 sm:px-6">
-        <Eyebrow>Carré magique — 16 partants</Eyebrow>
+        <Eyebrow>Carré magique — 16 partants · lecture ludique</Eyebrow>
         <h2 className="mt-1 text-lg font-bold text-fg">Seize chevaux, seize combinaisons équilibrées</h2>
         <p className="mt-1 max-w-3xl text-sm leading-6 text-muted">
           Chaque case porte le rang d&apos;un cheval dans notre classement. Sur chaque ligne, colonne, diagonale et carré,
           les rangs totalisent <strong className="font-semibold text-fg">{MAGIC_SUM}</strong> : chaque alignement réunit un
           cheval de chaque quart du classement — un des 4 premiers, un des rangs 5-8, 9-12 et 13-16.
+        </p>
+        <p className="mt-1 max-w-3xl text-xs leading-5 text-muted">
+          Lecture ludique : aucune espérance de gain n&apos;est revendiquée. Un alignement « probable » n&apos;est pas un pari
+          rentable.
         </p>
       </header>
 
@@ -174,7 +178,7 @@ export function MagicSquarePanel({
           </p>
         )}
         <p>
-          Le carré équilibre les combinaisons, il ne prédit rien de plus que notre classement. Chances calculées sur nos
+          Le carré équilibre les combinaisons, il ne prédit rien de plus que notre classement et ne promet aucun gain. Chances calculées sur nos
           probabilités : <strong className="font-semibold">2 sur 4</strong>, au moins deux des chevaux de l&apos;alignement dans
           les quatre premiers ; <strong className="font-semibold">Quarté+ désordre</strong>, les quatre. Chaque alignement
           comptant un cheval classé 13-16, le Quarté reste un coup de poker — la meilleure lecture se fait au 2 sur 4.

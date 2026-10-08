@@ -1,0 +1,394 @@
+{
+  "generatedBy": "scripts/fit-market.ts",
+  "period": {
+    "from": "2026-08-24",
+    "to": "2026-10-07",
+    "split": "2026-09-16",
+    "fitRaces": 767,
+    "validationRaces": 795,
+    "runners": 18350
+  },
+  "devig": {
+    "method": "exposant-global",
+    "gamma": {
+      "Plat": 1.0763,
+      "Trot": 1.0763,
+      "Obstacle": 1.0763
+    },
+    "gammaByDiscipline": {
+      "Plat": 1.055,
+      "Trot": 1.0871,
+      "Obstacle": 1.0646
+    },
+    "gammaGlobal": 1.0763,
+    "gammaGlobalSe": 0.0459,
+    "comparison": {
+      "proportionnel": {
+        "logLossFit": 1.9536,
+        "logLossValidation": 1.9747,
+        "gainVsProportional": {
+          "gain": 0,
+          "lo": 0,
+          "hi": 0
+        },
+        "byDiscipline": {
+          "Plat": 1.9241,
+          "Trot": 2.0361,
+          "Obstacle": 1.8533
+        }
+      },
+      "puissance": {
+        "logLossFit": 1.9523,
+        "logLossValidation": 1.9757,
+        "gainVsProportional": {
+          "gain": -0.00099,
+          "lo": -0.00731,
+          "hi": 0.00485
+        },
+        "byDiscipline": {
+          "Plat": 1.9244,
+          "Trot": 2.0373,
+          "Obstacle": 1.8557
+        }
+      },
+      "shin": {
+        "logLossFit": 1.948,
+        "logLossValidation": 1.9776,
+        "gainVsProportional": {
+          "gain": -0.00298,
+          "lo": -0.01185,
+          "hi": 0.00516
+        },
+        "byDiscipline": {
+          "Plat": 1.9215,
+          "Trot": 2.0402,
+          "Obstacle": 1.8685
+        }
+      },
+      "exposant": {
+        "logLossFit": 1.9516,
+        "logLossValidation": 1.9738,
+        "gainVsProportional": {
+          "gain": 0.00084,
+          "lo": -0.00349,
+          "hi": 0.00492
+        },
+        "byDiscipline": {
+          "Plat": 1.9229,
+          "Trot": 2.0356,
+          "Obstacle": 1.8525
+        }
+      },
+      "exposant-global": {
+        "logLossFit": 1.9517,
+        "logLossValidation": 1.9737,
+        "gainVsProportional": {
+          "gain": 0.00097,
+          "lo": -0.00324,
+          "hi": 0.005
+        },
+        "byDiscipline": {
+          "Plat": 1.9228,
+          "Trot": 2.0353,
+          "Obstacle": 1.8526
+        }
+      }
+    },
+    "aeWinValidation": {
+      "proportionnel": [
+        {
+          "band": "1-3",
+          "n": 418,
+          "actual": 161,
+          "expected": 155.9,
+          "ae": 1.033
+        },
+        {
+          "band": "3-5",
+          "n": 897,
+          "actual": 217,
+          "expected": 194.2,
+          "ae": 1.117
+        },
+        {
+          "band": "5-10",
+          "n": 1934,
+          "actual": 212,
+          "expected": 231.3,
+          "ae": 0.917
+        },
+        {
+          "band": "10-20",
+          "n": 2063,
+          "actual": 116,
+          "expected": 130.6,
+          "ae": 0.888
+        },
+        {
+          "band": "20-50",
+          "n": 2234,
+          "actual": 73,
+          "expected": 64.7,
+          "ae": 1.128
+        },
+        {
+          "band": "50-+",
+          "n": 1803,
+          "actual": 16,
+          "expected": 18.2,
+          "ae": 0.877
+        }
+      ],
+      "exposant-global": [
+        {
+          "band": "1-3",
+          "n": 418,
+          "actual": 161,
+          "expected": 165.4,
+          "ae": 0.973
+        },
+        {
+          "band": "3-5",
+          "n": 897,
+          "actual": 217,
+          "expected": 201.5,
+          "ae": 1.077
+        },
+        {
+          "band": "5-10",
+          "n": 1934,
+          "actual": 212,
+          "expected": 230.7,
+          "ae": 0.919
+        },
+        {
+          "band": "10-20",
+          "n": 2063,
+          "actual": 116,
+          "expected": 124.2,
+          "ae": 0.934
+        },
+        {
+          "band": "20-50",
+          "n": 2234,
+          "actual": 73,
+          "expected": 58,
+          "ae": 1.258
+        },
+        {
+          "band": "50-+",
+          "n": 1803,
+          "actual": 16,
+          "expected": 15.1,
+          "ae": 1.058
+        }
+      ]
+    }
+  },
+  "blend": {
+    "Plat": {
+      "alpha": 0.9803,
+      "beta": 0,
+      "betaFit": 0.0769,
+      "betaSe": 0.1499,
+      "kept": false,
+      "logLossMarket": 1.9229,
+      "logLossBlend": 1.9253,
+      "gain": -0.0024,
+      "gainLo": -0.00585,
+      "gainHi": 0.001,
+      "nFit": 266,
+      "nValidation": 286
+    },
+    "Trot": {
+      "alpha": 1.0101,
+      "beta": 0,
+      "betaFit": 0.0121,
+      "betaSe": 0.0711,
+      "kept": false,
+      "logLossMarket": 2.0356,
+      "logLossBlend": 2.0356,
+      "gain": 0.00001,
+      "gainLo": -0.00081,
+      "gainHi": 0.00082,
+      "nFit": 438,
+      "nValidation": 417
+    },
+    "Obstacle": {
+      "alpha": 0.9891,
+      "beta": 0,
+      "betaFit": -0.2198,
+      "betaSe": 0.2608,
+      "kept": false,
+      "logLossMarket": 1.8525,
+      "logLossBlend": 1.8763,
+      "gain": -0.02375,
+      "gainLo": -0.04466,
+      "gainHi": -0.00237,
+      "nFit": 63,
+      "nValidation": 92
+    }
+  },
+  "served": {
+    "logLossValidation": 1.9738,
+    "logLossProportionalValidation": 1.9747,
+    "aeWin": [
+      {
+        "band": "1-3",
+        "n": 418,
+        "actual": 161,
+        "expected": 165.1,
+        "ae": 0.975
+      },
+      {
+        "band": "3-5",
+        "n": 897,
+        "actual": 217,
+        "expected": 201.4,
+        "ae": 1.078
+      },
+      {
+        "band": "5-10",
+        "n": 1934,
+        "actual": 212,
+        "expected": 230.9,
+        "ae": 0.918
+      },
+      {
+        "band": "10-20",
+        "n": 2063,
+        "actual": 116,
+        "expected": 124.4,
+        "ae": 0.932
+      },
+      {
+        "band": "20-50",
+        "n": 2234,
+        "actual": 73,
+        "expected": 58.2,
+        "ae": 1.255
+      },
+      {
+        "band": "50-+",
+        "n": 1803,
+        "actual": 16,
+        "expected": 15,
+        "ae": 1.064
+      }
+    ]
+  },
+  "henery": {
+    "lambdas": [
+      0.774,
+      0.526
+    ],
+    "lambdaSe": [
+      0.0388,
+      0.0366
+    ],
+    "lambdaByDiscipline": {
+      "Plat": [
+        0.796,
+        0.625
+      ],
+      "Trot": [
+        0.75,
+        0.497
+      ],
+      "Obstacle": [
+        0.979,
+        0.461
+      ]
+    },
+    "orderLogLossValidationHarville": 6.1673,
+    "orderLogLossValidationHenery": 6.0788,
+    "top3AeHarville": [
+      {
+        "band": "1-3",
+        "n": 416,
+        "actual": 303,
+        "expected": 346.7,
+        "ae": 0.874
+      },
+      {
+        "band": "3-5",
+        "n": 896,
+        "actual": 488,
+        "expected": 555.5,
+        "ae": 0.879
+      },
+      {
+        "band": "5-10",
+        "n": 1931,
+        "actual": 703,
+        "expected": 751.4,
+        "ae": 0.936
+      },
+      {
+        "band": "10-20",
+        "n": 2059,
+        "actual": 479,
+        "expected": 446.8,
+        "ae": 1.072
+      },
+      {
+        "band": "20-50",
+        "n": 2229,
+        "actual": 308,
+        "expected": 219.9,
+        "ae": 1.401
+      },
+      {
+        "band": "50-+",
+        "n": 1801,
+        "actual": 97,
+        "expected": 58.8,
+        "ae": 1.651
+      }
+    ],
+    "top3AeHenery": [
+      {
+        "band": "1-3",
+        "n": 416,
+        "actual": 303,
+        "expected": 305.6,
+        "ae": 0.991
+      },
+      {
+        "band": "3-5",
+        "n": 896,
+        "actual": 488,
+        "expected": 483,
+        "ae": 1.01
+      },
+      {
+        "band": "5-10",
+        "n": 1931,
+        "actual": 703,
+        "expected": 700.3,
+        "ae": 1.004
+      },
+      {
+        "band": "10-20",
+        "n": 2059,
+        "actual": 479,
+        "expected": 480.1,
+        "ae": 0.998
+      },
+      {
+        "band": "20-50",
+        "n": 2229,
+        "actual": 308,
+        "expected": 297.5,
+        "ae": 1.035
+      },
+      {
+        "band": "50-+",
+        "n": 1801,
+        "actual": 97,
+        "expected": 112.4,
+        "ae": 0.863
+      }
+    ]
+  }
+}

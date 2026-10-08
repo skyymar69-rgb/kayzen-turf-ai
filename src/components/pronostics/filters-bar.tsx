@@ -30,7 +30,7 @@ type Toggle = { key: "quinte" | "value" | "lisible" | "upcoming"; label: string 
 
 const TOGGLES: Toggle[] = [
   { key: "quinte", label: "Quinté+" },
-  { key: "value", label: "Avec value bet" },
+  { key: "value", label: "Avec écart IA / marché" },
   { key: "lisible", label: "Lisibles" },
   { key: "upcoming", label: "À venir" },
 ];

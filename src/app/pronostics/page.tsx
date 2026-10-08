@@ -36,7 +36,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const { day } = parseDayParam((await searchParams).jour);
   return {
     title: TITLES[day],
-    description: "Toutes les courses françaises avec ordre probable, base IA, value bet prioritaire et tickets proposés — hier, aujourd’hui, demain.",
+    description: "Toutes les courses françaises avec ordre probable, base IA, écart IA / marché et tickets proposés — hier, aujourd’hui, demain.",
     // Une seule adresse de référence, quel que soit le jour affiché.
     alternates: { canonical: "/pronostics" },
   };
@@ -50,7 +50,7 @@ export default async function PronosticsPage({ searchParams }: PageProps) {
   const serverNow = Date.now();
 
   const totalHorses = races.reduce((t, r) => t + r.horses.length, 0);
-  const valueRaces = races.filter((r) => r.valueBet).length;
+  const gapRaces = races.filter((r) => r.aiGap).length;
   const bets = new Set(races.flatMap((r) => r.bets));
 
   return (
@@ -67,7 +67,7 @@ export default async function PronosticsPage({ searchParams }: PageProps) {
               </span>
               <h1 className="mt-4 font-display text-4xl font-bold text-fg sm:text-5xl">{TITLES[day]}</h1>
               <p className="mt-3 max-w-2xl text-base leading-7 text-muted">
-                Récapitulatif de toutes les courses françaises avec ordre probable, base IA, value bet
+                Récapitulatif de toutes les courses françaises avec ordre probable, base IA, écart IA / marché
                 et tickets proposés. Données rafraîchies toutes les minutes.
               </p>
               <div className="mt-5">
@@ -78,7 +78,7 @@ export default async function PronosticsPage({ searchParams }: PageProps) {
             <div className="grid grid-cols-3 gap-3 lg:min-w-[180px] lg:shrink-0 lg:grid-cols-1">
               <QuickStat label="Courses" value={races.length} />
               <QuickStat label="Partants" value={totalHorses} />
-              <QuickStat label="Value bets" value={valueRaces} accent />
+              <QuickStat label="Écarts IA / marché" value={gapRaces} accent />
             </div>
           </div>
 

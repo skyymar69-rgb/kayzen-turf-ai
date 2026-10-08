@@ -2,9 +2,8 @@ import Link from "next/link";
 import { ArrowRight, BellRing, Gauge, TrendingUp } from "lucide-react";
 import { ReadingBadge, titleCase } from "@/components/badges";
 import { probableArrival, raceToContext } from "@/lib/bet-recommendations";
-import { formatPct } from "@/lib/format";
 import type { DayInsights } from "@/lib/home/meetings";
-import { VALUE_THRESHOLD } from "@/lib/home/race-signals";
+import { bestAiMarketGap, formatGap } from "@/lib/value-signal";
 import { raceHref, type SignalsFor } from "./types";
 import { InsightCard, MiniMetric } from "./ui";
 
@@ -53,7 +52,7 @@ export function TopRaces({ insights, signalsFor }: { insights: DayInsights; sign
       </div>
       <div className="grid gap-px bg-border sm:grid-cols-3">
         {insights.topRaces.map((race, i) => {
-          const best = probableArrival(race.horses, raceToContext(race))[0];
+          const gap = race.oddsAvailable === false ? null : bestAiMarketGap(probableArrival(race.horses, raceToContext(race)).slice(0, 5));
           return (
             <Link key={race.id} href={raceHref(race)} className="group flex flex-col gap-3 bg-surface p-5 transition hover:bg-surface-sub">
               <div className="flex items-start justify-between gap-2">
@@ -70,9 +69,9 @@ export function TopRaces({ insights, signalsFor }: { insights: DayInsights; sign
                 <MiniMetric label="Partants" value={String(race.horses.length)} />
                 <MiniMetric label="Départ" value={race.startTime} />
               </div>
-              {best && best.valueIndex > VALUE_THRESHOLD && (
+              {gap && (
                 <p className="rounded-lg bg-accent-lo px-2.5 py-1.5 text-xs font-bold text-accent-text">
-                  Value bet n° {best.number} · espérance {formatPct(best.valueIndex, 0, true)}
+                  Écart IA / marché n° {gap.horse.number} · {formatGap(gap.points)}
                 </p>
               )}
             </Link>

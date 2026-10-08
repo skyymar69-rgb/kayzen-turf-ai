@@ -5,11 +5,12 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState, type FocusEve
 import { createPortal } from "react-dom";
 import { titleCase } from "@/components/badges";
 import { formatPct } from "@/lib/format";
+import { formatGap } from "@/lib/value-signal";
 import { racePeek } from "@/lib/home/race-peek";
 import type { RaceAnalysis } from "@/lib/types";
 
 /**
- * APERÇU AU SURVOL — Top 3 de l'IA et value bet d'une course, sans quitter
+ * APERÇU AU SURVOL — Top 3 de l'IA et écart IA / marché d'une course, sans quitter
  * l'accueil. S'ouvre au survol à la souris (après un court délai) et au focus
  * clavier ; Échap, la sortie du pointeur, la perte du focus ou le défilement
  * le referment. La bulle n'est pas interactive (`role="tooltip"`) : le lien
@@ -107,11 +108,11 @@ function PeekBubble({ id, open }: { id: string; open: Open }) {
           ))}
         </ol>
       )}
-      <p className={`mt-2 flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-bold ${peek.valueBet ? "bg-warn-lo text-warn" : "bg-surface-sub text-muted"}`}>
+      <p className={`mt-2 flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-bold ${peek.aiGap ? "bg-warn-lo text-warn" : "bg-surface-sub text-muted"}`}>
         <Zap aria-hidden="true" size={11} />
-        {peek.valueBet
-          ? `Value : n° ${peek.valueBet.number} ${titleCase(peek.valueBet.name)}, ${formatPct(peek.valueBet.valueIndex, 0, true)}`
-          : open.race.oddsAvailable === false ? "Value : cotes pas encore publiées" : "Pas de value repérée"}
+        {peek.aiGap
+          ? `Écart IA / marché : n° ${peek.aiGap.number} ${titleCase(peek.aiGap.name)}, ${formatGap(peek.aiGap.points)}`
+          : open.race.oddsAvailable === false ? "Écart IA / marché : cotes pas encore publiées" : "Pas d'écart net entre l'IA et le marché"}
       </p>
     </div>,
     document.body,

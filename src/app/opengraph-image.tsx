@@ -61,7 +61,7 @@ export default async function OpengraphImage() {
             <div style={{ display: "flex" }}>assistés par intelligence artificielle</div>
           </div>
           <div style={{ fontSize: 30, lineHeight: 1.4, color: "#a7c9b4", maxWidth: 900 }}>
-            Probabilités calibrées, value bets et tickets optimisés — hier, aujourd&apos;hui, demain.
+            Probabilités calibrées, avis IA face au marché et tickets — hier, aujourd&apos;hui, demain.
           </div>
         </div>
 

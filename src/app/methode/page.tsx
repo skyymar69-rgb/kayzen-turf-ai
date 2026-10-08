@@ -6,7 +6,7 @@ import { FEATURE_LABELS } from "@/lib/fundamental/features";
 import { FUNDAMENTAL_TRAIN_CUTOFF, FUNDAMENTAL_VERSION } from "@/lib/fundamental/model";
 import { ACCORD_MAX_GAP_PTS, ACCORD_RATIO_MAX, ACCORD_RATIO_MIN, CONFRONT_MIN_PCT } from "@/lib/confrontation";
 import { FLOW_ACCEL_PTS, FLOW_ACCEL_WINDOW_MIN, FLOW_WINDOW_MIN, MVT_NOISE_PCT, STRONG_MONEY_PTS } from "@/lib/market";
-import { MODEL_VERSION, MODEL_WEIGHT } from "@/lib/probability";
+import { MARKET_GAMMA, MODEL_VERSION, PLACE_LAMBDAS } from "@/lib/probability";
 import { PROFILES_VERSION, PROFILE_LABELS, PROFILE_RULES, READING_LABELS, READING_RULES, type RaceReading } from "@/lib/profiles";
 import { ProfileBadge } from "@/components/course/shared";
 import {
@@ -134,14 +134,18 @@ export default function MethodePage() {
 
           <Section title="2. La probabilité retenue et le classement">
             <p>
-              Le classement de la page course suit une probabilité unique : le marché, corrigé à {Math.round(MODEL_WEIGHT * 100)} %
-              par l&apos;IA (mélange log-linéaire p ∝ marché<sup>{1 - MODEL_WEIGHT}</sup> × IA<sup>{MODEL_WEIGHT}</sup>). Les
-              probabilités Top 3 et Top 5 en sont tirées par simulation Plackett-Luce (20 000 arrivées simulées par course).
+              Le classement de la page course suit une probabilité unique : le marché, dont la marge du PMU est retirée par
+              un exposant ajusté sur les arrivées réelles (p ∝ (1/cote)<sup>γ</sup>, γ = {MARKET_GAMMA.toLocaleString("fr-FR", { maximumFractionDigits: 3 })}).
+              L&apos;IA y est mélangée selon la méthode de Benter (p ∝ exp(α·log marché + β·log IA)), avec un poids β ajusté
+              par discipline : mesuré sur 795 courses hors échantillon, contre la cote finale, il n&apos;apporte rien — β est
+              donc fixé à 0. Nous ne prétendons pas battre le marché.
             </p>
             <p>
-              Le poids de {Math.round(MODEL_WEIGHT * 100)} % est un compromis mesuré : contre les cotes de départ, l&apos;IA
-              n&apos;améliore pas le marché ; contre des cotes de plusieurs heures, elle l&apos;améliore. La sélection publiée
-              compte huit chevaux ; son Top 3 est simplement les trois premiers.
+              Les probabilités Top 3 et Top 5 sont tirées par simulation (20 000 arrivées par course) d&apos;un modèle de
+              Plackett-Luce corrigé de Henery : les places d&apos;honneur sont tirées avec des forces aplaties (p<sup>λ</sup>,
+              λ = {PLACE_LAMBDAS[0].toLocaleString("fr-FR")} pour la 2e place, {PLACE_LAMBDAS[1].toLocaleString("fr-FR")} ensuite), sinon
+              les favoris étaient surestimés à la place (réel / attendu 0,87) et les outsiders sous-estimés (1,40 à 1,65).
+              La sélection publiée compte huit chevaux ; son Top 3 est simplement les trois premiers.
             </p>
           </Section>
 

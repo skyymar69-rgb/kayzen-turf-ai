@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Clock3, TrendingUp } from "lucide-react";
 import { BetBadge, DisciplinePill, RaceStatusPill, titleCase } from "@/components/badges";
-import { formatPct } from "@/lib/format";
+import { formatGap } from "@/lib/value-signal";
 import type { PronosticRace } from "@/lib/pronostics-filters";
 import type { RaceStatus } from "@/lib/race-status";
 import { FavoriIaChip, ProbabilityBars, ReadingPill } from "./race-bits";
@@ -12,7 +12,7 @@ export function raceHref(race: Pick<PronosticRace, "id">): string {
   return `/races/${encodeURIComponent(race.id)}`;
 }
 
-/** Carte complète d'une course : ordre probable, base, value bet, top 3, tickets. */
+/** Carte complète d'une course : ordre probable, base, écart IA / marché, top 3, tickets. */
 export function RaceCard({ race, status, active }: Props) {
   const headingId = `titre-${race.anchor}`;
   return (
@@ -61,9 +61,9 @@ export function RaceCard({ race, status, active }: Props) {
             <RecapBox label="Ordre probable" value={race.arrival.join(" – ") || "—"} mono className="col-span-2 min-[420px]:col-span-1" />
             <RecapBox label="Base IA" value={race.base ? `n° ${race.base.number} ${titleCase(race.base.name)}` : "—"} />
             <RecapBox
-              label="Value bet"
-              value={race.valueBet ? `n° ${race.valueBet.number} · ${formatPct(race.valueBet.valueIndex, 0, true)}` : "—"}
-              accent={!!race.valueBet}
+              label="Écart IA / marché"
+              value={race.aiGap ? `n° ${race.aiGap.number} · ${formatGap(race.aiGap.points)}` : "—"}
+              accent={!!race.aiGap}
             />
           </div>
 

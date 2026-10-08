@@ -1,14 +1,15 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import { PROFILE_LABELS } from "@/lib/profiles";
-import { hasValueBet } from "@/lib/home/race-signals";
+import { hasAiMarketGap } from "@/lib/home/race-signals";
+import { bestAiMarketGap, formatGap } from "@/lib/value-signal";
 import { buildSelection } from "@/lib/selection";
 import type { RaceAnalysis } from "@/lib/types";
 import { raceHref } from "./types";
 
 const PROFILES = ["base", "cache", "value", "outsider", "eviter"] as const;
 
-/** Profils du jour (histogramme) et value bets du programme. */
+/** Profils du jour (histogramme) et écarts IA / marché du programme. */
 export function ProfilesPanel({ races }: { races: RaceAnalysis[] }) {
   const profiled = useMemo(() => races.map((race) => buildSelection(race.horses)), [races]);
   if (races.length === 0) return null;
@@ -18,13 +19,13 @@ export function ProfilesPanel({ races }: { races: RaceAnalysis[] }) {
     count: profiled.reduce((t, selection) => t + selection.field.filter((f) => f.profile === profile).length, 0),
   }));
   const maxCount = Math.max(...counts.map((c) => c.count), 1);
-  const valueBetRaces = races.filter(hasValueBet);
+  const valueBetRaces = races.filter(hasAiMarketGap);
   const runners = races.reduce((t, r) => t + r.horses.length, 0);
   const readable = profiled.filter((s) => s.verdict.reading === "lisible").length;
   const traps = profiled.filter((s) => s.verdict.reading === "piege").length;
 
   return (
-    <section className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-2" aria-label="Profils du jour et value bets">
+    <section className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-2" aria-label="Profils du jour et écarts IA / marché">
       <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
         <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Profils · {runners} partants</p>
         <h2 className="mt-0.5 font-display text-lg font-bold text-fg">Lecture du programme</h2>
@@ -49,13 +50,14 @@ export function ProfilesPanel({ races }: { races: RaceAnalysis[] }) {
 
       <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
         <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Timeline · {valueBetRaces.length} course{valueBetRaces.length !== 1 ? "s" : ""}</p>
-        <h2 className="mt-0.5 font-display text-lg font-bold text-fg">Value Bets du jour</h2>
+        <h2 className="mt-0.5 font-display text-lg font-bold text-fg">Écarts IA / marché du jour</h2>
         {valueBetRaces.length === 0 ? (
-          <p className="mt-4 text-sm text-muted">Aucun signal value détecté sur ce programme.</p>
+          <p className="mt-4 text-sm text-muted">Aucun écart net entre l&apos;IA et le marché sur ce programme. Un écart n&apos;est pas une promesse de gain.</p>
         ) : (
           <div className="mt-4 grid gap-2">
             {valueBetRaces.slice(0, 5).map((race) => {
-              const best = [...race.horses].sort((a, b) => b.valueIndex - a.valueIndex)[0];
+              const best = bestAiMarketGap(race.horses);
+              if (!best) return null;
               return (
                 <Link
                   key={race.id}
@@ -67,7 +69,7 @@ export function ProfilesPanel({ races }: { races: RaceAnalysis[] }) {
                     <p className="truncate text-xs font-semibold text-fg">{race.programCode} · {race.name.charAt(0).toUpperCase() + race.name.slice(1).toLowerCase()}</p>
                   </div>
                   <span className="shrink-0 rounded-full bg-warn-lo px-2 py-0.5 text-[10px] font-bold text-warn">
-                    #{best.number} +{Math.round(best.valueIndex)}%
+                    #{best.horse.number} {formatGap(best.points)}
                   </span>
                 </Link>
               );

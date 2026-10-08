@@ -16,7 +16,9 @@
  * les combinaisons sont donc équilibrées de la même façon, et la somme des
  * rangs vaut toujours 34.
  *
- * Ce n'est pas un modèle : l'équilibre est une contrainte, pas une prédiction.
+ * LECTURE LUDIQUE. Ce n'est pas un modèle : l'équilibre est une contrainte,
+ * pas une prédiction, et aucune espérance de gain n'est revendiquée — un
+ * alignement « probable » n'est pas un pari rentable.
  * Pour que chaque lecture reste honnête, chaque alignement porte ses chances
  * calculées sur nos probabilités : qu'il contienne le gagnant, qu'au moins
  * deux de ses chevaux finissent dans les quatre premiers (le 2 sur 4, pari
@@ -25,6 +27,9 @@
  * dernier se joue presque toujours sous 0,1 % — c'est le 2 sur 4 qui
  * départage les alignements.
  */
+
+import { placeStrengths } from "@/lib/market-model";
+import { PLACE_LAMBDAS } from "@/lib/probability";
 
 export const MAGIC_SIZE = 4;
 export const MAGIC_SUM = 34;
@@ -98,7 +103,8 @@ export type MagicSquare = {
  * nombre d'entre eux classés dans les `depth` premiers : out[g][k] = P(k).
  *
  * Énumère tous les ordres d'arrivée des `depth` premières places sous le
- * modèle de Plackett-Luce qu'utilise simulateTopOrders — 43 680 ordres pour 16
+ * modèle d'ordre qu'utilise simulateTopOrders (Plackett-Luce corrigé de
+ * Henery : forces p^λ aux places d'honneur) — 43 680 ordres pour 16
  * partants. Calcul exact plutôt que simulé : un Quarté désordre se joue
  * autour de 0,01 %, là où une simulation ne compterait qu'une poignée de
  * tirages.
@@ -112,6 +118,9 @@ export function topOverlapDistribution(pWin: number[], groups: number[][], depth
   const d = Math.min(depth, pWin.length);
   if (total <= 0 || d === 0 || pWin.filter((x) => x > 0).length < d) return null;
   const p = pWin.map((x) => x / total);
+  // Forces de tirage par place (1re : p ; suivantes : p^λ), comme simulateTopOrders.
+  const strengths = placeStrengths(p, PLACE_LAMBDAS, d);
+  const rowTotals = strengths.map((row) => row.reduce((a, b) => a + b, 0));
 
   // member[i] = groupes qui contiennent le cheval i.
   const member = p.map(() => [] as number[]);
@@ -119,21 +128,29 @@ export function topOverlapDistribution(pWin: number[], groups: number[][], depth
   const counts = new Array<number>(groups.length).fill(0);
   const used = new Array<boolean>(p.length).fill(false);
 
-  const walk = (pos: number, prob: number, remaining: number) => {
+  // Somme des forces déjà retirées, par place (les chevaux placés avant).
+  const removed = new Array<number>(d).fill(0);
+
+  const walk = (pos: number, prob: number) => {
     if (pos === d) {
       groups.forEach((_, gi) => (out[gi][counts[gi]] += prob));
       return;
     }
+    const row = strengths[pos];
+    const remaining = rowTotals[pos] - removed[pos];
+    if (remaining <= 0) return;
     for (let i = 0; i < p.length; i++) {
-      if (used[i] || p[i] <= 0 || remaining <= 0) continue;
+      if (used[i] || p[i] <= 0) continue;
       used[i] = true;
+      for (let q = pos + 1; q < d; q++) removed[q] += strengths[q][i];
       for (const gi of member[i]) counts[gi]++;
-      walk(pos + 1, (prob * p[i]) / remaining, remaining - p[i]);
+      walk(pos + 1, (prob * row[i]) / remaining);
       for (const gi of member[i]) counts[gi]--;
+      for (let q = pos + 1; q < d; q++) removed[q] -= strengths[q][i];
       used[i] = false;
     }
   };
-  walk(0, 1, 1);
+  walk(0, 1);
   return out;
 }
 
