@@ -10,26 +10,19 @@
  * On compare donc, par tranche de peloton, le classement obtenu avec le poids en
  * production (0,10) et sans modèle du tout (0).
  *
- * Usage : node scripts/evaluate-weight-by-field.mjs
+ * Usage : npx tsx scripts/evaluate-weight-by-field.mjs
  */
 
 import { neon } from "@neondatabase/serverless";
+// Même retrait de marge que la production (cote absente = plus petite probabilité
+// connue) : un seul banc de mesure. Lancer avec tsx, qui charge le TypeScript.
+import { devig } from "../src/lib/probability.ts";
 import { readFileSync } from "node:fs";
 
 function databaseUrl() {
   if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
   const env = readFileSync(new URL("../.env.local", import.meta.url), "utf8");
   return (env.match(/^DATABASE_URL=(.+)$/m)?.[1] ?? "").trim().replace(/^["']|["']$/g, "");
-}
-
-function devig(odds) {
-  const raw = odds.map((o) => (Number.isFinite(o) && o > 1 ? 1 / o : 0));
-  const known = raw.filter((r) => r > 0);
-  if (!known.length) return odds.map(() => 1 / odds.length);
-  const mean = known.reduce((a, b) => a + b, 0) / known.length;
-  const filled = raw.map((r) => (r > 0 ? r : mean));
-  const total = filled.reduce((a, b) => a + b, 0);
-  return filled.map((r) => r / total);
 }
 
 function modelProbabilities(scores) {

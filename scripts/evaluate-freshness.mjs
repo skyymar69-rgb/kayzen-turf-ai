@@ -14,10 +14,13 @@
  * modélisation : à quelle heure faut-il rafraîchir pour ne pas publier un
  * pronostic déjà périmé ?
  *
- * Usage : node scripts/evaluate-freshness.mjs
+ * Usage : npx tsx scripts/evaluate-freshness.mjs
  */
 
 import { neon } from "@neondatabase/serverless";
+// Même retrait de marge que la production (cote absente = plus petite probabilité
+// connue) : un seul banc de mesure. Lancer avec tsx, qui charge le TypeScript.
+import { devig } from "../src/lib/probability.ts";
 import { readFileSync } from "node:fs";
 
 function databaseUrl() {
@@ -27,11 +30,6 @@ function databaseUrl() {
 }
 
 /** Probabilités implicites du marché, overround retiré. */
-function devig(odds) {
-  const raw = odds.map((o) => (Number.isFinite(o) && o > 1 ? 1 / o : 0));
-  const total = raw.reduce((a, b) => a + b, 0);
-  return total > 0 ? raw.map((r) => r / total) : raw.map(() => 1 / raw.length);
-}
 
 const sql = neon(databaseUrl());
 

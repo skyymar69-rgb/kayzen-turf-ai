@@ -11,8 +11,10 @@ const BOX = { size: 300, left: 44, right: 12, top: 12, bottom: 36 };
 const pct = (v: number, d = 0) => (Number.isFinite(v) ? `${(v * 100).toFixed(d).replace(".", ",")} %` : "—");
 const nf = new Intl.NumberFormat("fr-FR");
 
-export function CalibrationChart({ buckets, period }: { buckets: unknown; period: { from: string; to: string } }) {
+export function CalibrationChart({ buckets, period, scheme }: { buckets: unknown; period: { from: string; to: string }; scheme?: string }) {
   const points = calibrationPoints(buckets);
+  const labelled = points.some((p) => p.label !== undefined);
+  const withAe = points.some((p) => p.ae !== undefined);
   if (points.length === 0) {
     return <p className="text-sm text-muted">Pas assez de chevaux par tranche (30 au moins) pour tracer la calibration.</p>;
   }
@@ -54,22 +56,35 @@ export function CalibrationChart({ buckets, period }: { buckets: unknown; period
       <div className="overflow-x-auto">
         <table className="w-full min-w-[360px] text-left text-xs">
           <caption className="mb-2 text-left text-muted">
-            Backtest du {new Date(period.from).toLocaleDateString("fr-FR")} au {new Date(period.to).toLocaleDateString("fr-FR")}, tranches d&apos;au moins 30 chevaux.
+            Backtest du {new Date(period.from).toLocaleDateString("fr-FR")} au {new Date(period.to).toLocaleDateString("fr-FR")}, tranches d&apos;au moins 30 chevaux
+            {scheme === "log2"
+              ? " : tranches logarithmiques (moins de 1 %, 1-2 %, 2-4 %… 32 % et plus), qui détaillent les grosses cotes."
+              : " : déciles linéaires (ancien rapport ; tranches logarithmiques disponibles au prochain calcul)."}
           </caption>
           <thead>
             <tr className="border-b border-border text-[10px] font-bold uppercase tracking-widest text-muted">
+              {labelled && <th className="py-1.5 pr-3" scope="col">Tranche</th>}
               <th className="py-1.5 pr-3" scope="col">Annoncé</th>
               <th className="py-1.5 pr-3 text-right" scope="col">Observé</th>
               <th className="py-1.5 pr-3 text-right" scope="col">Marge 90 %</th>
+              {withAe && <th className="py-1.5 pr-3 text-right" scope="col">A/E</th>}
               <th className="py-1.5 text-right" scope="col">Chevaux</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border font-mono">
             {points.map((p) => (
               <tr key={p.bucket}>
-                <th className="py-1 pr-3 font-normal text-fg" scope="row">{pct(p.announced, 1)}</th>
+                {labelled ? (
+                  <>
+                    <th className="py-1 pr-3 font-sans font-normal text-fg" scope="row">{p.label ?? "—"}</th>
+                    <td className="py-1 pr-3 text-fg">{pct(p.announced, 1)}</td>
+                  </>
+                ) : (
+                  <th className="py-1 pr-3 font-normal text-fg" scope="row">{pct(p.announced, 1)}</th>
+                )}
                 <td className="py-1 pr-3 text-right text-fg">{pct(p.observed, 1)}</td>
                 <td className="py-1 pr-3 text-right text-muted">{pct(p.low, 1)} à {pct(p.high, 1)}</td>
+                {withAe && <td className="py-1 pr-3 text-right text-muted">{p.ae !== undefined ? p.ae.toFixed(2).replace(".", ",") : "—"}</td>}
                 <td className="py-1 text-right text-muted">{nf.format(p.n)}</td>
               </tr>
             ))}

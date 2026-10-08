@@ -6,7 +6,7 @@
  * Wilson à 90 % montre la marge d'erreur liée à la taille de la tranche.
  */
 
-export type CalibrationBucket = { bucket: number; announced: number; observed: number; n: number };
+export type CalibrationBucket = { bucket: number; announced: number; observed: number; n: number; label?: string; ae?: number };
 
 export type CalibrationPoint = CalibrationBucket & { low: number; high: number };
 
@@ -32,7 +32,17 @@ export function calibrationPoints(buckets: unknown): CalibrationPoint[] {
     })
     .map((b) => {
       const [low, high] = wilsonInterval(b.observed, b.n);
-      return { bucket: Number(b.bucket), announced: b.announced, observed: b.observed, n: Number(b.n), low, high };
+      return {
+        bucket: Number(b.bucket),
+        announced: b.announced,
+        observed: b.observed,
+        n: Number(b.n),
+        low,
+        high,
+        // Tranches logarithmiques (rapports récents) : libellé et A/E publiés.
+        ...(typeof b.label === "string" ? { label: b.label } : {}),
+        ...(typeof b.ae === "number" && Number.isFinite(b.ae) ? { ae: b.ae } : {}),
+      };
     })
     .sort((a, b) => a.announced - b.announced);
 }

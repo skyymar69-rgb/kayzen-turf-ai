@@ -33,10 +33,13 @@
  * sans élément nouveau. Les colonnes `pool_*` restent collectées : elles peuvent
  * encore servir de variable parmi d'autres, mais pas de classement de rechange.
  *
- * Usage : node scripts/evaluate-place-pool.mjs [--races 400] [--days 120]
+ * Usage : npx tsx scripts/evaluate-place-pool.mjs [--races 400] [--days 120]
  */
 
 import { neon } from "@neondatabase/serverless";
+// Même retrait de marge que la production (cote absente = plus petite probabilité
+// connue) : un seul banc de mesure. Lancer avec tsx, qui charge le TypeScript.
+import { devig } from "../src/lib/probability.ts";
 import { readFileSync } from "node:fs";
 import { PMU_BASE, delay, fetchJson } from "./lib/pmu-fetch.mjs";
 
@@ -59,16 +62,6 @@ function numberFlag(name, fallback) {
 
 const LIMIT = numberFlag("--races", 400);
 const DAYS = numberFlag("--days", 120);
-
-function devig(odds) {
-  const raw = odds.map((o) => (Number.isFinite(o) && o > 1 ? 1 / o : 0));
-  const known = raw.filter((r) => r > 0);
-  if (!known.length) return odds.map(() => 1 / odds.length);
-  const mean = known.reduce((a, b) => a + b, 0) / known.length;
-  const filled = raw.map((r) => (r > 0 ? r : mean));
-  const total = filled.reduce((a, b) => a + b, 0);
-  return filled.map((r) => r / total);
-}
 
 function modelProbabilities(scores) {
   const n = scores.length;
