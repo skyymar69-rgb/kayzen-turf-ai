@@ -4,6 +4,8 @@ import { raceCards, valueBets } from "@/lib/mock-data";
 import { fundamentalProbabilities } from "@/lib/fundamental/model";
 import type { MarketHistory } from "@/lib/market";
 import { calibrateField } from "@/lib/probability";
+import { parseOddsSource } from "@/lib/odds-freshness";
+import { connectionStatsAt, raceHasStarted } from "@/lib/point-in-time";
 import type { BetOffer, Confidence, HorsePrediction, RaceAnalysis } from "@/lib/types";
 
 // Les jeux de démonstration passent par la même calibration que la base : sans
@@ -61,6 +63,9 @@ type RaceRow = {
   risk_level: RaceAnalysis["riskLevel"];
   bet_types: BetOffer[] | string | null;
   odds_refreshed_at: string | null;
+  start_type: string | null;
+  prize: number | null;
+  going_updated_at: string | null;
 };
 
 type EntryRow = {
@@ -77,10 +82,12 @@ type EntryRow = {
   speed_figure: string | null;
   draw: number | null;
   equipment: string | null;
+  blinkers: string | null;
   silks_url: string | null;
   jockey: string;
   trainer: string;
   odds: string | null;
+  odds_source: string | null;
   fair_odds: string | null;
   market_edge: string | null;
   win_probability: string | null;
@@ -98,6 +105,10 @@ type EntryRow = {
   jockey_wins: number | null;
   trainer_runs: number | null;
   trainer_wins: number | null;
+  jockey_runs_pre: number | null;
+  jockey_wins_pre: number | null;
+  trainer_runs_pre: number | null;
+  trainer_wins_pre: number | null;
 };
 
 /**
@@ -153,7 +164,10 @@ export async function getRaces(filters?: { date?: string | null; day?: string | 
         races.betting_tier,
         races.risk_level,
         races.bet_types,
-        to_char(races.odds_refreshed_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as odds_refreshed_at
+        to_char(races.odds_refreshed_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as odds_refreshed_at,
+        races.start_type,
+        races.prize,
+        to_char(races.going_updated_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as going_updated_at
       from races
       left join racecourses on racecourses.id = races.racecourse_id
       where
@@ -220,10 +234,12 @@ async function fetchEntriesByRace(raceIds: string[]) {
       entries.speed_figure::text,
       entries.draw,
       entries.equipment,
+      entries.blinkers,
       entries.silks_url,
       jockeys.name as jockey,
       trainers.name as trainer,
       entries.odds::text,
+      entries.odds_source,
       entries.fair_odds::text,
       entries.market_edge::text,
       entries.win_probability::text,
@@ -240,7 +256,13 @@ async function fetchEntriesByRace(raceIds: string[]) {
       js.runs as jockey_runs,
       js.wins as jockey_wins,
       ts.runs as trainer_runs,
-      ts.wins as trainer_wins
+      ts.wins as trainer_wins,
+      -- Totaux figés avant la course ; la règle de lecture (figé, sinon courant
+      -- pour une course à venir, sinon rien) est dans src/lib/point-in-time.ts.
+      entries.jockey_runs_pre,
+      entries.jockey_wins_pre,
+      entries.trainer_runs_pre,
+      entries.trainer_wins_pre
     from entries
     join horses on horses.id = entries.horse_id
     left join jockeys on jockeys.id = entries.jockey_id
@@ -303,7 +325,10 @@ export async function getRaceById(id?: string | null): Promise<RaceAnalysis | nu
         races.betting_tier,
         races.risk_level,
         races.bet_types,
-        to_char(races.odds_refreshed_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as odds_refreshed_at
+        to_char(races.odds_refreshed_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as odds_refreshed_at,
+        races.start_type,
+        races.prize,
+        to_char(races.going_updated_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as going_updated_at
       from races
       left join racecourses on racecourses.id = races.racecourse_id
       where races.id = ${id}
@@ -340,7 +365,13 @@ export async function getValueBets() {
 }
 
 function mapRace(row: RaceRow, entries: EntryRow[]): RaceAnalysis {
-  const horses = withFundamental(entries.map(mapHorse), row.discipline);
+  // Course partie : les statistiques jockey/entraîneur courantes contiennent
+  // l'avenir (et ce résultat-ci) — seules les valeurs figées sont lues.
+  const started = raceHasStarted(
+    { raceDate: row.race_date, startTime: row.start_time },
+    entries.some((entry) => entry.finish_position != null && entry.finish_position > 0),
+  );
+  const horses = withFundamental(entries.map((entry) => mapHorse(entry, started)), row.discipline);
   return {
     id: row.id,
     name: row.name,
@@ -370,6 +401,9 @@ function mapRace(row: RaceRow, entries: EntryRow[]): RaceAnalysis {
     horses: calibrateField(horses),
     oddsAvailable: horses.some((horse) => Number.isFinite(horse.odds) && horse.odds > 1),
     oddsRefreshedAt: row.odds_refreshed_at,
+    startType: row.start_type === "autostart" || row.start_type === "volte" ? row.start_type : null,
+    prize: row.prize != null ? Number(row.prize) : null,
+    goingUpdatedAt: row.going_updated_at,
   };
 }
 
@@ -428,7 +462,7 @@ function sortByStartTime(races: RaceAnalysis[]) {
   );
 }
 
-function mapHorse(row: EntryRow): HorsePrediction {
+function mapHorse(row: EntryRow, raceStarted: boolean): HorsePrediction {
   return {
     id: row.id,
     horseId: row.horse_id,
@@ -443,12 +477,14 @@ function mapHorse(row: EntryRow): HorsePrediction {
     speedFigure: row.speed_figure != null ? Number(row.speed_figure) : null,
     draw: row.draw,
     equipment: row.equipment,
+    blinkers: row.blinkers,
     silksUrl: row.silks_url,
     jockey: row.jockey,
     trainer: row.trainer,
     // `Number(null)` vaut 0, pas NaN : une cote absente passait pour une cote
     // de 0 et `devig` lui attribuait une probabilité. NaN dit « inconnu ».
     odds: row.odds != null ? Number(row.odds) : NaN,
+    oddsSource: parseOddsSource(row.odds_source),
     fairOdds: row.fair_odds != null ? Number(row.fair_odds) : NaN,
     marketEdge: row.market_edge != null ? Number(row.market_edge) : 0,
     winProbability: row.win_probability != null ? Number(row.win_probability) : 0,
@@ -464,10 +500,7 @@ function mapHorse(row: EntryRow): HorsePrediction {
     won: row.won,
     poolWin: row.pool_win != null ? Number(row.pool_win) : null,
     poolPlace: row.pool_place != null ? Number(row.pool_place) : null,
-    jockeyRuns: row.jockey_runs,
-    jockeyWins: row.jockey_wins,
-    trainerRuns: row.trainer_runs,
-    trainerWins: row.trainer_wins,
+    ...connectionStatsAt(row, raceStarted),
   };
 }
 

@@ -58,6 +58,38 @@ export function participantOdds(participant: PmuParticipant): number {
   );
 }
 
+export type PmuOddsSource = "direct" | "reference" | "probable";
+
+/**
+ * Cote retenue ET son origine — même ordre que `participantOdds`, même règle
+ * que `getOddsWithSource` (scripts/lib/pmu-fetch.mjs). Une cote probable ou de
+ * référence n'est pas un prix de marché vivant : l'origine est stockée dans
+ * `entries.odds_source` pour que la page le dise (src/lib/odds-freshness.ts).
+ */
+export function participantOddsWithSource(participant: PmuParticipant): { odds: number; source: PmuOddsSource | null } {
+  const candidates: Array<[PmuOddsSource, unknown]> = [
+    ["direct", participant?.dernierRapportDirect?.rapport],
+    ["reference", participant?.dernierRapportReference?.rapport],
+    ["probable", participant?.rapportProbable],
+  ];
+  for (const [source, value] of candidates) {
+    if (value == null) continue;
+    const odds = Number(value);
+    return odds > 1 ? { odds, source } : { odds: 0, source: null };
+  }
+  return { odds: 0, source: null };
+}
+
+/**
+ * Terrain publié par l'organisateur (pénétromètre), `null` s'il n'est pas
+ * renseigné. Le champ vit sur la COURSE (`/R1/C4`), pas sur la réunion, et
+ * n'existe en pratique qu'en plat et obstacle : au trot, rien n'est écrit.
+ */
+export function goingFromCourse(course: { penetrometre?: { intitule?: string | null } | null } | null | undefined): string | null {
+  const value = course?.penetrometre?.intitule;
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
 /** « 2026-10-02-R1-C4 » → éléments d'URL PMU. */
 export function pmuPathFromRaceId(raceId: string) {
   const match = raceId.match(/^(\d{4})-(\d{2})-(\d{2})-R(\d+)-C(\d+)$/);

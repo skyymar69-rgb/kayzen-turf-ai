@@ -2,6 +2,18 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { neon } from "@neondatabase/serverless";
 import { storePayouts } from "./lib/payouts.mjs";
+import { getOddsWithSource } from "./lib/pmu-fetch.mjs";
+import {
+  arrivalPlacings,
+  blinkersFromParticipant,
+  entryUpsertParams,
+  entryUpsertSql,
+  hasRaceStarted,
+  parseMusicSignal,
+  preRaceConnectionStats,
+  prizeFromCourse,
+  startTypeFromCourse,
+} from "./lib/pmu-integrity.mjs";
 
 const PMU_BASE = "https://offline.turfinfo.api.pmu.fr/rest/client/7/programme";
 const USER_AGENT = "KayzenTurfAI/0.1 contact:github.com/skyymar69-rgb/kayzen-turf-ai";
@@ -161,17 +173,10 @@ function bettingTier(score) {
   return "Avoid";
 }
 
-function getOdds(participant) {
-  return Number(
-    participant?.dernierRapportDirect?.rapport ??
-      participant?.dernierRapportReference?.rapport ??
-      participant?.rapportProbable ??
-      0,
-  );
-}
-
 function buildPrediction(participant, fieldSize) {
-  const odds = getOdds(participant);
+  // Origine de la cote conservée (voir `getOddsWithSource`) : direct,
+  // référence ou probable n'ont pas la même valeur de marché.
+  const { odds, source: oddsSource } = getOddsWithSource(participant);
   const marketProbability = odds > 1 ? 1 / odds : 1 / Math.max(fieldSize, 1);
   const careerRuns = Number(participant.nombreCourses ?? 0);
   const wins = Number(participant.nombreVictoires ?? 0);
@@ -214,6 +219,7 @@ function buildPrediction(participant, fieldSize) {
     // comparait ensuite le modèle à lui-même : tous les partants ressortaient
     // à la même probabilité (Quinté du 04/09/2026, quinze chevaux à 7-8 %).
     odds: odds > 1 ? odds : null,
+    oddsSource: odds > 1 ? oddsSource : null,
     fairOdds,
     marketEdge,
     winProbability: Number(winProbability.toFixed(1)),
@@ -258,14 +264,6 @@ function watchedLongshotSignal({ careerPlaceRate, fieldSize, formSignal, marketE
     0,
     60,
   );
-}
-
-function parseMusicSignal(music) {
-  if (!music) return 0.08;
-  const digits = String(music).match(/[1-9]/g)?.slice(0, 5) ?? [];
-  if (digits.length === 0) return 0.05;
-  const average = digits.reduce((sum, digit) => sum + Number(digit), 0) / digits.length;
-  return clamp((10 - average) / 20, 0.02, 0.35);
 }
 
 function clamp(value, min, max) {
@@ -379,7 +377,26 @@ function betTypeRank(type) {
   return index === -1 ? 999 : index;
 }
 
-async function importDate(sql, pmuDate, maxRaces) {
+/**
+ * Photographie de `connection_stats` au début de l'import, indexée par
+ * « kind person_id ». Elle est copiée sur chaque partant d'une course pas
+ * encore partie (`entries.*_pre`) : c'est l'état connu avant la course, celui
+ * que le modèle doit lire — y compris des mois plus tard, quand
+ * `connection_stats` aura intégré les résultats suivants. Une seule requête
+ * par exécution : quelques milliers de lignes.
+ */
+async function loadConnectionStats(sql) {
+  try {
+    const rows = await sql`select kind, person_id::text as person_id, runs, wins from connection_stats`;
+    return new Map(rows.map((row) => [`${row.kind} ${row.person_id}`, { runs: Number(row.runs), wins: Number(row.wins) }]));
+  } catch (error) {
+    // Table absente (base neuve) : pas de statistiques figées, pas d'échec.
+    console.warn(`[pmu] connection_stats illisible (${error.message}) — statistiques d'avant-course non figées`);
+    return new Map();
+  }
+}
+
+async function importDate(sql, pmuDate, maxRaces, connectionStats) {
   const programmeUrl = `${PMU_BASE}/${pmuDate}`;
   const payload = await fetchJson(programmeUrl);
   const reunions = payload?.programme?.reunions ?? [];
@@ -438,6 +455,11 @@ async function importDate(sql, pmuDate, maxRaces) {
       const volatility = fieldSize >= 16 ? 24 : fieldSize >= 12 ? 18 : 11;
       const qualityScore = clamp(82 - Math.abs(fieldSize - 12) * 2 + (course.montantPrix ?? 0) / 10000, 35, 92);
       const betTypes = normalizeBetTypes(course.paris);
+      // Course partie (arrivée publiée ou heure passée) : plus rien d'avant-course
+      // n'est réécrit — ni partants, ni cotes, ni terrain (voir pmu-integrity.mjs).
+      const raceStarted = hasRaceStarted(course);
+      const startType = startTypeFromCourse(course);
+      const prize = prizeFromCourse(course);
       const weather = reunion?.meteo
         ? `${reunion.meteo.nebulositeLibelleCourt ?? "Meteo inconnue"}, ${reunion.meteo.temperature ?? "?"}C, vent ${reunion.meteo.forceVent ?? "?"}km/h`
         : "Meteo non renseignee";
@@ -447,7 +469,7 @@ async function importDate(sql, pmuDate, maxRaces) {
           id, race_date, relative_day, reunion_number, course_number, source_country,
           name, racecourse_id, start_time, discipline, specialty,
           distance, going, weather, market_volatility, model_consensus, race_quality_score,
-          betting_tier, risk_level, bet_types, data_cutoff_at
+          betting_tier, risk_level, bet_types, data_cutoff_at, start_type, prize
         )
         values (
           ${raceId}, ${isoDate}, ${relativeDay}, ${Number(reunion.numOfficiel)}, ${Number(course.numOrdre)},
@@ -455,7 +477,7 @@ async function importDate(sql, pmuDate, maxRaces) {
           ${racecourseId}, ${startTime}, ${disciplineFromPmu(course.specialite ?? course.discipline)}, ${specialtyFromPmu(course)},
           ${String(course.distance ?? course.parcours ?? "")}, ${course?.penetrometre?.intitule ?? course.typePiste ?? null},
           ${weather}, ${volatility}, ${68}, ${qualityScore}, ${bettingTier(qualityScore)},
-          ${riskFromVolatility(volatility)}, ${JSON.stringify(betTypes)}, now()
+          ${riskFromVolatility(volatility)}, ${JSON.stringify(betTypes)}, now(), ${startType}, ${prize}
         )
         on conflict (id) do update set
           race_date = excluded.race_date,
@@ -469,7 +491,9 @@ async function importDate(sql, pmuDate, maxRaces) {
           discipline = excluded.discipline,
           specialty = excluded.specialty,
           distance = excluded.distance,
-          going = excluded.going,
+          -- Terrain annoncé avant le départ : figé une fois la course partie
+          -- (la boucle live le relit jusqu'au départ, voir refresh-race.ts).
+          going = case when ${raceStarted}::boolean then coalesce(races.going, excluded.going) else excluded.going end,
           weather = excluded.weather,
           market_volatility = excluded.market_volatility,
           model_consensus = excluded.model_consensus,
@@ -478,6 +502,8 @@ async function importDate(sql, pmuDate, maxRaces) {
           risk_level = excluded.risk_level,
           bet_types = excluded.bet_types,
           data_cutoff_at = excluded.data_cutoff_at,
+          start_type = coalesce(excluded.start_type, races.start_type),
+          prize = coalesce(excluded.prize, races.prize),
           updated_at = now()
       `;
 
@@ -487,8 +513,8 @@ async function importDate(sql, pmuDate, maxRaces) {
       // Après l'arrivée, l'API renvoie dans `reductionKilometrique` le chrono
       // réalisé pendant la course, et non plus le record du cheval. Écraser la
       // valeur d'avant-course reviendrait à stocker le résultat sous couvert de
-      // pronostic : `speed_figure` est donc gelée dès que la course est partie.
-      const raceFinished = (course.ordreArrivee?.flat?.() ?? []).length > 0;
+      // pronostic : `speed_figure` et `reduction_km` ne sont donc plus écrites
+      // dès que la course est partie (`raceStarted`, plus strict que l'arrivée).
       // Chevaux effectivement écrits pour cette course : l'arrivée ne peut
       // référencer qu'eux (clé étrangère results.horse_id -> horses.id).
       const insertedHorseIds = new Set();
@@ -505,7 +531,7 @@ async function importDate(sql, pmuDate, maxRaces) {
         // n'est pas une réduction kilométrique (champ vide, 0, ou unité inattendue).
         const rawFigure = Number(participant.reductionKilometrique);
         const speedFigure =
-          !raceFinished && Number.isFinite(rawFigure) && rawFigure > 40000 && rawFigure < 200000 ? rawFigure : null;
+          !raceStarted && Number.isFinite(rawFigure) && rawFigure > 40000 && rawFigure < 200000 ? rawFigure : null;
 
         await sql`
           insert into horses (id, name, age)
@@ -514,67 +540,68 @@ async function importDate(sql, pmuDate, maxRaces) {
         `;
         insertedHorseIds.add(id);
 
-        await sql`
-          insert into entries (
-            id, race_id, horse_id, number, age, sex, music, earnings,
-            handicap_distance, reduction_km, equipment, silks_url,
-            weight, draw, shoeing, speed_figure,
-            jockey_id, trainer_id, odds, fair_odds,
-            market_edge, win_probability, top3_probability, top5_probability,
-            kz_score, value_index, confidence, factors
-          )
-          values (
-            ${entryId}, ${raceId}, ${id}, ${participant.numPmu},
-            ${participant.age ?? null}, ${participant.sexe ?? null}, ${participant.musique ?? null},
-            ${Number(participant?.gainsParticipant?.gainsCarriere ?? 0) / 100},
-            ${participant.handicapDistance ?? null}, ${participant.reductionKilometrique ?? participant.record ?? null},
-            ${participant.oeilleres ?? participant.deferre ?? null}, ${participant.urlCasaque ?? null},
-            ${participant.handicapPoids ?? null}, ${participant.placeCorde ?? null},
-            ${participant.deferre ?? null}, ${speedFigure},
-            ${jockeyId}, ${trainerId},
-            ${prediction.odds}, ${prediction.fairOdds}, ${prediction.marketEdge},
-            ${prediction.winProbability}, ${prediction.top3Probability}, ${prediction.top5Probability},
-            ${prediction.kzScore}, ${prediction.valueIndex}, ${prediction.confidence},
-            ${JSON.stringify(prediction.factors)}
-          )
-          on conflict (id) do update set
-            horse_id = excluded.horse_id,
-            age = excluded.age,
-            sex = excluded.sex,
-            music = excluded.music,
-            earnings = excluded.earnings,
-            handicap_distance = excluded.handicap_distance,
-            reduction_km = excluded.reduction_km,
-            weight = excluded.weight,
-            draw = excluded.draw,
-            shoeing = excluded.shoeing,
-            -- La première valeur relevée avant la course fait foi : refresh-odds
-            -- la relève au plus près du départ, et un import ultérieur ne doit
-            -- ni l'écraser ni la remplacer par le chrono de l'épreuve.
-            speed_figure = coalesce(entries.speed_figure, excluded.speed_figure),
-            equipment = excluded.equipment,
-            silks_url = excluded.silks_url,
-            odds = excluded.odds,
-            fair_odds = excluded.fair_odds,
-            market_edge = excluded.market_edge,
-            win_probability = excluded.win_probability,
-            top3_probability = excluded.top3_probability,
-            top5_probability = excluded.top5_probability,
-            kz_score = excluded.kz_score,
-            value_index = excluded.value_index,
-            confidence = excluded.confidence,
-            factors = excluded.factors
-        `;
+        const preStats = preRaceConnectionStats(connectionStats, jockeyId, trainerId, raceStarted);
+        const blinkers = blinkersFromParticipant(participant);
+
+        // Requête générée par `entryUpsertSql` : course pas encore partie, tout
+        // est rafraîchi ; course partie (import J-1, backfill-history.mjs), les
+        // valeurs d'avant-course déjà en base sont gelées et seules les colonnes
+        // vides sont complétées. Voir scripts/lib/pmu-integrity.mjs.
+        await sql.query(
+          entryUpsertSql(raceStarted),
+          entryUpsertParams({
+            id: entryId,
+            race_id: raceId,
+            horse_id: id,
+            number: participant.numPmu,
+            age: participant.age ?? null,
+            sex: participant.sexe ?? null,
+            music: participant.musique ?? null,
+            earnings: Number(participant?.gainsParticipant?.gainsCarriere ?? 0) / 100,
+            handicap_distance: participant.handicapDistance ?? null,
+            // Chrono réalisé une fois la course partie : jamais écrit après le départ.
+            reduction_km: raceStarted ? null : (participant.reductionKilometrique ?? participant.record ?? null),
+            // `equipment` = œillères seules (plus de repli sur le déferrage).
+            equipment: blinkers,
+            blinkers,
+            silks_url: participant.urlCasaque ?? null,
+            weight: participant.handicapPoids ?? null,
+            draw: participant.placeCorde ?? null,
+            shoeing: participant.deferre ?? null,
+            speed_figure: speedFigure,
+            jockey_id: jockeyId,
+            trainer_id: trainerId,
+            odds: prediction.odds,
+            odds_source: prediction.oddsSource,
+            fair_odds: prediction.fairOdds,
+            market_edge: prediction.marketEdge,
+            win_probability: prediction.winProbability,
+            top3_probability: prediction.top3Probability,
+            top5_probability: prediction.top5Probability,
+            kz_score: prediction.kzScore,
+            value_index: prediction.valueIndex,
+            confidence: prediction.confidence,
+            factors: JSON.stringify(prediction.factors),
+            jockey_runs_pre: preStats.jockeyRunsPre,
+            jockey_wins_pre: preStats.jockeyWinsPre,
+            trainer_runs_pre: preStats.trainerRunsPre,
+            trainer_wins_pre: preStats.trainerWinsPre,
+          }),
+        );
 
         // Un relevé n'est enregistré que si la cote a bougé depuis le dernier.
         // Le cron passe 3 fois par jour sur une fenêtre de 3 jours, soit ~9
         // relevés par partant : sans ce filtre, la moitié de la table était de
         // la cote réenregistrée à l'identique, sans aucune information de
         // marché — et c'est ce qui a saturé le plafond de 512 Mo du projet Neon.
-        if (prediction.odds > 1) {
+        //
+        // Course partie : pas de relevé. La cote lue après le départ est la cote
+        // finale, horodatée `now()` — des heures après la course — elle
+        // fausserait toute reconstitution de ce qui était affiché avant.
+        if (prediction.odds > 1 && !raceStarted) {
           await sql`
-            insert into odds_snapshots (race_id, horse_id, odds, source, observed_at)
-            select ${raceId}::text, ${id}::text, ${prediction.odds}::numeric, ${"PMU"}::text, now()
+            insert into odds_snapshots (race_id, horse_id, odds, source, odds_source, observed_at)
+            select ${raceId}::text, ${id}::text, ${prediction.odds}::numeric, ${"PMU"}::text, ${prediction.oddsSource}::text, now()
             where ${prediction.odds}::numeric is distinct from (
               select previous.odds
               from odds_snapshots previous
@@ -594,7 +621,10 @@ async function importDate(sql, pmuDate, maxRaces) {
       // remplacement ci-dessous, la première version partielle restait figée en
       // base — d'où des courses à 4 places alors que l'API en renvoyait 10, et
       // un Top 5 mécaniquement plafonné qui se lisait comme un échec du modèle.
-      const arrival = course.ordreArrivee?.flat?.() ?? [];
+      //
+      // Ex aequo : `ordreArrivee` est une liste de groupes ([[2], [11, 16], …]),
+      // chaque cheval reçoit la place de son groupe (`arrivalPlacings`).
+      const arrival = arrivalPlacings(course.ordreArrivee);
       if (arrival.length > 0) {
         // Remplacement intégral plutôt qu'un upsert ligne à ligne : une arrivée
         // peut être rectifiée (disqualification), et un upsert laisserait les
@@ -606,8 +636,7 @@ async function importDate(sql, pmuDate, maxRaces) {
         // passage suivant — et le site l'affichait comme non courue.
         const statements = [sql`delete from results where race_id = ${raceId}`];
 
-        for (let index = 0; index < arrival.length; index += 1) {
-          const number = Number(arrival[index]);
+        for (const { number, position, won } of arrival) {
           const participant = participants.find((item) => Number(item.numPmu) === number);
           if (!participant) continue;
           const id = horseId(participant, raceId);
@@ -620,7 +649,7 @@ async function importDate(sql, pmuDate, maxRaces) {
           }
           statements.push(sql`
             insert into results (race_id, horse_id, finish_position, won)
-            values (${raceId}, ${id}, ${index + 1}, ${index === 0})
+            values (${raceId}, ${id}, ${position}, ${won})
             on conflict (race_id, horse_id) do update set
               finish_position = excluded.finish_position,
               won = excluded.won
@@ -664,11 +693,12 @@ async function main() {
 
   const { dates, maxRaces } = parseArgs();
   const sql = neon(process.env.DATABASE_URL);
+  const connectionStats = await loadConnectionStats(sql);
   let total = 0;
 
   for (const date of dates) {
     console.log(`[pmu] importing ${date}`);
-    total += await importDate(sql, date, maxRaces - total);
+    total += await importDate(sql, date, maxRaces - total, connectionStats);
     if (total >= maxRaces) break;
   }
 

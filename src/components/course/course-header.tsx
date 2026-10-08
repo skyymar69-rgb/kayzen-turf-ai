@@ -15,10 +15,14 @@ import type { RaceAnalysis } from "@/lib/types";
  */
 
 /** Terrain et météo, tels que l'organisateur les publie. Rien n'est déduit. */
-function GoingWeather({ going, weather }: { going: string; weather: string }) {
+/** Heure de Paris d'un horodatage ISO (« 14:05 »), indépendante du fuseau du visiteur. */
+const heureParis = new Intl.DateTimeFormat("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" });
+
+function GoingWeather({ going, goingUpdatedAt, weather }: { going: string; goingUpdatedAt: string | null; weather: string }) {
   const g = going?.trim();
   const w = weather?.trim();
   if (!g && !w) return null;
+  const relu = goingUpdatedAt && Number.isFinite(Date.parse(goingUpdatedAt)) ? heureParis.format(new Date(goingUpdatedAt)) : null;
   return (
     <div className="mt-3 rounded-xl border border-border bg-surface-sub px-3 py-2 text-xs leading-5">
       <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-fg">
@@ -26,6 +30,7 @@ function GoingWeather({ going, weather }: { going: string; weather: string }) {
           <span className="inline-flex items-center gap-1.5">
             <Layers aria-hidden="true" className="text-muted" size={13} />
             <Term name="Terrain (sol)">Terrain</Term> : <strong className="font-semibold">{g}</strong>
+            {relu && <span className="text-muted">(relu à {relu})</span>}
           </span>
         )}
         {w && (
@@ -66,6 +71,7 @@ export function CourseHeader({
             <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
               <span className="font-bold text-fg">{race.discipline}</span>
               {race.specialty && <><span>·</span><span>{race.specialty}</span></>}
+              {race.startType && <><span>·</span><span>{race.startType === "autostart" ? "Départ autostart" : "Départ à la volte"}</span></>}
               <span>·</span><span>{formatMeters(race.distance)}</span>
               <span>·</span><span>{race.horses.length} partants</span>
             </div>
@@ -83,10 +89,11 @@ export function CourseHeader({
           </div>
         </div>
         <BetBadges offers={race.betTypes} />
-        <GoingWeather going={race.going} weather={race.weather} />
+        <GoingWeather going={race.going} goingUpdatedAt={race.goingUpdatedAt ?? null} weather={race.weather} />
         <LiveStatus
           finished={finished}
           lastObservation={lastObservation}
+          oddsSources={race.horses.map((horse) => horse.oddsSource ?? null)}
           raceDate={race.raceDate}
           raceId={race.id}
           startTime={race.startTime}

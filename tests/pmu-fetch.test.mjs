@@ -3,7 +3,7 @@
 
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { formatParisPmuDateOffset, getOdds, isoDateFromPmu } from "../scripts/lib/pmu-fetch.mjs";
+import { formatParisPmuDateOffset, getOdds, getOddsWithSource, isoDateFromPmu } from "../scripts/lib/pmu-fetch.mjs";
 
 describe("isoDateFromPmu", () => {
   it("convertit JJMMAAAA en AAAA-MM-JJ", () => {
@@ -68,5 +68,26 @@ describe("getOdds", () => {
 
   it("convertit une cote reçue en chaîne", () => {
     assert.equal(getOdds({ dernierRapportDirect: { rapport: "12.3" } }), 12.3);
+  });
+});
+
+describe("getOddsWithSource", () => {
+  it("étiquette l'origine de la cote retenue", () => {
+    assert.deepEqual(getOddsWithSource({ dernierRapportDirect: { rapport: 4.5 }, rapportProbable: 8 }), { odds: 4.5, source: "direct" });
+    assert.deepEqual(getOddsWithSource({ dernierRapportReference: { rapport: 6 }, rapportProbable: 8 }), { odds: 6, source: "reference" });
+    assert.deepEqual(getOddsWithSource({ rapportProbable: 8 }), { odds: 8, source: "probable" });
+  });
+
+  it("même cote que getOdds, toujours", () => {
+    const cases = [{ dernierRapportDirect: { rapport: "3.2" } }, { dernierRapportDirect: {}, rapportProbable: 5 }, { rapportProbable: 1 }, {}, undefined];
+    for (const participant of cases) {
+      const expected = getOdds(participant);
+      assert.equal(getOddsWithSource(participant).odds, expected > 1 ? expected : 0);
+    }
+  });
+
+  it("pas d'origine sans cote exploitable", () => {
+    assert.deepEqual(getOddsWithSource({}), { odds: 0, source: null });
+    assert.deepEqual(getOddsWithSource({ rapportProbable: 1 }), { odds: 0, source: null });
   });
 });

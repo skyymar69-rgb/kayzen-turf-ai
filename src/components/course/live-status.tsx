@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { RefreshCw } from "lucide-react";
+import { AlertTriangle, RefreshCw } from "lucide-react";
+import { INDICATIVE_LABELS, predictionIndicative, type OddsSource } from "@/lib/odds-freshness";
 import { instantDepart } from "@/lib/paris-time";
 import { formatAge, minutesAgo } from "@/components/course/shared";
 
@@ -37,6 +38,7 @@ export function LiveStatus({
   startTime,
   lastObservation,
   finished,
+  oddsSources = [],
   onStart,
   onDone,
 }: {
@@ -45,6 +47,8 @@ export function LiveStatus({
   startTime: string;
   lastObservation: string | null;
   finished: boolean;
+  /** Origine de la cote de chaque partant : décide du bandeau « indicatif ». */
+  oddsSources?: Array<OddsSource | null | undefined>;
   /** Appelé juste avant la relance : la page photographie son analyse. */
   onStart?: (auto: boolean) => void;
   /** Appelé une fois les données relues et la page en cours de recalcul. */
@@ -115,8 +119,19 @@ export function LiveStatus({
 
   const age = minutesAgo(lastObservation, now);
   const stale = age === null || age > 30;
+  const indicative = predictionIndicative({ minutesToStart, oddsAgeMinutes: age, sources: oddsSources });
 
   return (
+    <>
+    {indicative && (
+      <div className="mt-3 flex items-start gap-3 rounded-xl border border-warn/30 bg-warn-lo px-4 py-2.5 text-sm leading-6 text-warn" role="status">
+        <AlertTriangle aria-hidden="true" className="mt-1 shrink-0" size={15} />
+        <p>
+          <strong className="font-bold">Pronostic indicatif</strong> : {INDICATIVE_LABELS[indicative]}. Le classement repose en partie sur
+          ces cotes ; il sera recalculé dès la prochaine lecture des rapports directs.
+        </p>
+      </div>
+    )}
     <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface-sub px-4 py-2.5 text-sm" role="status">
       <span className={`size-2 shrink-0 rounded-full ${open ? "animate-pulse bg-cta" : stale ? "bg-warn" : "bg-accent"}`} aria-hidden="true" />
       <p className="min-w-0 flex-1 basis-[240px] text-fg">
@@ -144,5 +159,6 @@ export function LiveStatus({
       </button>
       {message && <p className="w-full text-xs text-danger">{message}</p>}
     </div>
+    </>
   );
 }

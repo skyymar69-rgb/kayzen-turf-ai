@@ -390,44 +390,29 @@ function distanceProfileSignalPlat(profile: DistanceProfile, music?: string | nu
 /**
  * Réduction kilométrique en secondes, ou `null` si inexploitable.
  *
- * L'API PMU livre la valeur en millièmes de seconde (`74300` = 1'14"3). La
- * base la stocke telle quelle dans `reduction_km` (texte) et, depuis le relevé
- * d'avant-course, sous forme numérique dans `speed_figure`. L'ancien parseur
- * exigeait un séparateur (« 1'14"3 ») : sur la valeur réelle il renvoyait 0,
- * et le signal le plus lourd du modèle Trot ne contribuait jamais.
+ * L'API PMU livre la valeur en millièmes de seconde (`74300` = 1'14"3). Seule
+ * `speed_figure` est lue : c'est la valeur relevée AVANT le départ, puis gelée
+ * (voir db/schema.sql et scripts/import-pmu-day.mjs).
  *
- * `speed_figure` a la priorité : c'est la valeur gelée avant le départ, alors
- * que `reduction_km` est réécrit par l'API avec le chrono réalisé une fois la
- * course courue.
+ * L'ancien repli sur `reduction_km` a été retiré : après l'arrivée, l'API y
+ * renvoie le chrono RÉALISÉ dans la course elle-même. Sur une course passée
+ * sans `speed_figure`, le modèle lisait donc le résultat — la meilleure
+ * réduction d'une course gagne dans 78,4 % des cas. Sans valeur d'avant-course,
+ * le signal est simplement absent (0), comme pour un inédit.
  */
-function reductionKmSeconds(speedFigure?: number | null, reductionKm?: string | null): number | null {
+function reductionKmSeconds(speedFigure?: number | null): number | null {
   if (typeof speedFigure === "number" && Number.isFinite(speedFigure) && speedFigure > 0) {
     return speedFigure / 1000;
   }
-
-  const raw = String(reductionKm ?? "").trim();
-  if (!raw) return null;
-
-  // Format brut de l'API : entier en millièmes.
-  if (/^\d{4,6}$/.test(raw)) return Number(raw) / 1000;
-
-  // Formats saisis à la main : 1'14"3, 1.14.3, 1,143, 1'143
-  const normalized = raw.replace(/[''`´]/g, ".").replace(/["]/g, "");
-  const match = normalized.match(/^(\d+)[.,](\d{1,2})(?:[.,]?(\d))?$/);
-  if (!match) return null;
-
-  const minutes = Number(match[1]);
-  const seconds = Number(match[2]);
-  const tenths = match[3] ? Number(match[3]) / 10 : 0;
-  return minutes * 60 + seconds + tenths;
+  return null;
 }
 
 /**
  * Signal 0,05 → 1 selon la réduction kilométrique, sur l'échelle des
  * trotteurs de niveau courant (1'11 excellent, 1'20 modeste).
  */
-function reductionKmSignal(speedFigure?: number | null, reductionKm?: string | null): number {
-  const seconds = reductionKmSeconds(speedFigure, reductionKm);
+function reductionKmSignal(speedFigure?: number | null): number {
+  const seconds = reductionKmSeconds(speedFigure);
   // Hors de la plage plausible d'une réduction (40 s à 200 s) : valeur absente.
   if (seconds === null || seconds < 40 || seconds > 200) return 0;
 
@@ -817,7 +802,7 @@ function trotScore(
   const favoriteGap = clamp((stats.favoriteOdds || odds) - odds, -20, 20);
 
   const distanceMeters = parseDistanceMeters(context.distance);
-  const rkSig = reductionKmSignal(horse.speedFigure, horse.reductionKm);
+  const rkSig = reductionKmSignal(horse.speedFigure);
   // Au trot, derrière l'autostart, le numéro de dossard est la position de
   // départ : l'utiliser ici est légitime, contrairement au Plat.
   const innerRailSig = innerRailSignalTrot(horse.draw ?? horse.number, distanceMeters);

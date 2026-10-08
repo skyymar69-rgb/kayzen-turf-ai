@@ -1,5 +1,5 @@
 import { getSql } from "@/lib/db";
-import { fetchPmuJson, participantOdds, pmuRaceUrl, type PmuParticipant } from "@/lib/pmu/client";
+import { fetchPmuJson, goingFromCourse, participantOddsWithSource, pmuRaceUrl, type PmuParticipant } from "@/lib/pmu/client";
 import { freezePrediction } from "@/lib/live/freeze";
 
 /**
@@ -7,8 +7,10 @@ import { freezePrediction } from "@/lib/live/freeze";
  * (scripts/live-refresh.ts) et par le bouton « Relancer l'analyse IA ».
  *
  * Ce qui est écrit, dans l'ordre :
- *   1. `entries.odds` et `entries.pool_*` — la valeur courante, lue par la page ;
- *   2. les non-partants déclarés, retirés (même garde-fou que l'ancien script) ;
+ *   1. `entries.odds` (et son origine `odds_source`) et `entries.pool_*` — la
+ *      valeur courante, lue par la page ; `races.going` relu jusqu'au départ ;
+ *   2. les non-partants déclarés, retirés (même garde-fou que l'ancien script)
+ *      et consignés dans `scratches` ;
  *   3. `odds_snapshots` et `pool_snapshots` — l'historique, espacé selon la
  *      distance au départ pour tenir le budget de stockage ;
  *   4. `prediction_snapshots` — le pronostic gelé à H-60, H-15 et H-2.
@@ -152,8 +154,17 @@ async function applyRefresh(raceId: string, running: PmuParticipant[], listedNum
   let scratched: number[] = [];
   let scratchedHorseIds: string[] = [];
   if (toRemove.length > 0) {
+    // Suppression et trace dans la même instruction : le retrait d'un partant
+    // ne disparaît plus sans laisser de traces (cheval, numéro, heure).
     const removed = (await sql.query(
-      `delete from entries where race_id = $1 and number = any($2::int[]) returning number, horse_id`,
+      `with removed as (
+         delete from entries where race_id = $1 and number = any($2::int[]) returning number, horse_id
+       ), logged as (
+         insert into scratches (race_id, number, horse_id)
+         select $1, number, horse_id from removed
+         on conflict (race_id, number) do nothing
+       )
+       select number, horse_id from removed`,
       [raceId, toRemove],
     )) as Array<{ number: number; horse_id: string }>;
     scratched = removed.map((r) => r.number);
@@ -161,20 +172,25 @@ async function applyRefresh(raceId: string, running: PmuParticipant[], listedNum
   }
 
   const oddsRows = running
-    .map((p) => ({ number: Number(p.numPmu), odds: participantOdds(p) }))
+    .map((p) => ({ number: Number(p.numPmu), ...participantOddsWithSource(p) }))
     .filter((r) => r.odds > 1);
 
+  // La cote vit jusqu'au départ, plus après : relue au-delà (fenêtre de deux
+  // minutes de la boucle), elle remplacerait la dernière cote d'avant-course.
   let oddsChanged = 0;
-  if (oddsRows.length > 0) {
+  if (oddsRows.length > 0 && minutesToStart > 0) {
     const changed = await sql.query(
-      `update entries e set odds = v.odds
-         from unnest($2::int[], $3::numeric[]) as v(number, odds)
-        where e.race_id = $1 and e.number = v.number and e.odds is distinct from v.odds
+      `update entries e set odds = v.odds, odds_source = v.source
+         from unnest($2::int[], $3::numeric[], $4::text[]) as v(number, odds, source)
+        where e.race_id = $1 and e.number = v.number
+          and (e.odds is distinct from v.odds or e.odds_source is distinct from v.source)
         returning e.id`,
-      [raceId, oddsRows.map((r) => r.number), oddsRows.map((r) => r.odds)],
+      [raceId, oddsRows.map((r) => r.number), oddsRows.map((r) => r.odds), oddsRows.map((r) => r.source)],
     );
     oddsChanged = changed.length;
   }
+
+  await refreshGoing(raceId, minutesToStart);
 
   const poolRows = running
     .map((p) => ({ number: Number(p.numPmu), ...(pools.get(Number(p.numPmu)) ?? { win: null, place: null, quinte: null }) }))
@@ -206,11 +222,13 @@ async function applyRefresh(raceId: string, running: PmuParticipant[], listedNum
   // plus ancien que l'écart prévu pour cette distance au départ.
   const gap = snapshotGapMinutes(minutesToStart);
   let snapshotRecorded = false;
+  // Les relevés restent permis juste après le départ : horodatés, ils disent
+  // honnêtement quand la cote a été lue (contrairement à `entries.odds`, gelée).
   if (oddsRows.length > 0) {
     const inserted = await sql.query(
-      `insert into odds_snapshots (race_id, horse_id, odds, source, observed_at)
-       select e.race_id, e.horse_id, v.odds, 'PMU', now()
-         from unnest($2::int[], $3::numeric[]) as v(number, odds)
+      `insert into odds_snapshots (race_id, horse_id, odds, source, odds_source, observed_at)
+       select e.race_id, e.horse_id, v.odds, 'PMU', v.source, now()
+         from unnest($2::int[], $3::numeric[], $5::text[]) as v(number, odds, source)
          join entries e on e.race_id = $1 and e.number = v.number
         where not exists (
                 select 1 from odds_snapshots recent
@@ -220,7 +238,7 @@ async function applyRefresh(raceId: string, running: PmuParticipant[], listedNum
                  where previous.race_id = e.race_id and previous.horse_id = e.horse_id and previous.source = 'PMU'
                  order by previous.observed_at desc limit 1)
        returning 1`,
-      [raceId, oddsRows.map((r) => r.number), oddsRows.map((r) => r.odds), gap],
+      [raceId, oddsRows.map((r) => r.number), oddsRows.map((r) => r.odds), gap, oddsRows.map((r) => r.source)],
     );
     snapshotRecorded = inserted.length > 0;
   }
@@ -238,6 +256,35 @@ async function applyRefresh(raceId: string, running: PmuParticipant[], listedNum
   const frozen = minutesToStart > 0 ? await freezePrediction(raceId, minutesToStart) : [];
 
   return { status: "refreshed", oddsChanged, runners: running.length, scratched, scratchedHorseIds, snapshotRecorded, frozen };
+}
+
+/**
+ * Terrain relu jusqu'au départ. L'import l'écrit le matin et ne repasse pas
+ * avant le lendemain : une pluie d'orage à midi laissait « Bon » affiché sur
+ * une piste devenue « Collant ». La date de relecture (`going_updated_at`)
+ * dit de quand date la valeur. Échec non bloquant : les cotes priment.
+ */
+async function refreshGoing(raceId: string, minutesToStart: number): Promise<void> {
+  if (minutesToStart <= 0) return;
+  const courseUrl = pmuRaceUrl(raceId);
+  if (!courseUrl) return;
+  try {
+    // Une relecture toutes les 10 min suffit : la boucle passe jusqu'à chaque
+    // 45 s dans le dernier quart d'heure, le terrain ne bouge pas à ce rythme.
+    const recent = (await getSql().query(
+      `select 1 from races where id = $1 and going_updated_at > now() - interval '10 minutes'`,
+      [raceId],
+    )) as unknown[];
+    if (recent.length > 0) return;
+    const going = goingFromCourse(await fetchPmuJson<{ penetrometre?: { intitule?: string | null } | null }>(courseUrl));
+    if (!going) return;
+    await getSql().query(
+      `update races set going = $2, going_updated_at = now() where id = $1`,
+      [raceId, going],
+    );
+  } catch {
+    // Terrain non relu : la valeur de l'import reste affichée.
+  }
 }
 
 function finiteOrNull(value: unknown): number | null {

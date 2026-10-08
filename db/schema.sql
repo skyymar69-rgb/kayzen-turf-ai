@@ -388,3 +388,70 @@ create table if not exists push_deliveries (
 alter table push_deliveries drop constraint if exists push_deliveries_kind_check;
 alter table push_deliveries add constraint push_deliveries_kind_check
   check (kind in ('depart', 'non-partant', 'smart-money', 'delaisse', 'arrivee'));
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Intégrité des données d'avant-course (audit d'octobre 2026).
+--
+-- Principe : tout ce que le modèle lit pour une course doit être ce qu'on
+-- savait AVANT son départ. Plusieurs colonnes étaient réécrites après coup
+-- (import J-1, backfill-history.mjs) ou lues dans leur état actuel pour des
+-- courses passées : le suivi de performance mesurait alors un modèle qui
+-- connaissait l'avenir.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- Type de départ au trot : 'autostart', 'volte', ou NULL (plat, obstacle).
+-- L'API PMU n'a pas de champ dédié : l'information est dans le texte
+-- `conditions` de la course (« Course E Départ à l'Autostart 35.000 »). Une
+-- course de trot sans cette mention part à la volte (tous les trots montés,
+-- et les courses à recul « Recul de 25 m. »). Voir `startTypeFromCourse` dans
+-- scripts/lib/pmu-integrity.mjs.
+alter table races add column if not exists start_type text;
+-- Allocation totale de la course (montantPrix PMU), en euros.
+alter table races add column if not exists prize integer;
+-- Dernière relecture du terrain (pénétromètre) par la boucle live. NULL tant
+-- que seul l'import l'a écrit : le terrain annoncé le matin change avec la
+-- pluie de l'après-midi.
+alter table races add column if not exists going_updated_at timestamptz;
+
+-- Statistiques jockey/driver et entraîneur CONNUES AVANT LA COURSE, copiées
+-- de `connection_stats` à l'import tant que la course n'est pas partie, puis
+-- figées. Pour une course passée, `connection_stats` contient les résultats
+-- postérieurs — y compris celui de la course elle-même : le lire serait une
+-- fuite. Une course passée sans ces colonnes reçoit NULL (le modèle se replie
+-- sur sa valeur a priori).
+alter table entries add column if not exists jockey_runs_pre integer;
+alter table entries add column if not exists jockey_wins_pre integer;
+alter table entries add column if not exists trainer_runs_pre integer;
+alter table entries add column if not exists trainer_wins_pre integer;
+
+-- Œillères seules (champ `oeilleres` PMU). `equipment` valait
+-- `oeilleres ?? deferre` : un code de déferrage pouvait déclencher la variable
+-- « œillères » du modèle. `equipment` ne porte plus que les œillères,
+-- `blinkers` en est la colonne explicite, `shoeing` garde le déferrage.
+alter table entries add column if not exists blinkers text;
+
+-- Origine de la cote : 'direct' (dernier rapport direct), 'reference' (cote de
+-- référence) ou 'probable' (rapport probable, avant l'ouverture des paris).
+-- Une cote 'probable' ou 'reference' n'est pas un prix de marché vivant : la
+-- page course présente alors le pronostic comme indicatif.
+alter table entries add column if not exists odds_source text;
+alter table odds_snapshots add column if not exists odds_source text;
+
+-- Nettoyage idempotent des anciennes lignes où `equipment` contient un code
+-- de déferrage (repli `oeilleres ?? deferre`). Dès le premier passage, la
+-- condition ne trouve plus rien.
+update entries set equipment = null
+ where equipment is not null
+   and equipment not like '%OEILLERES%'
+   and (equipment like '%DEFERR%' or equipment like 'PROTEGE%');
+
+-- Non-partants : la boucle live supprime leur ligne `entries` pour que le
+-- peloton soit recalculé sans eux. Cette table garde la trace du retrait
+-- (quel cheval, quand), qui disparaissait jusqu'ici sans laisser de trace.
+create table if not exists scratches (
+  race_id text not null references races(id) on delete cascade,
+  number integer not null,
+  horse_id text not null,
+  scratched_at timestamptz not null default now(),
+  primary key (race_id, number)
+);

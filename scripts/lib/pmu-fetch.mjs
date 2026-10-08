@@ -1,11 +1,9 @@
 /**
  * Accès à l'API PMU.
  *
- * `import-pmu-day.mjs` embarque encore ses propres copies de ces fonctions : il
- * tourne trois fois par jour en production et n'avait aucune raison d'être
- * touché pour introduire le rafraîchissement des cotes. Le jour où il évoluera,
- * c'est ici qu'il faudra le brancher — les deux implémentations sont
- * identiques et doivent le rester.
+ * `import-pmu-day.mjs` embarque encore ses propres copies de ces fonctions
+ * (réseau, dates), mais lit désormais la cote ici (`getOddsWithSource`) : les
+ * implémentations restantes sont identiques et doivent le rester.
  */
 
 import { readFile } from "node:fs/promises";
@@ -69,6 +67,28 @@ export function getOdds(participant) {
       participant?.rapportProbable ??
       0,
   );
+}
+
+/**
+ * Cote retenue ET son origine : 'direct', 'reference' ou 'probable' (`null`
+ * sans cote). Les trois sources étaient toutes étiquetées « PMU » : une cote
+ * probable publiée la veille, sans un euro misé, passait pour un prix de
+ * marché. L'origine est stockée dans `entries.odds_source` et
+ * `odds_snapshots.odds_source`, et la page course s'en sert pour présenter le
+ * pronostic comme indicatif. Même ordre de priorité que `getOdds`.
+ */
+export function getOddsWithSource(participant) {
+  const candidates = [
+    ["direct", participant?.dernierRapportDirect?.rapport],
+    ["reference", participant?.dernierRapportReference?.rapport],
+    ["probable", participant?.rapportProbable],
+  ];
+  for (const [source, value] of candidates) {
+    if (value == null) continue;
+    const odds = Number(value);
+    return odds > 1 ? { odds, source } : { odds: 0, source: null };
+  }
+  return { odds: 0, source: null };
 }
 
 /** Date PMU (JJMMAAAA) décalée de `offset` jours par rapport à aujourd'hui à Paris. */

@@ -16,11 +16,19 @@ export type HorsePrediction = {
   speedFigure?: number | null;
   /** Place à la corde (placeCorde PMU), distincte du numéro de dossard. */
   draw?: number | null;
+  /** Œillères seules (champ `oeilleres` PMU) — le déferrage n'y figure plus. */
   equipment?: string | null;
+  /** Œillères, colonne explicite `entries.blinkers` (même valeur qu'`equipment`). */
+  blinkers?: string | null;
   silksUrl?: string | null;
   jockey: string;
   trainer: string;
   odds: number;
+  /**
+   * Origine de la cote : rapport direct, cote de référence ou rapport probable.
+   * `null` pour l'historique antérieur à la colonne. Voir src/lib/odds-freshness.ts.
+   */
+  oddsSource?: "direct" | "reference" | "probable" | null;
   fairOdds: number;
   marketEdge: number;
   winProbability: number;
@@ -41,7 +49,11 @@ export type HorsePrediction = {
    * C'est l'« avis IA » comparable au marché — voir src/lib/fundamental.
    */
   fundamentalProbability?: number | null;
-  /** Courses et victoires du jockey/driver et de l'entraîneur (historique en base). */
+  /**
+   * Courses et victoires du jockey/driver et de l'entraîneur CONNUES AVANT LA
+   * COURSE (valeurs figées à l'import), `null` pour une course passée sans
+   * valeur figée. Voir src/lib/point-in-time.ts.
+   */
   jockeyRuns?: number | null;
   jockeyWins?: number | null;
   trainerRuns?: number | null;
@@ -137,6 +149,12 @@ export type RaceAnalysis = {
   oddsAvailable: boolean;
   /** Dernier rafraîchissement des cotes (ISO), `null` si jamais rafraîchie depuis l'import. */
   oddsRefreshedAt?: string | null;
+  /** Type de départ au trot (texte `conditions` PMU), `null` hors trot ou inconnu. */
+  startType?: "autostart" | "volte" | null;
+  /** Allocation totale de la course, en euros. */
+  prize?: number | null;
+  /** Dernière relecture du terrain par la boucle live (ISO), `null` si seul l'import l'a écrit. */
+  goingUpdatedAt?: string | null;
 };
 
 export type BetSimulation = {
