@@ -27,10 +27,13 @@
  * validation hors échantillon ne detecte pas ce genre de piège : il faut aussi
  * verifier que la variable existe avant le départ.
  *
- * Usage : node scripts/evaluate-features.mjs [--cut 2026-06-01]
+ * Usage : npx tsx scripts/evaluate-features.mjs [--cut 2026-06-01]
  */
 
 import { neon } from "@neondatabase/serverless";
+// Même retrait de marge que la production (cote absente = plus petite probabilité
+// connue) : un seul banc de mesure. Lancer avec tsx, qui charge le TypeScript.
+import { devig } from "../src/lib/probability.ts";
 import { readFileSync } from "node:fs";
 
 function databaseUrl() {
@@ -41,16 +44,6 @@ function databaseUrl() {
 
 const args = process.argv.slice(2);
 const CUT = args.includes("--cut") ? args[args.indexOf("--cut") + 1] : "2026-06-01";
-
-function devig(odds) {
-  const raw = odds.map((o) => (Number.isFinite(o) && o > 1 ? 1 / o : 0));
-  const known = raw.filter((r) => r > 0);
-  if (!known.length) return odds.map(() => 1 / odds.length);
-  const mean = known.reduce((a, b) => a + b, 0) / known.length;
-  const filled = raw.map((r) => (r > 0 ? r : mean));
-  const total = filled.reduce((a, b) => a + b, 0);
-  return filled.map((r) => r / total);
-}
 
 /** Note de forme tirée de la musique : 1p = victoire, 0p/Dp/Ap = échec. */
 function formScore(music) {

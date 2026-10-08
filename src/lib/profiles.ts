@@ -75,6 +75,15 @@ export const PROFILE_THRESHOLDS = {
 
 export const PROFILES_VERSION = "profils-v2";
 
+/**
+ * Date à laquelle les seuils ci-dessus ont été figés. Toute course antérieure a
+ * servi à les choisir : le backtest la classe en « période d'ajustement »
+ * (dans l'échantillon) et ne présente comme mesure honnête que les courses à
+ * partir de cette date (« hors échantillon »), plus le suivi en direct.
+ * Changer un seuil impose d'avancer cette date en même temps que `PROFILES_VERSION`.
+ */
+export const PROFILES_FROZEN_AT = "2026-10-02";
+
 export const PROFILE_RULES: Array<{ profile: Profile; rule: string }> = [
   { profile: "eviter", rule: `L'IA lui donne moins de ${PROFILE_THRESHOLDS.avoidMaxFundamental} % de chances, et au moins ${Math.round((1 - PROFILE_THRESHOLDS.avoidMaxRatio) * 100)} % de moins que le marché.` },
   { profile: "base", rule: `1er ou 2e de notre sélection, au moins ${PROFILE_THRESHOLDS.baseMinTop3} % de chances de finir dans les 3 premiers, et l'IA au moins aussi confiante que le marché.` },
