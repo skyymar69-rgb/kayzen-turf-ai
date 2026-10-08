@@ -5,6 +5,8 @@ import { computeHorseHistory, fetchHorseHistories, type HorseHistory, type SqlTa
 import { fundamentalFeatureNames, fundamentalProbabilities } from "@/lib/fundamental/model";
 import type { MarketHistory } from "@/lib/market";
 import { calibrateField } from "@/lib/probability";
+import { minutesToStart } from "@/lib/race-status";
+import { VALUE_EDGE_THRESHOLD } from "@/lib/value-signal";
 import { parseOddsSource } from "@/lib/odds-freshness";
 import { connectionStatsAt, raceHasStarted } from "@/lib/point-in-time";
 import type { BetOffer, Confidence, HorsePrediction, RaceAnalysis } from "@/lib/types";
@@ -379,7 +381,7 @@ export async function getValueBets() {
 
   const predictions = await getPredictions();
   return predictions
-    .filter((horse) => horse.valueIndex > 10 || (horse.odds >= 6 && horse.top3Probability >= 18))
+    .filter((horse) => horse.valueIndex > VALUE_EDGE_THRESHOLD || (horse.odds >= 6 && horse.top3Probability >= 18))
     .sort((a, b) => b.valueIndex - a.valueIndex || a.arrivalRank - b.arrivalRank);
 }
 
@@ -433,7 +435,12 @@ function mapRace(row: RaceRow, entries: EntryRow[], histories?: Map<string, Past
     // sont calculées cheval par cheval, sans normalisation (Σ win ≈ 185 %).
     // On les remplace ici, une seule fois, pour que tous les consommateurs —
     // page course, dashboard, tickets, API — lisent les mêmes valeurs.
-    horses: calibrateField(horses),
+    // Discipline : coefficients du marché ajustés (lib/market-calibration) ;
+    // délai au départ : l'espérance se lit à la cote finale attendue.
+    horses: calibrateField(horses, {
+      discipline: row.discipline,
+      minutesToStart: minutesToStart({ raceDate: row.race_date, startTime: row.start_time }),
+    }),
     oddsAvailable: horses.some((horse) => Number.isFinite(horse.odds) && horse.odds > 1),
     oddsRefreshedAt: row.odds_refreshed_at,
     startType: row.start_type === "autostart" || row.start_type === "volte" ? row.start_type : null,

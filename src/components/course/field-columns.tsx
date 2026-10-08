@@ -60,7 +60,7 @@ export const FOOTNOTES: Record<Tab, ReactNode> = {
     <>
       <Term name="Score de surprise">Score de surprise</Term> sur 100 : écart IA / marché (40 pts), rang de l&apos;IA (15), forme sur les cinq
       dernières courses (15), entourage (10), marché du jour — MVT et argent (20). Alerte seulement si l&apos;IA voit le cheval au moins{" "}
-      {String(SURPRISE_MIN_RATIO).replace(".", ",")} fois au-dessus du marché : Top value sous 10/1, Surprise IA de 10/1 à 30/1, Tocard malin
+      {String(SURPRISE_MIN_RATIO).replace(".", ",")} fois au-dessus du marché : Sous-coté IA sous 10/1, Surprise IA de 10/1 à 30/1, Tocard malin
       au-delà (signal fort seulement), trois au plus par course. Le score décrit un désaccord avec le marché, il n&apos;annonce pas plus de
       gagnants que la cote finale.
     </>
@@ -107,7 +107,7 @@ export const COLUMNS: Record<Tab, (race: RaceAnalysis) => Column[]> = {
     { label: "Marché", title: "Probabilité implicite de la cote, marge retirée", align: "right", render: (r) => pct(r.market, 0) },
     { label: "Écart", title: "IA moins marché, en points", align: "right", render: (r) => <span className={gapClass(r.gap)}>{signedPts(r.gap, 0)}</span> },
     { label: "Score", term: "Score de surprise", align: "right", render: (r) => <ScoreCell surprise={r.surprise} /> },
-    { label: "Alerte", title: "Top value, Surprise IA, Tocard malin ou À surveiller", render: (r) => <SurpriseBadge alert={r.surprise.alert} /> },
+    { label: "Alerte", title: "Sous-coté IA, Surprise IA, Tocard malin ou À surveiller", render: (r) => <SurpriseBadge alert={r.surprise.alert} /> },
     { label: "Cote", align: "right", render: (r) => <OddsCell number={r.horse.number} odds={r.horse.odds} /> },
     { label: "MVT", term: "MVT", render: (r) => <MoveCell row={r} /> },
     { label: "Argent", title: "Variation de la part des mises sur 15 min", align: "right", render: (r) => <FlowCell row={r} /> },

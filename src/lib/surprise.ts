@@ -18,7 +18,7 @@
  *                               l'argent sortant la baisse.
  *
  * Alertes : un cheval n'est signalé que si l'IA le voit au-dessus du marché
- * (rapport ≥ SURPRISE_MIN_RATIO). Le type dépend de la cote (Top value, Surprise
+ * (rapport ≥ SURPRISE_MIN_RATIO). Le type dépend de la cote (Sous-coté IA, Surprise
  * IA, Tocard malin), le niveau de la note (forte, possible, à surveiller).
  *
  * CE QUE LE SCORE N'EST PAS. Mesuré sur 1 571 courses (24/08 → 07/10/2026,
@@ -64,7 +64,7 @@ export type SurpriseKind = "value" | "surprise" | "tocard";
 export type SurpriseLevel = keyof typeof SURPRISE_LEVELS;
 
 export const SURPRISE_KIND_LABELS: Record<SurpriseKind, string> = {
-  value: "Top value",
+  value: "Sous-coté IA",
   surprise: "Surprise IA",
   tocard: "Tocard malin",
 };
@@ -270,7 +270,7 @@ function reasonsFor(x: {
 function conclusionFor(alert: SurpriseAlert, direction: Movement["direction"]): string {
   if (alert.kind === "tocard") return direction === "delaisse" ? "Le marché le délaisse, l'IA y croit : surprise possible" : "Grosse cote que l'IA remonte : surprise possible";
   if (alert.kind === "surprise") return alert.level === "forte" ? "Sous-estimé par le marché : à surveiller de près" : "Sous-estimé par le marché : à surveiller";
-  return alert.level === "forte" ? "Très bonne valeur à sa cote" : "Bonne valeur à sa cote";
+  return alert.level === "forte" ? "Nettement plus haut chez l'IA que sur le marché" : "Plus haut chez l'IA que sur le marché";
 }
 
 /** Rang de chaque cheval chez l'IA (1 = plus haute probabilité), `null` sans avis. */

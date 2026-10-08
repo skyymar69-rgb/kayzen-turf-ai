@@ -44,7 +44,7 @@ export const CHANGELOG: readonly EntreeChangelog[] = [
         categorie: "Ajouté",
         elements: [
           "Score de surprise sur 100 pour chaque partant : écart entre l'IA et le marché, rang de l'IA, forme, entourage et marché du jour, avec ses raisons en clair.",
-          "Alertes Top value, Surprise IA, Tocard malin et À surveiller — trois au plus par course.",
+          "Alertes Sous-coté IA, Surprise IA, Tocard malin et À surveiller — trois au plus par course.",
           "Page course : panneau « Chevaux cachés · Surprise IA », onglet « Analyse complète » qui réunit toutes les données du tableau, et score détaillé dans la fiche cheval.",
           "Accueil : « Top 3 surprises du jour ».",
           "Page Méthode : le calcul du score et ce qu'il ne promet pas.",

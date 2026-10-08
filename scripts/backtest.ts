@@ -364,7 +364,8 @@ async function main() {
       if (age != null) ages.push(age);
     }
 
-    const market = devig(odds);
+    // Même marché que le site : exposant γ et α de la discipline (lib/probability).
+    const market = devig(odds, race.discipline);
     const shown = blendProbabilities(market, fundamental, MODEL_WEIGHT);
     const scoreLl = (key: string, p: number[]) => {
       const s = ll.get(key)!;

@@ -1,4 +1,5 @@
 import { probableArrival, raceToContext } from "@/lib/bet-recommendations";
+import { VALUE_EDGE_THRESHOLD } from "@/lib/value-signal";
 import { explainPredictionScore, watchedLongshot } from "@/lib/prediction-math";
 import type { HorsePrediction, PostRaceAnalysis, RaceAnalysis } from "@/lib/types";
 
@@ -123,7 +124,7 @@ function lessonsFor(race: RaceAnalysis, actual: HorsePrediction[], predicted: Ho
     lessons.push(`[${discipline}] Le gagnant #${winner.number} était classé ${winnerRank}e par le modèle: pénalité à remonter dans le feedback.`);
   }
 
-  if (winner.valueIndex > 10) {
+  if (winner.valueIndex > VALUE_EDGE_THRESHOLD) {
     lessons.push(`[${discipline}] Le gagnant avait un signal value positif (+${winner.valueIndex}%): renforcer la pondération value quand elle converge avec Top 3/Top 5.`);
   }
 
