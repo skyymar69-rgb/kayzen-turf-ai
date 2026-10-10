@@ -28,9 +28,9 @@ listed exhaustively in "Deletions that do happen" below.
 
 Every write path that removes rows, and the guard that bounds it:
 
-- **`scripts/import-pmu-day.mjs`** keeps only the PMU national programme
-  (every country). REGIONAL and LOCAL meetings are skipped at import; nothing
-  is purged after the fact.
+- **`scripts/import-pmu-day.mjs`** imports exactly the PMU point-of-sale
+  programme (`specialisation=OFFLINE`, every country); nothing is purged after
+  the fact.
 - **`src/lib/live/refresh-race.ts`** (loop `scripts/live-refresh.ts`, run by
   `live_refresh.yml`, and the "Relancer l'analyse IA" button) removes from `entries` the runners the PMU API no longer
   lists as `PARTANT` — declared non-runners. A phantom runner distorts the

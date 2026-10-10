@@ -306,18 +306,6 @@ function horseId(participant, raceId) {
     .slice(0, 120);
 }
 
-// Le périmètre est le programme national du PMU (R1, R2… jouables partout en
-// France et sur pmu.fr), quel que soit le pays de l'hippodrome : Allemagne,
-// Pays-Bas, Suède… en font partie. Les réunions REGIONAL et LOCAL (numérotées
-// après le national) ne sont jouables qu'en région ou sur l'hippodrome, sans
-// aucune offre en ligne : elles sont exclues. Une audience absente est gardée,
-// pour qu'une réponse API incomplète ne fasse jamais disparaître une réunion.
-const OUT_OF_SCOPE_AUDIENCES = ["REGIONAL", "LOCAL"];
-
-function isRelevantReunion(reunion) {
-  const audience = String(reunion?.audience ?? "").toUpperCase();
-  return !OUT_OF_SCOPE_AUDIENCES.includes(audience);
-}
 
 function normalizeBetTypes(paris = []) {
   const unique = new Map();
@@ -394,7 +382,10 @@ async function loadConnectionStats(sql) {
 }
 
 async function importDate(sql, pmuDate, maxRaces, connectionStats) {
-  const programmeUrl = `${PMU_BASE}/${pmuDate}`;
+  // Le périmètre est le programme des points de vente PMU (pmu.fr/point-de-vente),
+  // tel que l'API le sert : réunions étrangères comprises, réunions réservées à
+  // internet ou à l'hippodrome exclues. Aucun filtre maison par-dessus.
+  const programmeUrl = `${PMU_BASE}/${pmuDate}?specialisation=OFFLINE`;
   const payload = await fetchJson(programmeUrl);
   const reunions = payload?.programme?.reunions ?? [];
   const isoDate = isoDateFromPmu(pmuDate);
@@ -407,17 +398,8 @@ async function importDate(sql, pmuDate, maxRaces, connectionStats) {
   // suffit à reconstituer ce qui était affiché. Les lignes déjà écrites sont
   // conservées, seules les écritures cessent.
   let importedRaces = 0;
-  let skippedRaces = 0;
 
   for (const reunion of reunions) {
-    if (!isRelevantReunion(reunion)) {
-      const skippedCourses = reunion.courses?.length ?? 0;
-      skippedRaces += skippedCourses;
-      console.log(
-        `[pmu] skipped R${reunion.numOfficiel} ${reunion?.hippodrome?.libelleCourt ?? ""} (${reunion?.audience ?? "N/A"}) - outside PMU national programme`,
-      );
-      continue;
-    }
 
     const racecourseName = reunion?.hippodrome?.libelleCourt ?? reunion?.hippodrome?.libelleLong ?? `R${reunion.numOfficiel}`;
     const racecourseRows = await sql`
@@ -676,9 +658,6 @@ async function importDate(sql, pmuDate, maxRaces, connectionStats) {
     }
   }
 
-  if (skippedRaces > 0) {
-    console.log(`[pmu] skipped ${skippedRaces} races outside French race scope`);
-  }
 
   return importedRaces;
 }

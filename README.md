@@ -85,7 +85,7 @@ Auto-learning from official arrivals:
 npm run model:learn
 ```
 
-Imports keep the PMU national programme (R1, R2…, every country). Regional and local meetings, not bettable nationwide, are skipped.
+Imports follow exactly the PMU point-of-sale programme (pmu.fr/point-de-vente, API `specialisation=OFFLINE`), foreign meetings included.
 
 This connector uses the publicly reachable PMU JSON programme endpoint with a clear user agent, no bot evasion, and a short delay between race participant requests. For commercial scale, validate usage rights or replace it with an authorised PMU partner feed.
 

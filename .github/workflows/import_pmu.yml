@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     # Le job dure normalement 21-31 min (import 13-19 min + apprentissage 8-11 min).
     # L'ancienne limite de 30 min tuait l'étape "Learn from official results" environ
-    # une exécution sur deux. Marge portée à 120 min (programme national toutes nations) ; les garde-fous anti-blocage
+    # une exécution sur deux. Marge portée à 120 min (programme point de vente, toutes nations) ; les garde-fous anti-blocage
     # réels sont désormais posés par étape ci-dessous.
     timeout-minutes: 120
     env:
@@ -63,8 +63,8 @@ jobs:
 
       - name: Import rolling PMU window
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.date == '' }}
-        # Le programme national PMU (toutes nations) compte environ deux fois plus
-        # de courses que l'ancien périmètre France seule.
+        # Le programme des points de vente PMU (toutes nations) compte plus de
+        # courses que l'ancien périmètre France seule.
         timeout-minutes: 70
         run: npm run data:import:pmu
 
