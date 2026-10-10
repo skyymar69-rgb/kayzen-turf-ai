@@ -28,7 +28,7 @@ jobs:
     timeout-minutes: 30
     env:
       GH_TOKEN: ${{ github.token }}
-      ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/kayzen-turf.p12
+      ANDROID_KEYSTORE_PATH: /tmp/kayzen-turf.p12
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       ANDROID_VERSION_CODE: ${{ github.run_number }}
       ANDROID_VERSION_NAME: 1.${{ github.run_number }}
