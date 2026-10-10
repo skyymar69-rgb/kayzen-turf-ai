@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "fr.kayzen.turf",
+      "sha256_cert_fingerprints": [
+        "DF:B3:56:65:AC:9B:0C:EE:FB:68:9B:67:0D:DB:A5:D3:AC:55:CB:62:98:18:10:C5:AD:5A:A9:7E:1B:03:ED:40"
+      ]
+    }
+  }
+]

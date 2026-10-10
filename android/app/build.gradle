@@ -1,0 +1,50 @@
+plugins {
+    id "com.android.application"
+}
+
+// Signature : la clé vit hors du dépôt. En CI, android_apk.yml la décode
+// depuis les secrets ANDROID_KEYSTORE_BASE64 / ANDROID_KEYSTORE_PASSWORD.
+def keystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
+
+android {
+    namespace "fr.kayzen.turf"
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "fr.kayzen.turf"
+        minSdk 21
+        targetSdk 34
+        // versionCode doit croître à chaque APK publié pour que la mise à jour
+        // s'installe par-dessus : la CI le dérive du numéro d'exécution.
+        versionCode Integer.parseInt(System.getenv("ANDROID_VERSION_CODE") ?: "1")
+        versionName System.getenv("ANDROID_VERSION_NAME") ?: "1.0"
+    }
+
+    signingConfigs {
+        release {
+            if (keystorePath) {
+                storeFile file(keystorePath)
+                storeType "pkcs12"
+                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias "kayzen"
+                keyPassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (keystorePath) signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation "com.google.androidbrowserhelper:androidbrowserhelper:2.5.0"
+}

@@ -37,3 +37,12 @@ pnpm-debug.log*
 next-env.d.ts
 .lighthouseci/
 .lighthouseci-reports/
+
+# Android
+/android/.gradle/
+/android/build/
+/android/app/build/
+/android/local.properties
+*.p12
+*.jks
+*.keystore

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Mêmes valeurs que theme_color / background_color de src/app/manifest.ts. -->
+<resources>
+    <color name="themeColor">#0C2318</color>
+    <color name="backgroundColor">#0C1A11</color>
+    <color name="iconBackground">#0C2318</color>
+</resources>

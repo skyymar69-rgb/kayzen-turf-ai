@@ -1,0 +1,81 @@
+name: Android APK
+
+# Construit l'application Android (Trusted Web Activity, dossier android/),
+# la signe avec la clé conservée dans les secrets, et publie l'APK à une
+# adresse fixe :
+#   https://github.com/skyymar69-rgb/kayzen-turf-ai/releases/download/android/kayzen-turf.apk
+# Le contenu de l'application est le site lui-même : un correctif du site
+# n'exige pas de nouvel APK. Reconstruire seulement quand android/ change.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "android/**"
+      - ".github/workflows/android_apk.yml"
+
+# Publier l'APK dans une release GitHub demande l'écriture sur le dépôt.
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/kayzen-turf.p12
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_VERSION_CODE: ${{ github.run_number }}
+      ANDROID_VERSION_NAME: 1.${{ github.run_number }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Setup Java
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@48b5f213c81028ace310571dc5ec0fbbca0b2947 # v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Decode signing key
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          test -n "$ANDROID_KEYSTORE_BASE64" || { echo "Secret ANDROID_KEYSTORE_BASE64 absent"; exit 1; }
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$ANDROID_KEYSTORE_PATH"
+
+      - name: Build signed APK
+        run: gradle -p android assembleRelease --no-daemon
+
+      - name: Verify signature
+        run: |
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          "$ANDROID_HOME"/build-tools/$(ls "$ANDROID_HOME"/build-tools | sort -V | tail -1)/apksigner verify --print-certs "$APK" | tee signature.txt
+          # Doit correspondre à l'empreinte de public/.well-known/assetlinks.json.
+          grep -qi "SHA-256 digest: dfb35665ac9b0ceefb689b670ddba5d3ac55cb62981810c5ad5aa97e1b03ed40" signature.txt
+          cp "$APK" kayzen-turf.apk
+
+      - name: Publish release
+        run: |
+          if ! gh release view android >/dev/null 2>&1; then
+            gh release create android --target "$GITHUB_SHA" --title "Application Android" \
+              --notes "Application Android de Kayzen Turf. Télécharger kayzen-turf.apk sur le téléphone puis l'ouvrir pour l'installer."
+          fi
+          gh release upload android kayzen-turf.apk --clobber
+          gh release edit android --notes "Application Android de Kayzen Turf — version 1.${{ github.run_number }}. Télécharger kayzen-turf.apk sur le téléphone puis l'ouvrir pour l'installer."
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: kayzen-turf-apk
+          path: kayzen-turf.apk
