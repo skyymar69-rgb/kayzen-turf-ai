@@ -17,7 +17,6 @@
     "db:stats": "node scripts/db-stats.mjs",
     "db:compact": "node scripts/compact-storage.mjs",
     "model:learn": "node scripts/learn-from-results.mjs --apply",
-    "data:prune:scope": "node scripts/prune-race-scope.mjs",
     "data:import:pmu": "node scripts/import-pmu-day.mjs",
     "data:refresh:live": "tsx scripts/live-refresh.ts",
     "db:health": "node scripts/db-health.mjs",

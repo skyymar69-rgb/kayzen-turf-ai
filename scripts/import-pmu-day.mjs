@@ -17,7 +17,6 @@ import {
 
 const PMU_BASE = "https://offline.turfinfo.api.pmu.fr/rest/client/7/programme";
 const USER_AGENT = "KayzenTurfAI/0.1 contact:github.com/skyymar69-rgb/kayzen-turf-ai";
-const DEFAULT_ALLOWED_COUNTRY_CODES = ["FRA"];
 
 async function loadLocalEnv() {
   try {
@@ -307,19 +306,17 @@ function horseId(participant, raceId) {
     .slice(0, 120);
 }
 
-function allowedCountryCodes() {
-  const configured = process.env.KAYZEN_ALLOWED_COUNTRIES;
-  if (!configured) return DEFAULT_ALLOWED_COUNTRY_CODES;
+// Le périmètre est le programme national du PMU (R1, R2… jouables partout en
+// France et sur pmu.fr), quel que soit le pays de l'hippodrome : Allemagne,
+// Pays-Bas, Suède… en font partie. Les réunions REGIONAL et LOCAL (numérotées
+// après le national) ne sont jouables qu'en région ou sur l'hippodrome, sans
+// aucune offre en ligne : elles sont exclues. Une audience absente est gardée,
+// pour qu'une réponse API incomplète ne fasse jamais disparaître une réunion.
+const OUT_OF_SCOPE_AUDIENCES = ["REGIONAL", "LOCAL"];
 
-  return configured
-    .split(",")
-    .map((code) => code.trim().toUpperCase())
-    .filter(Boolean);
-}
-
-function isRelevantReunion(reunion, allowlist) {
-  const countryCode = String(reunion?.pays?.code ?? "").toUpperCase();
-  return allowlist.includes(countryCode);
+function isRelevantReunion(reunion) {
+  const audience = String(reunion?.audience ?? "").toUpperCase();
+  return !OUT_OF_SCOPE_AUDIENCES.includes(audience);
 }
 
 function normalizeBetTypes(paris = []) {
@@ -409,16 +406,15 @@ async function importDate(sql, pmuDate, maxRaces, connectionStats) {
   // `odds_snapshots` — la page dérivant tout des cotes, un relevé de cote daté
   // suffit à reconstituer ce qui était affiché. Les lignes déjà écrites sont
   // conservées, seules les écritures cessent.
-  const allowlist = allowedCountryCodes();
   let importedRaces = 0;
   let skippedRaces = 0;
 
   for (const reunion of reunions) {
-    if (!isRelevantReunion(reunion, allowlist)) {
+    if (!isRelevantReunion(reunion)) {
       const skippedCourses = reunion.courses?.length ?? 0;
       skippedRaces += skippedCourses;
       console.log(
-        `[pmu] skipped R${reunion.numOfficiel} ${reunion?.hippodrome?.libelleCourt ?? ""} (${reunion?.pays?.code ?? "N/A"}) - outside French race scope`,
+        `[pmu] skipped R${reunion.numOfficiel} ${reunion?.hippodrome?.libelleCourt ?? ""} (${reunion?.audience ?? "N/A"}) - outside PMU national programme`,
       );
       continue;
     }

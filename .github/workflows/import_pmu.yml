@@ -27,9 +27,9 @@ jobs:
     runs-on: ubuntu-latest
     # Le job dure normalement 21-31 min (import 13-19 min + apprentissage 8-11 min).
     # L'ancienne limite de 30 min tuait l'étape "Learn from official results" environ
-    # une exécution sur deux. Marge portée à 90 min ; les garde-fous anti-blocage
+    # une exécution sur deux. Marge portée à 120 min (programme national toutes nations) ; les garde-fous anti-blocage
     # réels sont désormais posés par étape ci-dessous.
-    timeout-minutes: 90
+    timeout-minutes: 120
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       # L'entrée passe par l'environnement, jamais interpolée dans `run:` :
@@ -63,12 +63,10 @@ jobs:
 
       - name: Import rolling PMU window
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.date == '' }}
-        timeout-minutes: 45
+        # Le programme national PMU (toutes nations) compte environ deux fois plus
+        # de courses que l'ancien périmètre France seule.
+        timeout-minutes: 70
         run: npm run data:import:pmu
-
-      - name: Prune races outside France/Equidia scope
-        timeout-minutes: 10
-        run: npm run data:prune:scope
 
       - name: Learn from official results
         timeout-minutes: 30

@@ -79,19 +79,13 @@ Full PMU programme import for a day:
 npm run data:import:pmu -- --date 03052026
 ```
 
-Race scope cleanup:
-
-```bash
-npm run data:prune:scope
-```
-
 Auto-learning from official arrivals:
 
 ```bash
 npm run model:learn
 ```
 
-By default, imports keep French races only. Override with `KAYZEN_ALLOWED_COUNTRIES=FRA,GBR,AUS` only if the product scope changes later.
+Imports keep the PMU national programme (R1, R2…, every country). Regional and local meetings, not bettable nationwide, are skipped.
 
 This connector uses the publicly reachable PMU JSON programme endpoint with a clear user agent, no bot evasion, and a short delay between race participant requests. For commercial scale, validate usage rights or replace it with an authorised PMU partner feed.
 
@@ -103,7 +97,7 @@ The full PMU programme import runs from GitHub Actions, not from a local machine
 - `10:30 UTC`: mid-day refresh
 - `17:30 UTC`: evening refresh and result catch-up
 
-After each import, the workflow prunes out-of-scope races, stores post-race feedback, selects the best active scoring profile by segment (`DEFAULT`, `QUARTE_PLUS`, `QUINTE_PLUS`) and applies it only to races without official results.
+After each import, the workflow stores post-race feedback, selects the best active scoring profile by segment (`DEFAULT`, `QUARTE_PLUS`, `QUINTE_PLUS`) and applies it only to races without official results.
 
 Required GitHub secret:
 

@@ -28,15 +28,9 @@ listed exhaustively in "Deletions that do happen" below.
 
 Every write path that removes rows, and the guard that bounds it:
 
-- **`scripts/prune-race-scope.mjs`** (`npm run data:prune:scope`, run after
-  each import by `import_pmu.yml`) deletes races whose country
-  (`races.source_country`, falling back to `racecourses.country`) is outside
-  the France/Equidia allowlist (`KAYZEN_ALLOWED_COUNTRIES`, default `FRA`),
-  together with their entries and results through `on delete cascade`.
-  Guards: an empty allowlist is refused (nothing is deleted), and a run that
-  would remove more than 5 % of the races in the database aborts instead of
-  deleting. An out-of-scope race is one the product never displays, so this is
-  a scope decision, not retention.
+- **`scripts/import-pmu-day.mjs`** keeps only the PMU national programme
+  (every country). REGIONAL and LOCAL meetings are skipped at import; nothing
+  is purged after the fact.
 - **`src/lib/live/refresh-race.ts`** (loop `scripts/live-refresh.ts`, run by
   `live_refresh.yml`, and the "Relancer l'analyse IA" button) removes from `entries` the runners the PMU API no longer
   lists as `PARTANT` — declared non-runners. A phantom runner distorts the
