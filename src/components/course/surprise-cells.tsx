@@ -6,8 +6,8 @@ import { SURPRISE_KIND_LABELS, SURPRISE_LEVELS, SURPRISE_PART_LABELS, SURPRISE_W
  */
 
 const KIND_STYLES: Record<SurpriseAlert["kind"], string> = {
-  value: "bg-emerald-600 text-white dark:bg-emerald-500 dark:text-emerald-950",
-  surprise: "bg-orange-600 text-white dark:bg-orange-500 dark:text-orange-950",
+  value: "bg-emerald-700 text-white dark:bg-emerald-500 dark:text-emerald-950",
+  surprise: "bg-orange-700 text-white dark:bg-orange-500 dark:text-orange-950",
   tocard: "bg-violet-600 text-white dark:bg-violet-500 dark:text-violet-950",
 };
 
@@ -47,7 +47,7 @@ export function ScoreCell({ surprise }: { surprise: Surprise }) {
       </span>
       <span className={`rounded-md px-1.5 py-0.5 text-xs font-bold ${tone.chip}`}>
         {surprise.score}
-        <span className="font-normal opacity-70">/100</span>
+        <span className="font-normal">/100</span>
       </span>
     </span>
   );
