@@ -2,9 +2,9 @@ import { HomePage, type DashboardPerformance } from "@/components/home/home-page
 import { getLatestTrackRecord, getRaces } from "@/lib/race-repository";
 
 // `force-dynamic` refaisait la cascade de requêtes à chaque visite (TTFB mesuré
-// à 2,2 s). Les cotes PMU ne bougent pas à la seconde : 60 s de fraîcheur
-// suffisent largement et le rendu passe à ~0,1 s sur cache chaud.
-export const revalidate = 60;
+// à 2,2 s). Cinq minutes de fraîcheur réduisent les lectures répétées sans
+// retarder les données live, qui sont actualisées séparément.
+export const revalidate = 300;
 
 export default async function Home() {
   const [races, report] = await Promise.all([getRaces(), getLatestTrackRecord()]);

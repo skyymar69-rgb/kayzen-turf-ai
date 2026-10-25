@@ -568,7 +568,7 @@ async function importDate(sql, pmuDate, maxRaces, connectionStats) {
         );
 
         // Un relevé n'est enregistré que si la cote a bougé depuis le dernier.
-        // Le cron passe 3 fois par jour sur une fenêtre de 3 jours, soit ~9
+        // Le cron passe 2 fois par jour sur une fenêtre de 3 jours, soit ~6
         // relevés par partant : sans ce filtre, la moitié de la table était de
         // la cote réenregistrée à l'identique, sans aucune information de
         // marché — et c'est ce qui a saturé le plafond de 512 Mo du projet Neon.

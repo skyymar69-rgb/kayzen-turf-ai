@@ -5,9 +5,9 @@ import { summarizeForDirect } from "@/lib/direct";
 import { getRaces } from "@/lib/race-repository";
 import { compareRaceTime } from "@/lib/race-status";
 
-// Les cotes sont relues chaque minute dans le dernier quart d'heure : une
-// page plus fraîche que 30 s n'apporterait rien et chargerait la base.
-export const revalidate = 30;
+// Le bandeau de course relit les cotes en direct ; cinq minutes suffisent pour
+// la liste, dont le compte à rebours est actualisé côté navigateur.
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "Direct — courses imminentes",

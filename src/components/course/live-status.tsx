@@ -7,9 +7,9 @@ import { INDICATIVE_LABELS, predictionIndicative, type OddsSource } from "@/lib/
 import { instantDepart } from "@/lib/paris-time";
 import { formatAge, minutesAgo } from "@/components/course/shared";
 
-/** Relecture automatique chaque minute dans les dix dernières minutes. */
+/** La page se resynchronise toutes les cinq minutes dans les dix dernières minutes. */
 const AUTO_WINDOW_MINUTES = 10;
-const AUTO_REFRESH_MS = 60_000;
+const AUTO_REFRESH_MS = 300_000;
 /** Doit rester égal à `MAX_MINUTES_BEFORE` de la route /api/races/[id]/refresh. */
 const MAX_MINUTES_BEFORE = 18 * 60;
 
@@ -28,8 +28,9 @@ export type RelaunchResult = {
  * Le pari mutuel ne fixe la cote qu'après le départ : aucune cote affichée
  * n'est définitive. Ce bandeau dit donc toujours de quand elle date. Le bouton
  * relit le PMU et fait recalculer toute l'analyse, à tout moment avant le
- * départ ; dans les dix dernières minutes, la relance est en plus automatique
- * chaque minute. La page compare ensuite les deux lectures (voir
+ * départ ; le service relève les cotes toutes les deux minutes, et la page
+ * vérifie les nouvelles données toutes les cinq minutes dans la dernière
+ * dizaine. La page compare ensuite les deux lectures (voir
  * src/lib/analysis-diff.ts).
  */
 export function LiveStatus({
@@ -137,13 +138,13 @@ export function LiveStatus({
       <p className="min-w-0 flex-1 basis-[240px] text-fg">
         Cotes PMU relevées <strong>{formatAge(age)}</strong>
         {open
-          ? " · actualisation automatique chaque minute jusqu'au départ"
+          ? " · page synchronisée automatiquement toutes les 5 min jusqu'au départ"
           : minutesToStart !== null && minutesToStart <= 15
-            ? " · actualisées chaque minute jusqu'au départ"
+            ? " · cotes relues toutes les 2 min jusqu'au départ"
             : minutesToStart !== null && minutesToStart <= 60
-              ? " · actualisées toutes les 4 min jusqu'à H-15, puis chaque minute"
+              ? " · cotes relues toutes les 10 min jusqu'à H-15, puis toutes les 2 min"
               : minutesToStart !== null && minutesToStart <= 90
-                ? " · actualisées toutes les 15 min jusqu'à H-60, puis toutes les 4 min"
+                ? " · cotes relues toutes les 15 min jusqu'à H-60, puis toutes les 10 min"
                 : ""}
         . La cote finale n&apos;est connue qu&apos;après le départ.
       </p>

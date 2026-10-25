@@ -73,8 +73,9 @@ Phase 3:
 ## Redundancy Compaction (approved deletion workflow)
 
 Retaining history is not the same as retaining duplicates. The import workflow
-runs three times a day over a rolling three-day window, so every race day is
-re-imported about nine times. `entries` and `value_bets` are upserted, but
+runs twice a day over a rolling three-day window, so every race day is
+re-imported about six times. Model learning and jockey/trainer statistics run
+only after the evening import. `entries` and `value_bets` are upserted, but
 `predictions` and `odds_snapshots` used to be inserted blindly — producing nine
 near-identical copies per runner. On 2026-08-16 this filled the 512 MB Neon
 project limit and every write started failing with
@@ -131,4 +132,3 @@ The script reports:
 - No 30/60/90-day retention limit.
 - No automatic pruning of old races.
 - No reliance on local machine storage.
-

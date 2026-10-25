@@ -39,8 +39,8 @@ export async function GET(request: Request) {
 
   return NextResponse.json(
     { generatedAt: new Date().toISOString(), data: races },
-    // Les cotes PMU ne bougent pas à la seconde : 60 s de fraîcheur, et une
-    // réponse périmée reste servie pendant la revalidation en arrière-plan.
-    { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } },
+    // Programme partagé : garder la réponse en cache évite de recharger tous
+    // les partants et leur historique à chaque visite.
+    { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=900" } },
   );
 }

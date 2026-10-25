@@ -72,6 +72,6 @@ export async function GET(request: Request) {
       availableBets: race.betTypes,
       recommendations: buildBetRecommendations(race.horses, race.betTypes, context),
     },
-    { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } },
+    { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=900" } },
   );
 }

@@ -42,7 +42,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="historique-marche-${id.data}.csv"`,
-      "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+      "Cache-Control": "public, s-maxage=300, stale-while-revalidate=900",
       "X-Content-Type-Options": "nosniff",
     },
   });

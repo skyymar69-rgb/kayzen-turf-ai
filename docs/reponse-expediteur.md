@@ -22,7 +22,7 @@ de feuille de route, et une bonne partie est déjà en ligne :
 - **Analyse de dernière minute** : sur chaque course, un bouton « Relancer
   l'analyse IA » relit les cotes PMU et recalcule tout le pronostic, puis
   montre ce qui a changé (Top 3, classement, cotes, profils, non-partants).
-  Dans les dix dernières minutes, la relance est automatique chaque minute.
+  Dans les dix dernières minutes, le service actualise les cotes toutes les deux minutes et la page vérifie les changements toutes les cinq minutes.
 - **Chevaux suivis et alertes** : une notification 30 minutes avant le départ
   et en cas de non-partant, sans créer de compte.
 - **Suivi de performance public** (rubrique « Suivi ») : chaque pronostic est

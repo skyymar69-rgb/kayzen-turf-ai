@@ -12,7 +12,7 @@ import { formatOdds } from "@/lib/format";
 import { minutesToStart } from "@/lib/race-status";
 
 const TICK_MS = 15_000;
-const REFRESH_MS = 60_000;
+const REFRESH_MS = 300_000;
 
 /** Heure courante, rafraîchie toutes les 15 s — `null` au rendu serveur pour éviter un écart d'hydratation. */
 function useNow(): Date | null {
@@ -36,8 +36,7 @@ export function DirectBoard({ races }: { races: DirectRace[] }) {
   const router = useRouter();
   const now = useNow();
 
-  // Les cotes et les arrivées changent côté serveur : on relit la page
-  // chaque minute, sans recharger le navigateur.
+  // La liste est mise en cache cinq minutes ; le compte à rebours reste local.
   useEffect(() => {
     const id = window.setInterval(() => router.refresh(), REFRESH_MS);
     return () => window.clearInterval(id);

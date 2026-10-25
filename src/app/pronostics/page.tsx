@@ -8,9 +8,9 @@ import { PronosticsExplorer } from "@/components/pronostics/pronostics-explorer"
 import { parseDayParam, type RelativeDay } from "@/lib/pronostics-filters";
 import { loadPronostics } from "./load-pronostics";
 
-// Le calcul des pronostics est mis en cache 60 s par jour dans
+// Le calcul des pronostics est mis en cache 5 min par jour dans
 // `loadPronostics` ; la page reste rafraîchie au même rythme.
-export const revalidate = 60;
+export const revalidate = 300;
 
 type PageProps = { searchParams: Promise<{ jour?: string | string[] }> };
 
@@ -68,7 +68,7 @@ export default async function PronosticsPage({ searchParams }: PageProps) {
               <h1 className="mt-4 font-display text-4xl font-bold text-fg sm:text-5xl">{TITLES[day]}</h1>
               <p className="mt-3 max-w-2xl text-base leading-7 text-muted">
                 Récapitulatif de toutes les courses françaises avec ordre probable, base IA, écart IA / marché
-                et tickets proposés. Données rafraîchies toutes les minutes.
+                et tickets proposés. Données rafraîchies toutes les cinq minutes.
               </p>
               <div className="mt-5">
                 <DaySelector current={param} />

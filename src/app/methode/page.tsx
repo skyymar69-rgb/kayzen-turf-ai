@@ -245,7 +245,7 @@ export default function MethodePage() {
           <Section title="7. Fraîcheur, pronostics gelés et suivi">
             <p>
               Les cotes des courses imminentes sont relues toutes les 15 minutes au-delà d&apos;une heure du départ, toutes
-              les 4 minutes jusqu&apos;à H-15, puis chaque minute. Chaque page affiche l&apos;âge de la cote. Le pari mutuel
+              les 10 minutes jusqu&apos;à H-15, puis toutes les 2 minutes. Chaque page affiche l&apos;âge de la cote. Le pari mutuel
               ne fixe la cote qu&apos;après le départ : aucune cote affichée n&apos;est définitive.
             </p>
             <p>

@@ -20,8 +20,9 @@
  * interroger la base, pour laisser Neon se mettre en veille.
  *
  * Cadence (voir src/lib/live/refresh-race.ts) : une course est interrogée au
- * plus toutes les 15 min au-delà d'une heure du départ, toutes les 4 min entre
- * H-60 et H-15, toutes les 45 s dans le dernier quart d'heure.
+ * plus toutes les 15 min au-delà d'une heure du départ, toutes les 10 min entre
+ * H-60 et H-15, toutes les 2 min dans le dernier quart d'heure. La boucle attend
+ * elle aussi plus longtemps loin des départs, sans interroger la base à vide.
  *
  * Usage : npx tsx scripts/live-refresh.ts [--minutes 330] [--once]
  */
@@ -112,8 +113,10 @@ async function main() {
       await delay(Math.max(0, Math.min(sleepMinutes, remaining)) * 60_000);
       continue;
     }
-    // Plus le prochain départ est proche, plus on repasse vite.
-    await delay(closest <= 15 ? 30_000 : 60_000);
+    // Aligner les vérifications sur la cadence réelle évite des requêtes SQL
+    // qui seraient immédiatement refusées par le verrou de rafraîchissement.
+    const pauseMinutes = closest <= 15 ? 2 : closest <= 60 ? 5 : 10;
+    await delay(pauseMinutes * 60_000);
   } while (Date.now() < deadline);
 
   console.log(`[live] terminé après ${passes} passages`);
