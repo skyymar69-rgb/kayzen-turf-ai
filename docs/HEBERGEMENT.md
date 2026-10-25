@@ -13,7 +13,7 @@ Deux conséquences, l'une technique et l'autre juridique.
 Chaque rendu de page fait deux requêtes en base (les courses, puis les
 partants). Avec un aller-retour transatlantique à environ 90 ms, cela ajoutait
 près de 360 ms au TTFB, avant même le moindre calcul. C'est le plancher que le
-rendu incrémental (`revalidate = 60`) masquait sur cache chaud, mais que payait
+rendu incrémental (`revalidate = 300`) masquait sur cache chaud, mais que payait
 chaque revalidation et chaque page rendue à la demande.
 
 `regions: ["fra1"]` place le calcul dans la même région AWS que la base : le
@@ -48,3 +48,18 @@ Le plan Hobby n'autorise qu'une seule région de fonctions, mais laisse le choix
 de laquelle. `fra1` est donc compatible. Sur un plan Pro, on pourrait ajouter
 `cdg1` (Paris) pour rapprocher encore le calcul des visiteurs français, à
 condition de garder la base dans la même zone.
+
+## Maîtrise du transfert Neon
+
+Les pages principales et les réponses publiques qui relisent le programme ou
+les partants sont mises en cache cinq minutes (`src/app` et `src/app/api`).
+Le backtest complet, qui lit les courses historiques, les partants et les
+relevés de marché, ne tourne plus que le dimanche au lieu de chaque nuit.
+L'import PMU reste deux fois par jour et le rafraîchissement live conserve une
+cadence plus rapprochée près des départs.
+
+Ces mesures visent à réduire les lectures répétées, mais ne garantissent pas un
+plafond de 5 Go par mois : le volume dépend aussi du nombre de visiteurs, des
+robots et de la taille de l'historique. Après déploiement, consulter dans Neon
+la consommation mensuelle de transfert et la taille d'un backtest hebdomadaire.
+Si le backtest seul est trop coûteux, le lancer manuellement moins souvent.

@@ -10,16 +10,16 @@ export const metadata: Metadata = {
   alternates: { canonical: "/etat" },
 };
 
-/** Une minute : la boucle live rafraîchit les cotes jusqu'à toutes les 45 s. */
-export const revalidate = 60;
+/** La page de statut n'a pas besoin de relire la base chaque minute. */
+export const revalidate = 300;
 
 /**
- * Écart normal maximal entre deux imports planifiés (04:30, 10:30, 17:30 UTC) :
- * 11 h de 17:30 à 04:30. Au-delà de 12 h, un import a manqué.
+ * Écart normal maximal entre les deux imports quotidiens (04:30 et 17:30 UTC) :
+ * 13 h. Au-delà de 14 h, un import a manqué.
  */
-const IMPORT_EN_RETARD_MS = 12 * 3_600_000;
-/** Rapport régénéré chaque nuit à 23:15 UTC : au-delà de 36 h, une nuit a sauté. */
-const RAPPORT_EN_RETARD_MS = 36 * 3_600_000;
+const IMPORT_EN_RETARD_MS = 14 * 3_600_000;
+/** Rapport hebdomadaire : au-delà de huit jours, une génération a manqué. */
+const RAPPORT_EN_RETARD_MS = 8 * 24 * 3_600_000;
 
 const heureParis = (iso: string) =>
   new Date(iso).toLocaleString("fr-FR", {
@@ -58,8 +58,8 @@ function lignes(etat: Extract<EtatDonnees, { mode: "connecte" }>, maintenant: nu
       valeur: dernierImport ? `${heureParis(dernierImport)} (${age(dernierImport, maintenant)})` : "Aucun import depuis 7 jours",
       detail:
         ecart(dernierImport) > IMPORT_EN_RETARD_MS
-          ? "En retard : trois imports sont planifiés chaque jour, l'un d'eux a manqué. Le programme affiché peut être incomplet."
-          : "Trois imports planifiés par jour (6 h 30, 12 h 30 et 19 h 30, heure d'été), pour la veille, le jour et le lendemain.",
+          ? "En retard : deux imports sont planifiés chaque jour, l'un d'eux a manqué. Le programme affiché peut être incomplet."
+          : "Deux imports planifiés par jour (6 h 30 et 19 h 30, heure d'été), pour la veille, le jour et le lendemain.",
       alerte: ecart(dernierImport) > IMPORT_EN_RETARD_MS,
     },
     {
@@ -79,8 +79,8 @@ function lignes(etat: Extract<EtatDonnees, { mode: "connecte" }>, maintenant: nu
         : "Aucun rapport publié",
       detail:
         ecart(dernierRapportPerformance) > RAPPORT_EN_RETARD_MS
-          ? "En retard : le rapport est régénéré chaque nuit, la dernière génération a manqué."
-          : "Régénéré chaque nuit à partir des rapports officiels PMU.",
+          ? "En retard : le rapport est régénéré chaque semaine, la dernière génération a manqué."
+          : "Régénéré chaque dimanche à partir des rapports officiels PMU.",
       alerte: ecart(dernierRapportPerformance) > RAPPORT_EN_RETARD_MS,
     },
   ];

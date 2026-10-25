@@ -49,8 +49,8 @@ export function snapshotGapMinutes(minutesToStart: number): number {
 /** Écart minimal entre deux interrogations du PMU pour une même course. */
 export function refreshIntervalSeconds(minutesToStart: number): number {
   if (minutesToStart > 60) return 15 * 60;
-  if (minutesToStart > 15) return 4 * 60;
-  return 45;
+  if (minutesToStart > 15) return 10 * 60;
+  return 2 * 60;
 }
 
 /**
@@ -301,8 +301,8 @@ async function refreshGoing(raceId: string, minutesToStart: number): Promise<voi
   const courseUrl = pmuRaceUrl(raceId);
   if (!courseUrl) return;
   try {
-    // Une relecture toutes les 10 min suffit : la boucle passe jusqu'à chaque
-    // 45 s dans le dernier quart d'heure, le terrain ne bouge pas à ce rythme.
+    // Une relecture toutes les 10 min suffit : la boucle passe toutes les
+    // 2 min dans le dernier quart d'heure, le terrain ne bouge pas à ce rythme.
     const recent = (await getSql().query(
       `select 1 from races where id = $1 and going_updated_at > now() - interval '10 minutes'`,
       [raceId],

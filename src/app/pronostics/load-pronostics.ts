@@ -57,7 +57,7 @@ function toPronosticRace(race: RaceAnalysis): PronosticRace {
 /**
  * TTFB mesuré à 4,6 s quand buildBetRecommendations tournait pour les 25
  * courses à chaque visite. Le paramètre `?jour=` rend la page dynamique : le
- * calcul est donc mis en cache ici, 60 s par jour demandé. La date de Paris
+ * calcul est donc mis en cache ici, 5 min par jour demandé. La date de Paris
  * entre dans la clé pour qu'« aujourd'hui » ne serve pas la veille après minuit.
  */
 const loadCached = unstable_cache(
@@ -67,7 +67,7 @@ const loadCached = unstable_cache(
     return races.map(toPronosticRace);
   },
   ["pronostics-du-jour"],
-  { revalidate: 60 },
+  { revalidate: 300 },
 );
 
 export function loadPronostics(day: RelativeDay): Promise<PronosticRace[]> {

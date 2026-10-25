@@ -19,7 +19,9 @@ describe("cadence", () => {
     assert.ok(snapshotGapMinutes(80) > snapshotGapMinutes(40));
     assert.ok(snapshotGapMinutes(40) > snapshotGapMinutes(5));
   });
-  it("interroge le PMU au moins chaque minute dans le dernier quart d'heure", () => {
-    assert.ok(refreshIntervalSeconds(10) <= 60);
+  it("réduit les appels loin du départ tout en gardant un relevé toutes les deux minutes à l'approche", () => {
+    assert.equal(refreshIntervalSeconds(90), 15 * 60);
+    assert.equal(refreshIntervalSeconds(60), 10 * 60);
+    assert.equal(refreshIntervalSeconds(15), 2 * 60);
   });
 });

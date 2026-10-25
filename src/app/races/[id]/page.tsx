@@ -20,13 +20,13 @@ type RacePageProps = {
  * `force-dynamic` refaisait les deux requêtes base à chaque visite, sur la
  * surface la plus crawlée du site — une centaine de pages renouvelées chaque
  * jour. L'accueil et /pronostics étaient déjà passés en rendu incrémental ;
- * les pages de course, non. 60 s de fraîcheur suffisent pour des cotes PMU et
- * ramènent le TTFB au niveau du cache.
+ * les pages de course, non. Cinq minutes de cache réduisent les lectures ;
+ * les données live déclenchent une revalidation dédiée.
  *
  * `dynamicParams` reste implicite à `true` : une course publiée après le
  * dernier build doit être rendue à la demande, pas répondre 404.
  */
-export const revalidate = 60;
+export const revalidate = 300;
 
 /**
  * `generateMetadata` et le rendu de page demandent la même course. Sans `cache`,

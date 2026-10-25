@@ -10,9 +10,10 @@ import { schemaIdCourse } from "@/lib/validation";
  * « Relancer l'analyse IA » — relit le PMU pour une course (cotes, parts des
  * mises, non-partants, pronostic gelé) puis fait recalculer la page.
  *
- * Ouvert à tout moment avant le départ. Le PMU n'est interrogé qu'une fois par
- * course toutes les 30 s dans le dernier quart d'heure, toutes les 2 min avant,
- * quel que soit le nombre de visiteurs : le verrou vit en base
+ * Ouvert à tout moment avant le départ. Le PMU n'est interrogé qu'à la cadence
+ * partagée avec la boucle planifiée (15 min loin du départ, 10 min entre H-60
+ * et H-15, 2 min dans le dernier quart d'heure), quel que soit le nombre de
+ * visiteurs : le verrou vit en base
  * (`races.odds_refreshed_at`), pas dans l'instance.
  */
 
@@ -41,7 +42,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Identifiant de course invalide" }, { status: 400, headers: NO_STORE });
   }
   const parsed = schemaIdCourse.safeParse(id);
-  // Relecture automatique (chaque minute dans les dix dernières) ou clic.
+  // Relecture automatique de la page (toutes les cinq minutes dans les dix dernières) ou clic.
   const body = (await request.json().catch(() => ({}))) as { auto?: unknown };
   const auto = body?.auto === true;
   if (!parsed.success) return NextResponse.json({ error: "Identifiant de course invalide" }, { status: 400, headers: NO_STORE });
@@ -63,7 +64,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   try {
-    const outcome = await refreshRace(raceId, { minutesToStart, minIntervalSeconds: minutesToStart <= 15 ? 30 : 120 });
+    const outcome = await refreshRace(raceId, { minutesToStart });
     // Régénérer la page si le PMU a été relu. Sur un clic, aussi quand il
     // venait de l'être par quelqu'un d'autre (la page en cache peut avoir une
     // minute de retard), mais au plus une fois toutes les 15 s par course.

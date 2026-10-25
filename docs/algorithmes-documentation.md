@@ -39,7 +39,7 @@ base ──► src/lib/race-repository.ts
 
 ### 2.2 Temps réel (src/lib/live/refresh-race.ts)
 
-- Cotes : toutes les 15 min au-delà de H-60, 4 min jusqu'à H-15, 45 s ensuite. Leur origine (`direct`, `reference`, `probable`) est stockée (`entries.odds_source`, `odds_snapshots.odds_source`).
+- Cotes : toutes les 15 min au-delà de H-60, 10 min jusqu'à H-15, 2 min ensuite. Leur origine (`direct`, `reference`, `probable`) est stockée (`entries.odds_source`, `odds_snapshots.odds_source`).
 - Terrain : relu au plus toutes les 10 min jusqu'au départ (`races.going`, `going_updated_at`).
 - Non-partants : retirés de `entries` et consignés dans `scratches`.
 - Pronostic « indicatif » (`src/lib/odds-freshness.ts`) : affiché avant le départ si plus de la moitié des cotes sont probables ou de référence, ou si elles ont plus de 30 min à moins de 2 h du départ.

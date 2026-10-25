@@ -94,10 +94,9 @@ This connector uses the publicly reachable PMU JSON programme endpoint with a cl
 The full PMU programme import runs from GitHub Actions, not from a local machine:
 
 - `04:30 UTC`: morning import for J-1/J/J+1
-- `10:30 UTC`: mid-day refresh
-- `17:30 UTC`: evening refresh and result catch-up
+- `17:30 UTC`: evening refresh and result catch-up, followed by model learning and jockey/trainer statistics
 
-After each import, the workflow stores post-race feedback, selects the best active scoring profile by segment (`DEFAULT`, `QUARTE_PLUS`, `QUINTE_PLUS`) and applies it only to races without official results.
+The mid-day import was removed to avoid re-reading the same three-day window. After the evening import (or a manual run), the workflow stores post-race feedback, selects the best active scoring profile by segment (`DEFAULT`, `QUARTE_PLUS`, `QUINTE_PLUS`) and applies it only to races without official results. Model learning and jockey/trainer statistics now run once daily instead of after both scheduled imports.
 
 Required GitHub secret:
 
@@ -111,7 +110,7 @@ gh workflow run import_pmu.yml -f date=03052026
 
 ### Odds refresh before the off
 
-The market is the best predictor we have, but only close to the start (37.6 % of winners found with the starting price versus 31.0 % with odds 6-12 h old, see `scripts/evaluate-freshness.mjs`). GitHub does not guarantee scheduled-run times (8 real runs out of 60 planned between 30/09 and 02/10/2026), so each `live_refresh.yml` run executes a 5.5-hour loop (`scripts/live-refresh.ts`) and then dispatches the next run itself; the cron (every 2 h) only restarts the chain if it breaks. Outside race hours the loop sleeps without querying the database. Each race starting within 90 minutes is refreshed through `src/lib/live/refresh-race.ts` — odds, pool shares, speed figures, declared non-runners — at most every 15 min beyond H-60, every 4 min until H-15, every 45 s in the last quarter of an hour. The same module serves the "Relancer l'analyse IA" button on race pages (available until the off, automatic every minute in the last ten), after which the page shows what changed (`src/lib/analysis-diff.ts`). History is written sparingly (`odds_snapshots`, `pool_snapshots`) and the prediction displayed at H-60, H-15 and just before the off is frozen in `prediction_snapshots`. It never creates races.
+The market is the best predictor we have, but only close to the start (37.6 % of winners found with the starting price versus 31.0 % with odds 6-12 h old, see `scripts/evaluate-freshness.mjs`). GitHub does not guarantee scheduled-run times (8 real runs out of 60 planned between 30/09 and 02/10/2026), so each `live_refresh.yml` run executes a 5.5-hour loop (`scripts/live-refresh.ts`) and then dispatches the next run itself; the cron (every 2 h) only restarts the chain if it breaks. Outside race hours the loop sleeps without querying the database. Each race starting within 90 minutes is refreshed through `src/lib/live/refresh-race.ts` — odds, pool shares, speed figures, declared non-runners — at most every 15 min beyond H-60, every 10 min until H-15, and every 2 min in the last quarter of an hour. On an open race page, the browser checks for updates every 5 min in the last ten minutes; a manual refresh remains available. History is written sparingly (`odds_snapshots`, `pool_snapshots`) and the prediction displayed at H-60, H-15 and just before the off is frozen in `prediction_snapshots`. It never creates races. Main pages and public data APIs use a 5-minute cache; live race data can still invalidate a race page as soon as it changes.
 
 ```bash
 npm run data:refresh:live -- --once          # one pass, locally
@@ -138,7 +137,11 @@ node scripts/backfill-payouts.mjs --from 2026-04-01   # official payouts for pas
 node scripts/check-freshness.mjs                 # did a race start without fresh odds today?
 ```
 
-`track_record.yml` stores a report every night in `track_record_reports`; `/track-record` publishes it, negative results included, with the live tracking of frozen predictions (`prediction_snapshots`, stage H-2). `freshness_check.yml` fails — and GitHub emails — when more than 10 % of the day's races started without odds observed in the 20 minutes before the off.
+`track_record.yml` completes missing payouts daily, but recalculates the report from the full historical dataset only on Sundays (or when manually triggered) to reduce Neon data transfer. `/track-record` publishes it, negative results included, with the live tracking of frozen predictions (`prediction_snapshots`, stage H-2). `freshness_check.yml` fails — and GitHub emails — when more than 10 % of the day's races started without odds observed in the 20 minutes before the off.
+
+### Keeping Neon data transfer under control
+
+Public database-backed API responses and main pages are cached for five minutes, and the full-history backtest runs weekly rather than nightly. This substantially reduces repeat reads, but a limit below 5 GB/month cannot be guaranteed from code alone: actual traffic, crawlers, history size and Neon usage must be checked in the Neon dashboard after deployment. The weekly backtest still reads the full history once per run; run it manually less often if that single run consumes too much of the monthly allowance.
 
 ## MVP API
 

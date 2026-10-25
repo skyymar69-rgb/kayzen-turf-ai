@@ -1,8 +1,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Compaction du stockage Neon — suppression de la REDONDANCE, pas de l'histoire.
 //
-// Le workflow d'import tourne 3 fois par jour sur une fenêtre glissante de
-// 3 jours : chaque journée de courses est donc réimportée ~9 fois. `entries` et
+// Le workflow d'import tourne 2 fois par jour sur une fenêtre glissante de
+// 3 jours : chaque journée de courses est donc réimportée ~6 fois. `entries` et
 // `value_bets` sont en upsert, mais `predictions` et `odds_snapshots` étaient en
 // insert sec — d'où 9 copies quasi identiques par partant. Résultat : la base a
 // atteint le plafond de 512 Mo du projet Neon et TOUTE écriture échoue

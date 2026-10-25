@@ -9,7 +9,6 @@ on:
         type: string
   schedule:
     - cron: "30 4 * * *"
-    - cron: "30 10 * * *"
     - cron: "30 17 * * *"
 
 # Le job n'écrit rien dans le dépôt : lecture seule suffit.
@@ -69,9 +68,13 @@ jobs:
         run: npm run data:import:pmu
 
       - name: Learn from official results
+        # Les statistiques et l'apprentissage ne changent pas utilement entre
+        # les deux imports quotidiens ; le passage du soir les met à jour.
+        if: ${{ github.event_name == 'workflow_dispatch' || github.event.schedule == '30 17 * * *' }}
         timeout-minutes: 30
         run: npm run model:learn
 
       - name: Update jockey and trainer statistics
+        if: ${{ github.event_name == 'workflow_dispatch' || github.event.schedule == '30 17 * * *' }}
         timeout-minutes: 5
         run: node scripts/update-connection-stats.mjs

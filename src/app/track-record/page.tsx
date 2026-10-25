@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/track-record" },
 };
 
-/** Le rapport est régénéré une fois par jour : une heure de cache suffit. */
+/** Le rapport est recalculé chaque semaine : une heure de cache suffit. */
 export const revalidate = 3600;
 
 export default async function TrackRecordPage() {
