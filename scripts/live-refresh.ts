@@ -27,7 +27,7 @@
  * Usage : npx tsx scripts/live-refresh.ts [--minutes 330] [--once]
  */
 
-import { readFileSync } from "node:fs";
+import { appendFileSync, readFileSync } from "node:fs";
 import { imminentRaces, minutesToNextRace, refreshRace } from "@/lib/live/refresh-race";
 import { delay } from "@/lib/pmu/client";
 import { purgeStaleSubscriptions, pushConfigured, sendPushAlerts } from "@/lib/push/send";
@@ -122,7 +122,23 @@ async function main() {
   console.log(`[live] terminé après ${passes} passages`);
 }
 
+/**
+ * Quota Neon dépassé (HTTP 402) : la base reste fermée jusqu'au renouvellement
+ * du quota ou à un changement d'offre. Relancer la boucle toutes les six
+ * minutes n'y change rien et consomme des minutes d'Actions : le workflow lit
+ * `quota_exceeded` et laisse le filet planifié (toutes les deux heures)
+ * réessayer.
+ */
+function isQuotaExceeded(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /HTTP status 402|exceeded the (data transfer |compute time )?quota/i.test(message);
+}
+
 main().catch((error) => {
   console.error(error);
+  if (isQuotaExceeded(error)) {
+    console.error("[live] quota Neon dépassé : pas de relance immédiate, nouvel essai au prochain passage planifié");
+    if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `quota_exceeded=true${"\n"}`);
+  }
   process.exit(1);
 });

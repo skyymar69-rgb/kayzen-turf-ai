@@ -64,11 +64,14 @@ jobs:
           VAPID_PRIVATE_KEY: ""
 
       - name: Refresh imminent races
+        id: refresh
         timeout-minutes: 340
         run: npx tsx scripts/live-refresh.ts --minutes "$LOOP_MINUTES"
 
+      # Quota Neon dépassé : la base est fermée, relancer toutes les six minutes
+      # ne sert à rien. Le cron (toutes les deux heures) réessaie.
       - name: Relaunch next loop
-        if: always()
+        if: always() && steps.refresh.outputs.quota_exceeded != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           OUTCOME: ${{ job.status }}
