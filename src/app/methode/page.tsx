@@ -9,6 +9,7 @@ import { FLOW_ACCEL_PTS, FLOW_ACCEL_WINDOW_MIN, FLOW_WINDOW_MIN, MVT_NOISE_PCT, 
 import { MARKET_GAMMA, MODEL_VERSION, PLACE_LAMBDAS } from "@/lib/probability";
 import { PROFILES_VERSION, PROFILE_LABELS, PROFILE_RULES, READING_LABELS, READING_RULES, type RaceReading } from "@/lib/profiles";
 import { ProfileBadge } from "@/components/course/shared";
+import { PRESS_THRESHOLDS } from "@/lib/press-consensus";
 import {
   SURPRISE_FULL_AI_PCT,
   SURPRISE_FULL_RATIO,
@@ -242,7 +243,41 @@ export default function MethodePage() {
             </p>
           </Section>
 
-          <Section title="7. Fraîcheur, pronostics gelés et suivi">
+          <Section id="pronostiqueurs" title="7. Pronostiqueurs × Marché">
+            <p>
+              Avec l&apos;accord des sites concernés, nous relevons avant le départ la sélection publique de Geny, Paris-Turf, ZEturf,
+              Canalturf et Turfomania, ainsi que le pronostic presse publié par le PMU. Seuls les numéros et leur ordre sont repris,
+              avec le nom de la source et un lien : jamais leurs textes. Un relevé fait après le départ n&apos;est jamais enregistré.
+            </p>
+            <p>
+              Pour chaque cheval : le nombre de sites qui le citent et son rang chez chacun, la part des sites qui le citent
+              (consensus), son rang sur le marché par la cote. Le degré d&apos;accord d&apos;une course mesure la part de chevaux
+              communs entre les sélections, deux à deux, sur leurs cinq premiers.
+            </p>
+            <ul className="space-y-1.5">
+              <li className="rounded-lg bg-surface-sub px-3 py-2 text-xs text-fg">
+                <strong>Consensus sites + marché</strong> — cité par au moins {Math.round(PRESS_THRESHOLDS.sitesStrongShare * 100)} % des
+                sites et dans les {PRESS_THRESHOLDS.marketStrongRank} premiers du marché.
+              </li>
+              <li className="rounded-lg bg-surface-sub px-3 py-2 text-xs text-fg">
+                <strong>Alerte : recommandé par les sites, délaissé par le marché</strong> — cité par au moins{" "}
+                {Math.round(PRESS_THRESHOLDS.sitesStrongShare * 100)} % des sites, mais au-delà du {PRESS_THRESHOLDS.marketWeakRank}e rang
+                du marché.
+              </li>
+              <li className="rounded-lg bg-surface-sub px-3 py-2 text-xs text-fg">
+                <strong>Alerte : soutenu par le marché, négligé par les sites</strong> — dans les {PRESS_THRESHOLDS.marketStrongRank}{" "}
+                premiers du marché, mais cité par au plus {Math.round(PRESS_THRESHOLDS.sitesWeakShare * 100)} % des sites.
+              </li>
+            </ul>
+            <p>
+              Avec une seule source disponible, « cité » veut dire « dans ses {PRESS_THRESHOLDS.singleSourceTopRank} premiers » et la
+              page l&apos;indique. Ces seuils ont été posés le 31 octobre 2026 sans mesure préalable : tout leur historique est donc
+              hors échantillon. Le rendement de chaque catégorie, en simple gagnant et en simple placé, est calculé chaque semaine sur
+              les rapports officiels et publié sur le suivi de performance.
+            </p>
+          </Section>
+
+          <Section title="8. Fraîcheur, pronostics gelés et suivi">
             <p>
               Les cotes des courses imminentes sont relues toutes les 15 minutes au-delà d&apos;une heure du départ, toutes
               les 10 minutes jusqu&apos;à H-15, puis toutes les 2 minutes. Chaque page affiche l&apos;âge de la cote. Le pari mutuel
@@ -255,10 +290,10 @@ export default function MethodePage() {
             </p>
           </Section>
 
-          <Section title="8. Ce que nous ne faisons pas">
+          <Section title="9. Ce que nous ne faisons pas">
             <ul className="list-disc space-y-1 pl-5">
               <li>Aucune promesse de gain. Un rendement est toujours donné avec sa période, son nombre de paris et sa marge d&apos;erreur.</li>
-              <li>Aucune autre source que le PMU : Betfair n&apos;est pas agréé par l&apos;ANJ, et les opérateurs n&apos;ouvrent pas de flux de données.</li>
+              <li>Aucune source de cotes autre que le PMU : Betfair n&apos;est pas agréé par l&apos;ANJ, et les opérateurs n&apos;ouvrent pas de flux de données. Les sélections des sites de pronostics ne sont reprises qu&apos;avec leur accord.</li>
               <li>Aucun « {PROFILE_LABELS.cache.toLowerCase()} », « value » ou « surprise » présenté comme un pari gagnant : ce sont des désaccords entre l&apos;IA et le marché, dont nous mesurons la valeur.</li>
             </ul>
           </Section>

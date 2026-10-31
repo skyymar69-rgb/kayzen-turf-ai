@@ -3,6 +3,7 @@ import { compareMarketSupport, moneyFlow, oddsMovement, type Flow, type MarketHi
 import type { CalibratedHorse } from "@/lib/probability";
 import type { Profile, RaceVerdict } from "@/lib/profiles";
 import { buildSelection } from "@/lib/selection";
+import { pressConsensus, raceAgreement, type PressHorse, type PressSelection } from "@/lib/press-consensus";
 import { scoreField, topSurprises, type Surprise } from "@/lib/surprise";
 import type { RaceAnalysis } from "@/lib/types";
 
@@ -36,6 +37,8 @@ export type HorseRow = {
   nonRunnerAt: string | null;
   /** Score de surprise, alerte et raisons (voir lib/surprise). */
   surprise: Surprise;
+  /** Comparaison pronostiqueurs × marché, `null` sans sélection de site. */
+  press: PressHorse | null;
 };
 
 /**
@@ -60,6 +63,8 @@ export type CourseViewModel = {
   nonRunners: HorseRow[];
   /** Trois meilleures surprises signalées (forte ou possible), par niveau puis note. */
   surprises: HorseRow[];
+  /** Sélections des sites disponibles pour la course, et leur degré d'accord. */
+  press: { selections: PressSelection[]; agreement: number | null };
   /** Dernier relevé de cote connu (ISO). */
   lastObservation: string | null;
 };
@@ -113,7 +118,18 @@ export function buildCourseViewModel(race: RaceAnalysis, history: MarketHistory)
       nonRunner: r.nonRunner,
     })),
   );
-  const rows: HorseRow[] = base.map((r) => ({ ...r, surprise: surprises.get(r.horse.number)! }));
+  const selections = (race.press ?? []).filter((s) => s.ranks.length > 0);
+  const press = selections.length
+    ? pressConsensus(
+        selections,
+        base.map((r) => ({ number: r.horse.number, market: r.market, nonRunner: r.nonRunner })),
+      )
+    : null;
+  const rows: HorseRow[] = base.map((r) => ({
+    ...r,
+    surprise: surprises.get(r.horse.number)!,
+    press: press?.get(r.horse.number) ?? null,
+  }));
 
   const byProfile = Object.fromEntries(
     (["base", "cache", "value", "favori", "outsider", "tocard", "eviter", "second"] as Profile[]).map((p) => [p, rows.filter((r) => r.profile === p)]),
@@ -135,6 +151,7 @@ export function buildCourseViewModel(race: RaceAnalysis, history: MarketHistory)
     strongMoney: rows.filter((r) => r.flow.strong && !r.nonRunner).sort((a, b) => (b.flow.delta15 ?? 0) - (a.flow.delta15 ?? 0)),
     nonRunners: rows.filter((r) => r.nonRunner).sort((a, b) => a.horse.number - b.horse.number),
     surprises: topSurprises(rows),
+    press: { selections, agreement: raceAgreement(selections) },
     lastObservation: latest([race.oddsRefreshedAt ?? null, times.at(-1) ?? null]),
   };
 }
