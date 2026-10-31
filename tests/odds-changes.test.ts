@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { announceOdds, diffOdds, swipeDirection } from "../src/lib/odds-changes";
+import { announceOdds, diffOdds } from "../src/lib/odds-changes";
 
 describe("diffOdds", () => {
   const before = new Map([[4, 4.8], [8, 7.2], [2, 5.6]]);
@@ -24,17 +24,5 @@ describe("announceOdds", () => {
 
   it("se tait sans changement", () => {
     assert.equal(announceOdds([]), "");
-  });
-});
-
-describe("swipeDirection", () => {
-  it("reconnaît un glissement franc", () => {
-    assert.equal(swipeDirection(-120, 10), "next");
-    assert.equal(swipeDirection(120, -20), "previous");
-  });
-
-  it("ignore un défilement vertical ou un geste trop court", () => {
-    assert.equal(swipeDirection(-60, 0), null);
-    assert.equal(swipeDirection(-120, 90), null);
   });
 });

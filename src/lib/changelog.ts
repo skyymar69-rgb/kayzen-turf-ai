@@ -22,6 +22,19 @@ export type EntreeChangelog = {
 
 export const CHANGELOG: readonly EntreeChangelog[] = [
   {
+    date: "2026-10-31",
+    titre: "Vous restez sur la course que vous analysez",
+    changements: [
+      {
+        categorie: "Modifié",
+        elements: [
+          "Page course : plus de passage automatique à une autre course. Le glissement horizontal sur mobile, qui changeait de course en plein défilement, est supprimé ; on passe à la course précédente ou suivante uniquement avec les boutons de l'en-tête.",
+          "Accueil : la course mise en avant ne bascule plus toute seule vers la suivante quand l'heure avance. Elle ne change que si vous changez de jour ou de réunion.",
+        ],
+      },
+    ],
+  },
+  {
     date: "2026-10-08",
     titre: "Probabilités recalibrées, value plus honnête",
     changements: [

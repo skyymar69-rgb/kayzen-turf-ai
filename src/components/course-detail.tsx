@@ -10,7 +10,7 @@ import { CourseHeader } from "@/components/course/course-header";
 import { FieldTable } from "@/components/course/field-table";
 import { HorseCompare } from "@/components/course/horse-compare";
 import { HorseSheet } from "@/components/course/horse-sheet";
-import { OddsFlashProvider, SwipeNavigation, TabCountdown } from "@/components/course/live-extras";
+import { OddsFlashProvider, TabCountdown } from "@/components/course/live-extras";
 import type { RelaunchResult } from "@/components/course/live-status";
 import { MagicSquarePanel } from "@/components/course/magic-square";
 import { MarketPanel } from "@/components/course/market-panel";
@@ -159,7 +159,6 @@ export function CourseDetail({ race, history = EMPTY_HISTORY, signals = NO_SIGNA
   return (
     <OddsFlashProvider rows={vm.rows}>
     <TabCountdown race={race} />
-    <SwipeNavigation dayIndex={dayIndex} raceId={race.id} />
     <main className="min-h-screen bg-bg pb-20" id="contenu-principal">
       <div className="mx-auto max-w-[1520px] px-4 pt-6 sm:px-6 lg:px-8">
         <nav aria-label="Fil d'Ariane" className="mb-4 flex flex-wrap items-center gap-2">

@@ -10,6 +10,9 @@ qu'un visiteur peut constater, vit dans `src/lib/changelog.ts` et s'affiche sur
 
 ## [Non publié]
 
+### Modifié
+- Plus aucun changement de course automatique (retour client) : glissement horizontal entre courses supprimé (`SwipeNavigation`, `swipeDirection`) ; la course active de l'accueil est fixée à la première lecture de l'horloge et ne change qu'avec le jour (`use-home-programme.ts`).
+
 ### Ajouté
 - Score de surprise « Chevaux cachés · Surprise IA » (`src/lib/surprise.ts`, version `surprise-v1`) : note sur 100 en cinq briques (écart IA / marché, rang de l'IA, forme, entourage, marché du jour), alertes Sous-coté IA / Surprise IA / Tocard malin / À surveiller, trois au plus par course, raisons et conclusion par cheval. Page course : panneau dédié, onglet « Analyse complète », bloc dans la fiche cheval. Accueil : « Top 3 surprises du jour » (`src/lib/home/surprises.ts`). Méthode : section 6. Backtest : signaux `surprise-sg` et `surprise-sp`. Mesure préalable sur 1 571 courses (24/08 → 07/10/2026) contre la cote finale : aucune brique n'apporte d'information au-delà de la cote — le score est présenté comme un outil de lecture, pas comme une prévision.
 - Page course : carré magique 16 partants (`src/lib/magic-square.ts`, `src/components/course/magic-square.tsx`). Carré d'ordre 4 bâti sur deux carrés latins diagonaux orthogonaux : ses 16 alignements (lignes, colonnes, diagonales, quarts, centre, coins) totalisent 34 et prennent chacun un cheval par quart du classement. Chances exactes Plackett-Luce (gagnant, 2 sur 4, Quarté+ désordre) ; meilleure lecture au 2 sur 4.

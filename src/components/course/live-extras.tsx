@@ -1,11 +1,9 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { HorseRow } from "@/lib/course-view-model";
 import { formatOdds } from "@/lib/format";
-import { announceOdds, diffOdds, swipeDirection } from "@/lib/odds-changes";
-import { adjacentRaces, type RaceIndexItem } from "@/lib/race-navigation";
+import { announceOdds, diffOdds } from "@/lib/odds-changes";
 import { minutesToStart } from "@/lib/race-status";
 import type { RaceAnalysis } from "@/lib/types";
 
@@ -13,8 +11,12 @@ import type { RaceAnalysis } from "@/lib/types";
  * VIE DE LA PAGE COURSE — ce qui réagit au temps et aux rafraîchissements :
  *   - éclair sur une cote qui vient de bouger (contexte lu par <OddsCell>) ;
  *   - annonce polie, limitée aux plus gros mouvements, pour lecteur d'écran ;
- *   - compte à rebours dans le titre d'onglet dans la dernière heure ;
- *   - glissement horizontal sur mobile vers la course précédente / suivante.
+ *   - compte à rebours dans le titre d'onglet dans la dernière heure.
+ *
+ * Novembre 2026 : le glissement horizontal vers la course précédente /
+ * suivante est retiré. Un défilement un peu oblique sur mobile changeait de
+ * course en pleine analyse ; on ne quitte plus une course que par les boutons
+ * « course précédente / suivante » de l'en-tête.
  */
 
 type Flash = ReadonlyMap<number, "up" | "down">;
@@ -79,37 +81,5 @@ export function TabCountdown({ race }: { race: Pick<RaceAnalysis, "raceDate" | "
       if (document.title === shown) document.title = original;
     };
   }, [race]);
-  return null;
-}
-
-/** Zones où un glissement horizontal sert déjà à faire défiler un contenu. */
-const NO_SWIPE = ".overflow-x-auto, .kz-scroll, [data-no-swipe], input, textarea, select";
-
-export function SwipeNavigation({ dayIndex, raceId }: { dayIndex: RaceIndexItem[]; raceId: string }) {
-  const router = useRouter();
-  useEffect(() => {
-    const { previous, next } = adjacentRaces(dayIndex, raceId);
-    if (!previous && !next) return;
-    let start: { x: number; y: number } | null = null;
-
-    function onStart(e: TouchEvent) {
-      const target = e.target as Element | null;
-      start = e.touches.length === 1 && !target?.closest(NO_SWIPE) ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
-    }
-    function onEnd(e: TouchEvent) {
-      if (!start) return;
-      const touch = e.changedTouches[0];
-      const direction = swipeDirection(touch.clientX - start.x, touch.clientY - start.y);
-      start = null;
-      const target = direction === "next" ? next : direction === "previous" ? previous : null;
-      if (target) router.push(`/races/${encodeURIComponent(target.id)}`);
-    }
-    window.addEventListener("touchstart", onStart, { passive: true });
-    window.addEventListener("touchend", onEnd, { passive: true });
-    return () => {
-      window.removeEventListener("touchstart", onStart);
-      window.removeEventListener("touchend", onEnd);
-    };
-  }, [dayIndex, raceId, router]);
   return null;
 }

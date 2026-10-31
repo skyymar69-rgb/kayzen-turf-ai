@@ -22,8 +22,14 @@ export function useHomeProgramme(races: RaceAnalysis[], nowMs: number | null) {
   const [meetingSort, setMeetingSort] = useState<MeetingSort>("numero");
   const [compactView, setCompactView] = useState(false);
 
-  // Minute de Paris ; 0 au rendu serveur, comme avant le découpage.
-  const currentMinute = nowMs === null ? 0 : minutesActuellesParis(new Date(nowMs));
+  // Minute de Paris à laquelle la course « active » est choisie. Elle est
+  // fixée à la première lecture de l'horloge, puis seulement quand le
+  // visiteur change de jour : l'aperçu ne bascule plus tout seul vers la
+  // course suivante pendant qu'on analyse celle qui est affichée (retour
+  // client, novembre 2026). 0 au rendu serveur, comme avant.
+  const [anchorMinute, setAnchorMinute] = useState<number | null>(null);
+  if (nowMs !== null && anchorMinute === null) setAnchorMinute(minutesActuellesParis(new Date(nowMs)));
+  const currentMinute = anchorMinute ?? 0;
   const dayRaces = useMemo(() => racesOfDay(races, dayFilter), [dayFilter, races]);
   const meetings = useMemo(() => groupRacesByMeeting(dayRaces), [dayRaces]);
   const filteredMeetings = useMemo(() => {
@@ -74,6 +80,7 @@ export function useHomeProgramme(races: RaceAnalysis[], nowMs: number | null) {
   const selectDay = useCallback((day: RaceAnalysis["relativeDay"]) => {
     if (day === "other") return;
     setDayFilter(day);
+    setAnchorMinute(null);
     setSelectedMeetingKey("");
     setQuery("");
     setDisciplineFilterState("Tous");

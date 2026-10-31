@@ -29,9 +29,3 @@ export function announceOdds(changes: OddsChange[]): string {
   const parts = top.map((c) => `n° ${c.number} de ${fmt(c.from)} à ${fmt(c.to)}`);
   return `Cotes mises à jour : ${parts.join(" ; ")}${rest > 0 ? ` ; et ${rest} autre${rest > 1 ? "s" : ""}` : ""}.`;
 }
-
-/** Glissement horizontal franc : au moins 80 px, et nettement plus horizontal que vertical. */
-export function swipeDirection(dx: number, dy: number): "previous" | "next" | null {
-  if (Math.abs(dx) < 80 || Math.abs(dx) < Math.abs(dy) * 2) return null;
-  return dx < 0 ? "next" : "previous";
-}
