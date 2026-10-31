@@ -1,0 +1,101 @@
+{
+ "selection": [
+  {
+   "num_partant": 11,
+   "rang": 1,
+   "cote_prob": "4/1",
+   "id_nav_partant": "20261031-DEA-3-11"
+  },
+  {
+   "num_partant": 6,
+   "rang": 2,
+   "cote_prob": "5/1",
+   "id_nav_partant": "20261031-DEA-3-6"
+  },
+  {
+   "num_partant": 7,
+   "rang": 3,
+   "cote_prob": "8/1",
+   "id_nav_partant": "20261031-DEA-3-7"
+  },
+  {
+   "num_partant": 9,
+   "rang": 4,
+   "cote_prob": "9/1",
+   "id_nav_partant": "20261031-DEA-3-9"
+  },
+  {
+   "num_partant": 1,
+   "rang": 5,
+   "cote_prob": "11/1",
+   "id_nav_partant": "20261031-DEA-3-1"
+  },
+  {
+   "num_partant": 3,
+   "rang": 6,
+   "cote_prob": "13/1",
+   "id_nav_partant": "20261031-DEA-3-3"
+  },
+  {
+   "num_partant": 5,
+   "rang": 7,
+   "cote_prob": "15/1",
+   "id_nav_partant": "20261031-DEA-3-5"
+  },
+  {
+   "num_partant": 4,
+   "rang": 8,
+   "cote_prob": "16/1",
+   "id_nav_partant": "20261031-DEA-3-4"
+  },
+  {
+   "num_partant": 10,
+   "rang": 9,
+   "cote_prob": "18/1",
+   "id_nav_partant": "20261031-DEA-3-10"
+  },
+  {
+   "num_partant": 8,
+   "rang": 10,
+   "cote_prob": "22/1",
+   "id_nav_partant": "20261031-DEA-3-8"
+  },
+  {
+   "num_partant": 2,
+   "rang": 11,
+   "cote_prob": "25/1",
+   "id_nav_partant": "20261031-DEA-3-2"
+  },
+  {
+   "num_partant": 16,
+   "rang": 12,
+   "cote_prob": "28/1",
+   "id_nav_partant": "20261031-DEA-3-16"
+  },
+  {
+   "num_partant": 15,
+   "rang": 13,
+   "cote_prob": "33/1",
+   "id_nav_partant": "20261031-DEA-3-15"
+  },
+  {
+   "num_partant": 12,
+   "rang": 14,
+   "cote_prob": "45/1",
+   "id_nav_partant": "20261031-DEA-3-12"
+  },
+  {
+   "num_partant": 14,
+   "rang": 15,
+   "cote_prob": "60/1",
+   "id_nav_partant": "20261031-DEA-3-14"
+  },
+  {
+   "num_partant": 13,
+   "rang": 16,
+   "cote_prob": "60/1",
+   "id_nav_partant": "20261031-DEA-3-13"
+  }
+ ],
+ "source": "DATAHIPPIQUE"
+}

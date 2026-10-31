@@ -1,0 +1,526 @@
+{
+ "programme": {
+  "date": 1793401200000,
+  "reunions": [
+   {
+    "numOfficiel": 1,
+    "hippodrome": {
+     "libelleCourt": "DEAUVILLE"
+    },
+    "pays": {
+     "code": "FRA"
+    },
+    "courses": [
+     {
+      "numOrdre": 1,
+      "libelle": "PRIX NONOALCO",
+      "heureDepart": 1793451480000
+     },
+     {
+      "numOrdre": 2,
+      "libelle": "PRIX LA BAMBA",
+      "heureDepart": 1793453580000
+     },
+     {
+      "numOrdre": 3,
+      "libelle": "PRIX DU PAYS DE BRAY",
+      "heureDepart": 1793456100000
+     },
+     {
+      "numOrdre": 4,
+      "libelle": "PRIX ZEDDAAN",
+      "heureDepart": 1793458200000
+     },
+     {
+      "numOrdre": 5,
+      "libelle": "PRIX LODD BY CHLOE (PRIX LITTLE MANJO)",
+      "heureDepart": 1793460300000
+     },
+     {
+      "numOrdre": 6,
+      "libelle": "PRIX IRISH RIVER",
+      "heureDepart": 1793462400000
+     },
+     {
+      "numOrdre": 7,
+      "libelle": "PRIX DU PAYS DE CAUX",
+      "heureDepart": 1793464500000
+     },
+     {
+      "numOrdre": 8,
+      "libelle": "PRIX DU PLATEAU DE LA MADRIE",
+      "heureDepart": 1793466600000
+     },
+     {
+      "numOrdre": 9,
+      "libelle": "PRIX DU BRAY NORMAND",
+      "heureDepart": 1793468880000
+     }
+    ]
+   },
+   {
+    "numOfficiel": 2,
+    "hippodrome": {
+     "libelleCourt": "ANGERS"
+    },
+    "pays": {
+     "code": "FRA"
+    },
+    "courses": [
+     {
+      "numOrdre": 1,
+      "libelle": "PRIX ANDRE ADELE",
+      "heureDepart": 1793438040000
+     },
+     {
+      "numOrdre": 2,
+      "libelle": "PRIX POINT BLEU - PELETON A",
+      "heureDepart": 1793439840000
+     },
+     {
+      "numOrdre": 3,
+      "libelle": "PRIX POINT BLEU - PELETON B",
+      "heureDepart": 1793441640000
+     },
+     {
+      "numOrdre": 4,
+      "libelle": "PRIX TELLO",
+      "heureDepart": 1793443560000
+     },
+     {
+      "numOrdre": 5,
+      "libelle": "PRIX LA KOUMIA",
+      "heureDepart": 1793445480000
+     },
+     {
+      "numOrdre": 6,
+      "libelle": "HANDICAP DE LA MAINE",
+      "heureDepart": 1793447400000
+     },
+     {
+      "numOrdre": 7,
+      "libelle": "PRIX RABELAIS",
+      "heureDepart": 1793449320000
+     },
+     {
+      "numOrdre": 8,
+      "libelle": "PRIX ECOUFLANT",
+      "heureDepart": 1793451240000
+     },
+     {
+      "numOrdre": 9,
+      "libelle": "PRIX CLAUDE MUNET - GRAND PRIX D'ANGERS",
+      "heureDepart": 1793453160000
+     },
+     {
+      "numOrdre": 10,
+      "libelle": "PRIX YVES PRIOUZEAU",
+      "heureDepart": 1793454960000
+     }
+    ]
+   },
+   {
+    "numOfficiel": 3,
+    "hippodrome": {
+     "libelleCourt": "ARGENTAN"
+    },
+    "pays": {
+     "code": "FRA"
+    },
+    "courses": [
+     {
+      "numOrdre": 1,
+      "libelle": "PRIX GENERAL DU POMMEAU",
+      "heureDepart": 1793442600000
+     },
+     {
+      "numOrdre": 2,
+      "libelle": "PRIX SANCHO PANCA",
+      "heureDepart": 1793444520000
+     },
+     {
+      "numOrdre": 3,
+      "libelle": "PRIX CUSTOM",
+      "heureDepart": 1793446440000
+     },
+     {
+      "numOrdre": 4,
+      "libelle": "PRIX REMI SERAIS IMMOBILIER",
+      "heureDepart": 1793448360000
+     },
+     {
+      "numOrdre": 5,
+      "libelle": "PRIX FITECO",
+      "heureDepart": 1793450280000
+     },
+     {
+      "numOrdre": 6,
+      "libelle": "PRIX XAVIER CAVEY",
+      "heureDepart": 1793452500000
+     },
+     {
+      "numOrdre": 7,
+      "libelle": "PRIX ERIC THE EEL",
+      "heureDepart": 1793454600000
+     },
+     {
+      "numOrdre": 8,
+      "libelle": "PRIX PAUL BUQUET",
+      "heureDepart": 1793457120000
+     }
+    ]
+   },
+   {
+    "numOfficiel": 4,
+    "hippodrome": {
+     "libelleCourt": "KEENELAND"
+    },
+    "pays": {
+     "code": "USA"
+    },
+    "courses": [
+     {
+      "numOrdre": 1,
+      "libelle": "MAIDEN SPECIAL WEIGHT 1400M",
+      "heureDepart": 1793459820000
+     },
+     {
+      "numOrdre": 2,
+      "libelle": "ALLOWANCE OPTIONAL CLAIMING 1400M",
+      "heureDepart": 1793461920000
+     },
+     {
+      "numOrdre": 3,
+      "libelle": "ALLOWANCE OPTIONAL CLAIMING 1300M",
+      "heureDepart": 1793464020000
+     },
+     {
+      "numOrdre": 4,
+      "libelle": "BREEDERS' CUP FILLY & MARE SPRINT (GRADE I)",
+      "heureDepart": 1793466720000
+     },
+     {
+      "numOrdre": 5,
+      "libelle": "PREVAGEN BREEDERS' CUP TURF SPRINT (GRADE I)",
+      "heureDepart": 1793469000000
+     },
+     {
+      "numOrdre": 6,
+      "libelle": "BREEDERS' CUP DIRT MILE (GRADE I)",
+      "heureDepart": 1793471280000
+     },
+     {
+      "numOrdre": 7,
+      "libelle": "MAKER'S MARK BREEDERS' CUP FILLY & MARE TURF (GRADE I)",
+      "heureDepart": 1793473560000
+     },
+     {
+      "numOrdre": 8,
+      "libelle": "CYGAMES BREEDERS' CUP SPRINT (GRADE I)",
+      "heureDepart": 1793475840000
+     },
+     {
+      "numOrdre": 9,
+      "libelle": "FANDUEL BREEDERS' CUP MILE PRESENTED BY PDJF (GRADE I)",
+      "heureDepart": 1793478120000
+     },
+     {
+      "numOrdre": 10,
+      "libelle": "LONGINES BREEDERS' CUP DISTAFF (GRADE I)",
+      "heureDepart": 1793480400000
+     },
+     {
+      "numOrdre": 11,
+      "libelle": "LONGINES BREEDERS' CUP TURF (GRADE I)",
+      "heureDepart": 1793482680000
+     },
+     {
+      "numOrdre": 12,
+      "libelle": "LONGINES BREEDERS' CUP CLASSIC (GRADE I)",
+      "heureDepart": 1793485080000
+     }
+    ]
+   },
+   {
+    "numOfficiel": 5,
+    "hippodrome": {
+     "libelleCourt": "PONT DE VIVAUX"
+    },
+    "pays": {
+     "code": "FRA"
+    },
+    "courses": [
+     {
+      "numOrdre": 1,
+      "libelle": "PRIX DE LA SOCIETE DU TROTTEUR FRANCAIS",
+      "heureDepart": 1793459220000
+     },
+     {
+      "numOrdre": 2,
+      "libelle": "PRIX DE LA PROVENCE",
+      "heureDepart": 1793461320000
+     },
+     {
+      "numOrdre": 3,
+      "libelle": "PRIX DU COMITE REGIONAL DU TROT",
+      "heureDepart": 1793463420000
+     },
+     {
+      "numOrdre": 4,
+      "libelle": "PRIX DE LA CAMARGUE _ PRIX GENY COURSES",
+      "heureDepart": 1793465520000
+     },
+     {
+      "numOrdre": 5,
+      "libelle": "PRIX DE REDON",
+      "heureDepart": 1793467860000
+     },
+     {
+      "numOrdre": 6,
+      "libelle": "PRIX DE MONTOLIVET",
+      "heureDepart": 1793470140000
+     },
+     {
+      "numOrdre": 7,
+      "libelle": "PRIX DES GARDIANS",
+      "heureDepart": 1793472420000
+     },
+     {
+      "numOrdre": 8,
+      "libelle": "PRIX KOENIGSBERG",
+      "heureDepart": 1793474700000
+     }
+    ]
+   },
+   {
+    "numOfficiel": 6,
+    "hippodrome": {
+     "libelleCourt": "WOLVEGA"
+    },
+    "pays": {
+     "code": "NLD"
+    },
+    "courses": [
+     {
+      "numOrdre": 1,
+      "libelle": "TCT VIERJARIGEN SATELLIETKOERS          PAYS BAS",
+      "heureDepart": 1793466000000
+     },
+     {
+      "numOrdre": 2,
+      "libelle": "PRIX KINGMA & WALINGA                   PAYS BAS",
+      "heureDepart": 1793467500000
+     },
+     {
+      "numOrdre": 3,
+      "libelle": "PRIX SIJPERDA VERHUUR                   PAYS BAS",
+      "heureDepart": 1793469600000
+     },
+     {
+      "numOrdre": 4,
+      "libelle": "PRIX CHESSA METAALBEWERKING             PAYS BAS",
+      "heureDepart": 1793471400000
+     },
+     {
+      "numOrdre": 5,
+      "libelle": "PRIX HYPOTHEEKSHOP LEMMER               PAYS BAS",
+      "heureDepart": 1793473200000
+     },
+     {
+      "numOrdre": 6,
+      "libelle": "PRIX HOUT MET HISTORIE                  PAYS BAS",
+      "heureDepart": 1793475000000
+     },
+     {
+      "numOrdre": 7,
+      "libelle": "PRODUCTENDRAVERIJ                       PAYS BAS",
+      "heureDepart": 1793476980000
+     },
+     {
+      "numOrdre": 8,
+      "libelle": "PRIX HEEGSMA LEMMER                     PAYS BAS",
+      "heureDepart": 1793479260000
+     },
+     {
+      "numOrdre": 9,
+      "libelle": "PARAPAARD GIGANTEN TRIAL                PAYS BAS",
+      "heureDepart": 1793481540000
+     },
+     {
+      "numOrdre": 10,
+      "libelle": "PRIX NANO UP STAR                       PAYS BAS",
+      "heureDepart": 1793483820000
+     }
+    ]
+   },
+   {
+    "numOfficiel": 7,
+    "hippodrome": {
+     "libelleCourt": "MAUQUENCHY"
+    },
+    "pays": {
+     "code": "FRA"
+    },
+    "courses": [
+     {
+      "numOrdre": 1,
+      "libelle": "PRIX ICI PICARDIE & PICARDIE (GR A)",
+      "heureDepart": 1793458800000
+     },
+     {
+      "numOrdre": 2,
+      "libelle": "PRIX DE LA FEDERATION REGIONALE (GR B)",
+      "heureDepart": 1793460600000
+     },
+     {
+      "numOrdre": 3,
+      "libelle": "PRIX MYHN DIAG EXPERTISE (GR A)",
+      "heureDepart": 1793462400000
+     },
+     {
+      "numOrdre": 4,
+      "libelle": "PRIX LEVASSEUR RECEPTIONS (GR B)",
+      "heureDepart": 1793464200000
+     },
+     {
+      "numOrdre": 5,
+      "libelle": "PRIX HIPPODROME DE GOURNAY EN BRAY (GR C)",
+      "heureDepart": 1793466000000
+     },
+     {
+      "numOrdre": 6,
+      "libelle": "PRIX COMMUNAUTE DE COMMUNES 4 RIV (GR A)",
+      "heureDepart": 1793467800000
+     },
+     {
+      "numOrdre": 7,
+      "libelle": "PRIX DES BENEVOLES (GR B)",
+      "heureDepart": 1793469600000
+     },
+     {
+      "numOrdre": 8,
+      "libelle": "PRIX EDEY COM",
+      "heureDepart": 1793471400000
+     },
+     {
+      "numOrdre": 9,
+      "libelle": "PRIX DE BUCHY",
+      "heureDepart": 1793473200000
+     },
+     {
+      "numOrdre": 10,
+      "libelle": "PRIX FRANCK DECAMPEAUX",
+      "heureDepart": 1793475000000
+     }
+    ]
+   },
+   {
+    "numOfficiel": 8,
+    "hippodrome": {
+     "libelleCourt": "CHATEAUBRIANT"
+    },
+    "pays": {
+     "code": "FRA"
+    },
+    "courses": [
+     {
+      "numOrdre": 1,
+      "libelle": "PRIX CASDAR",
+      "heureDepart": 1793444400000
+     },
+     {
+      "numOrdre": 2,
+      "libelle": "PRIX OURASI",
+      "heureDepart": 1793446200000
+     },
+     {
+      "numOrdre": 3,
+      "libelle": "PRIX GENET DU HAUT BOIS (GR A)",
+      "heureDepart": 1793448000000
+     },
+     {
+      "numOrdre": 4,
+      "libelle": "PRIX PMU+ (GR B)",
+      "heureDepart": 1793449800000
+     },
+     {
+      "numOrdre": 5,
+      "libelle": "PRIX BELINA JOSSELYN",
+      "heureDepart": 1793451600000
+     },
+     {
+      "numOrdre": 6,
+      "libelle": "PRIX DES ETANGS",
+      "heureDepart": 1793453400000
+     },
+     {
+      "numOrdre": 7,
+      "libelle": "PRIX KERJACQUES",
+      "heureDepart": 1793455200000
+     },
+     {
+      "numOrdre": 8,
+      "libelle": "PRIX IDAO DE TILLARD (GR A)",
+      "heureDepart": 1793457000000
+     },
+     {
+      "numOrdre": 9,
+      "libelle": "PRIX HIPPODROME-CHATEAUBRIANT.FR (GR B)",
+      "heureDepart": 1793458800000
+     }
+    ]
+   },
+   {
+    "numOfficiel": 9,
+    "hippodrome": {
+     "libelleCourt": "REIMS"
+    },
+    "pays": {
+     "code": "FRA"
+    },
+    "courses": [
+     {
+      "numOrdre": 1,
+      "libelle": "PRIX DE L'HIPPODROME DE STRASBOURG",
+      "heureDepart": 1793450400000
+     },
+     {
+      "numOrdre": 2,
+      "libelle": "PRIX DE L'HIPPODROME DE WISSEMBOURG",
+      "heureDepart": 1793452200000
+     },
+     {
+      "numOrdre": 3,
+      "libelle": "GRAND PRIX CHAMPAGNE GARDET",
+      "heureDepart": 1793454000000
+     },
+     {
+      "numOrdre": 4,
+      "libelle": "PRIX DE L'HIPPODROME DE VITTEL",
+      "heureDepart": 1793455800000
+     },
+     {
+      "numOrdre": 5,
+      "libelle": "PRIX DE L'HIPPODROME DE NANCY",
+      "heureDepart": 1793457600000
+     },
+     {
+      "numOrdre": 6,
+      "libelle": "PRIX DE L'HIPPODROME DE MONTIER (GR.A)",
+      "heureDepart": 1793459400000
+     },
+     {
+      "numOrdre": 7,
+      "libelle": "PRIX DE L'HIPPODROME DE REIMS (GR.B)",
+      "heureDepart": 1793461200000
+     },
+     {
+      "numOrdre": 8,
+      "libelle": "PRIX DE L'HIPPODROME DE CHALONS",
+      "heureDepart": 1793463000000
+     }
+    ]
+   }
+  ]
+ }
+}

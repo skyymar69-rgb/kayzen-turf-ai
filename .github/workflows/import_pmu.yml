@@ -67,6 +67,17 @@ jobs:
         timeout-minutes: 70
         run: npm run data:import:pmu
 
+      - name: Import press selections
+        # Sélections des sites partenaires + pronostic presse PMU (voir
+        # docs/partenariats-sources.md). Courses non parties uniquement. Une
+        # source en panne ou qui refuse notre robot ne doit jamais faire échouer
+        # le job : continue-on-error.
+        continue-on-error: true
+        timeout-minutes: 15
+        run: node scripts/import-press.mjs
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
       - name: Learn from official results
         # Les statistiques et l'apprentissage ne changent pas utilement entre
         # les deux imports quotidiens ; le passage du soir les met à jour.

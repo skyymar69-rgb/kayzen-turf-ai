@@ -458,3 +458,18 @@ create table if not exists scratches (
   scratched_at timestamptz not null default now(),
   primary key (race_id, number)
 );
+
+-- Sélections presse des sites partenaires (Geny, ZEturf, Canalturf, Turfomania,
+-- Paris-Turf) et pronostic presse PMU : uniquement l'ordre des numéros de selle
+-- choisis par la source, jamais ses textes. Écrites par scripts/import-press.mjs,
+-- seulement AVANT le départ de la course (aucune sélection rétrospective).
+-- Voir docs/partenariats-sources.md.
+create table if not exists press_selections (
+  race_id text not null references races(id) on delete cascade,
+  source text not null,
+  ranks integer[] not null,
+  url text,
+  fetched_at timestamptz not null default now(),
+  primary key (race_id, source)
+);
+create index if not exists press_selections_race_idx on press_selections (race_id);
