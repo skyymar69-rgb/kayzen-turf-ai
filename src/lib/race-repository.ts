@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { getSql, hasDatabase } from "@/lib/db";
 import { probableArrival, raceToContext } from "@/lib/bet-recommendations";
 import { raceCards, valueBets } from "@/lib/mock-data";
@@ -129,7 +130,29 @@ function specialtyLabel(specialty: string | null, discipline: string): string {
   return value === discipline ? "" : value;
 }
 
+/**
+ * Programme partagé entre l'accueil, le direct, les pronostics, le sitemap et
+ * l'API : chaque rendu relisait sinon toutes les courses et tous leurs partants
+ * (de l'ordre du mégaoctet), et ce transfert a épuisé le quota mensuel Neon.
+ * Dix minutes de fraîcheur, pour toutes les pages à la fois ; la page d'une
+ * course relit toujours ses propres cotes. La date de Paris entre dans la clé
+ * pour qu'« aujourd'hui » ne serve pas la veille après minuit.
+ */
+const loadRacesCached = unstable_cache(
+  async (date: string | null, day: string | null, parisDate: string | null) => {
+    void parisDate; // n'influe que sur la clé de cache
+    return loadRaces({ date, day });
+  },
+  ["races-programme"],
+  { revalidate: 600 },
+);
+
 export async function getRaces(filters?: { date?: string | null; day?: string | null }) {
+  if (!hasDatabase()) return loadRaces(filters);
+  return loadRacesCached(filters?.date ?? null, filters?.day ?? null, dateForRelativeDay("today"));
+}
+
+async function loadRaces(filters?: { date?: string | null; day?: string | null }) {
   const filterDate = filters?.date ?? (filters?.day ? dateForRelativeDay(filters.day) : null);
   const yesterdayDate = dateForRelativeDay("yesterday");
   const todayDate = dateForRelativeDay("today");
@@ -708,9 +731,21 @@ export type TrackRecordSummary = {
   signals: SignalRecord[];
 };
 
-/** Dernier rapport du suivi de performance, ou `null` s'il n'en existe pas encore. */
+/**
+ * Dernier rapport du suivi de performance, ou `null` s'il n'en existe pas encore.
+ *
+ * Le rapport est un gros JSON (séries quotidiennes de chaque signal) relu par
+ * l'accueil et par chaque page de course : il n'est recalculé que par le
+ * backtest, une heure de cache suffit largement.
+ */
 export async function getLatestTrackRecord(): Promise<(TrackRecordSummary & Record<string, unknown>) | null> {
   if (!hasDatabase()) return null;
+  return loadLatestTrackRecordCached();
+}
+
+const loadLatestTrackRecordCached = unstable_cache(loadLatestTrackRecord, ["track-record-latest"], { revalidate: 3600 });
+
+async function loadLatestTrackRecord(): Promise<(TrackRecordSummary & Record<string, unknown>) | null> {
   try {
     const sql = getSql();
     const rows = (await sql`

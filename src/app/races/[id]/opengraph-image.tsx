@@ -13,6 +13,9 @@ import { getRaceById } from "@/lib/race-repository";
 export const alt = "Pronostic Kayzen Turf pour cette course";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
+// Chaque aperçu de lien relisait toute la course en base : une heure suffit
+// pour une image de partage.
+export const revalidate = 3600;
 
 function safeDecode(value: string) {
   try {

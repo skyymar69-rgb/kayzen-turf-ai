@@ -109,13 +109,12 @@ async function loadCompletedRaces(sql) {
       r.race_date::text as race_date,
       r.reunion_number,
       r.course_number,
-      r.name,
       r.market_volatility::float as market_volatility,
       r.bet_types,
+      -- Tout l'historique est relu à chaque passage : seuls les champs utilisés
+      -- par l'évaluation sont renvoyés (le transfert Neon est plafonné).
       jsonb_agg(
         jsonb_build_object(
-          'entryId', e.id,
-          'horseId', e.horse_id,
           'number', e.number,
           'win', e.win_probability::float,
           'odds', e.odds::float,
@@ -192,7 +191,7 @@ function scoreEntry(entry, weights, race) {
     Math.max(0, odds - 32) * 0.18;
 
   if (!Number.isFinite(raw)) {
-    throw new Error(`Score non fini pour le partant ${entry.entry_id ?? entry.horseId ?? "?"} : refus d'écrire NaN en base`);
+    throw new Error(`Score non fini pour le partant ${entry.entry_id ?? entry.number ?? "?"} : refus d'écrire NaN en base`);
   }
 
   return Math.max(1, Math.min(99, Math.round(raw)));
