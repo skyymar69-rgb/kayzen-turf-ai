@@ -73,7 +73,7 @@ jobs:
         # source en panne ou qui refuse notre robot ne doit jamais faire échouer
         # le job : continue-on-error.
         continue-on-error: true
-        timeout-minutes: 15
+        timeout-minutes: 25
         run: node scripts/import-press.mjs
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}

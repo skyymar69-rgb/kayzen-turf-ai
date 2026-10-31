@@ -57,7 +57,7 @@ passe est séquentielle : une source après l'autre.
 - respect des règles `Disallow` de robots.txt (groupe `*`, ou groupe nommant
   notre robot), relu à chaque exécution ;
 - délai maximal de 20 s par requête ;
-- au plus 40 requêtes par site et par exécution (une journée de courses) ;
+- au plus 120 requêtes par site et par exécution (une journée de courses) ;
 - aucune reprise automatique sur un refus (401, 403, 429, 451).
 
 ## Règle : aucun contournement

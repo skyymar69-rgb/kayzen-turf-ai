@@ -15,7 +15,7 @@ export const BOT_USER_AGENT = "KayzenTurfBot/1.0 (+https://kayzen-turf-ai.vercel
 export const BOT_TOKEN = "kayzenturfbot";
 export const MIN_DELAY_MS = 1500;
 export const TIMEOUT_MS = 20_000;
-export const DEFAULT_MAX_REQUESTS_PER_HOST = 40;
+export const DEFAULT_MAX_REQUESTS_PER_HOST = 120;
 
 /** Statuts HTTP qui signifient « le site ne veut pas de nous » : jamais contournés. */
 export const BLOCKED_STATUSES = new Set([401, 403, 429, 451]);
