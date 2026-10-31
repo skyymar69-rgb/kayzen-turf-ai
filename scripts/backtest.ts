@@ -60,6 +60,7 @@ import {
   type RaceLogLoss,
   type RunnerObservation,
 } from "./lib/backtest-metrics";
+import { pressConsensus, type PressSelection } from "@/lib/press-consensus";
 import { confrontationKeys, mostBacked, surpriseNumbers } from "./lib/backtest-signals";
 import { UNPRICEABLE_FORMATS, raceTickets, type PricedRaceTicket } from "./lib/backtest-tickets";
 import { loadDataset, loadLocalEnv, type DatasetRace } from "./lib/dataset";
@@ -86,13 +87,16 @@ type SignalDef = {
  *     02/10/2026 sur le backtest juin-septembre (src/lib/profiles.ts) ;
  *   - MVT : signal ajouté le 03/10/2026 au soir → hors échantillon dès le 04/10 ;
  *   - confrontation IA × marché et signaux d'argent : 04/10/2026 au soir → 05/10 ;
- *   - score de surprise : mesuré du 24/08 au 07/10/2026 → 08/10.
+ *   - score de surprise : mesuré du 24/08 au 07/10/2026 → 08/10 ;
+ *   - pronostiqueurs × marché : seuils posés le 31/10/2026 sans mesure
+ *     préalable → hors échantillon dès le 31/10.
  */
 const FROZEN = {
   profils: PROFILES_FROZEN_AT,
   mvt: "2026-10-04",
   confrontation: "2026-10-05",
   surprise: "2026-10-08",
+  presse: "2026-10-31",
 } as const;
 
 /**
@@ -128,6 +132,11 @@ const SIGNALS: SignalDef[] = [
   { key: "smart-money-sg", label: "Smart money", betType: "SG", frozenAt: FROZEN.confrontation, description: "Simple gagnant quand l'argent entre ou accélère, que la cote baisse et que l'IA est favorable ou d'accord" },
   { key: "surprise-sg", label: "Surprise IA", betType: "SG", frozenAt: FROZEN.surprise, description: "Simple gagnant sur chaque alerte forte ou possible du score de surprise (trois au plus par course)" },
   { key: "surprise-sp", label: "Surprise IA", betType: "SP", frozenAt: FROZEN.surprise, description: "Simple placé sur chaque alerte forte ou possible du score de surprise (trois au plus par course)" },
+  { key: "presse-consensus-sg", label: "Consensus sites + marché", betType: "SG", frozenAt: FROZEN.presse, description: "Simple gagnant sur chaque cheval cité par au moins 60 % des sites de pronostics et dans les 3 premiers du marché" },
+  { key: "presse-consensus-sp", label: "Consensus sites + marché", betType: "SP", frozenAt: FROZEN.presse, description: "Simple placé sur chaque cheval cité par au moins 60 % des sites de pronostics et dans les 3 premiers du marché" },
+  { key: "presse-sites-sans-marche-sg", label: "Sites sans le marché", betType: "SG", frozenAt: FROZEN.presse, description: "Simple gagnant sur chaque cheval cité par au moins 60 % des sites mais au-delà du 5e rang du marché" },
+  { key: "presse-sites-sans-marche-sp", label: "Sites sans le marché", betType: "SP", frozenAt: FROZEN.presse, description: "Simple placé sur chaque cheval cité par au moins 60 % des sites mais au-delà du 5e rang du marché" },
+  { key: "presse-marche-sans-sites-sg", label: "Marché sans les sites", betType: "SG", frozenAt: FROZEN.presse, description: "Simple gagnant sur chaque cheval dans les 3 premiers du marché mais cité par au plus 20 % des sites" },
   { key: "favori-marche-sg", label: "Favori du marché", betType: "SG", frozenAt: FROZEN.profils, reference: true, description: "Référence : simple gagnant sur la plus petite cote" },
   { key: "tous-sg", label: "Tous les partants", betType: "SG", frozenAt: FROZEN.profils, reference: true, description: "Référence : 1 € gagnant sur chaque partant — le coût du prélèvement" },
 ];
@@ -210,6 +219,34 @@ function diagnose(rows: Array<{ ratio: number; fundRank: number; odds: number; s
  * échantillon : chaque pronostic a été figé avec les règles en vigueur ce
  * jour-là, avant la course.
  */
+/**
+ * Sélections des sites relevées AVANT la cote de décision (départ moins
+ * `leadMinutes`) : une sélection publiée ou relue après coup ne compte pas.
+ * Table absente (base antérieure à novembre 2026) : aucune sélection.
+ */
+async function pressSelectionsBefore(sql: NeonQueryFunction<false, false>, raceIds: string[], leadMinutes: number) {
+  const out = new Map<string, PressSelection[]>();
+  if (raceIds.length === 0) return out;
+  try {
+    const rows = (await sql.query(
+      `select p.race_id, p.source, p.ranks
+         from press_selections p
+         join races r on r.id = p.race_id
+        where p.race_id = any($1)
+          and p.fetched_at <= ((r.race_date + replace(r.start_time, 'h', ':')::time) at time zone 'Europe/Paris') - make_interval(mins => $2)`,
+      [raceIds, leadMinutes],
+    )) as Array<{ race_id: string; source: string; ranks: number[] }>;
+    for (const row of rows) {
+      const list = out.get(row.race_id) ?? [];
+      list.push({ source: row.source, ranks: row.ranks.map(Number) });
+      out.set(row.race_id, list);
+    }
+  } catch (error) {
+    if ((error as { code?: string }).code !== "42P01") throw error;
+  }
+  return out;
+}
+
 async function liveTracking(sql: NeonQueryFunction<false, false>) {
   const rows = (await sql.query(
     `select s.race_id, s.captured_at::text as captured_at, (extract(epoch from s.captured_at) * 1000)::float8 as captured_ms,
@@ -328,6 +365,7 @@ async function main() {
     [leadMinutes],
   );
   const meta = await raceMeta(sql, raceIds);
+  const press = await pressSelectionsBefore(sql, raceIds, leadMinutes);
   const payouts = await officialPayouts(sql, raceIds);
   const books = payoutBooks(await allPayoutRows(sql, raceIds));
 
@@ -459,6 +497,24 @@ async function main() {
     for (const n of surprises) {
       place("surprise-sg", n);
       place("surprise-sp", n);
+    }
+    const pressSel = press.get(race.raceId);
+    if (pressSel?.length) {
+      const consensus = pressConsensus(
+        pressSel,
+        race.field.map((h, i) => ({ number: h.number, market: odds[i] > 1 ? market[i] * 100 : null })),
+      );
+      for (const p of consensus.values()) {
+        if (p.category === "consensus") {
+          place("presse-consensus-sg", p.number);
+          place("presse-consensus-sp", p.number);
+        } else if (p.category === "sites-sans-marche") {
+          place("presse-sites-sans-marche-sg", p.number);
+          place("presse-sites-sans-marche-sp", p.number);
+        } else if (p.category === "marche-sans-sites") {
+          place("presse-marche-sans-sites-sg", p.number);
+        }
+      }
     }
     const favorite = race.field.map((h, i) => ({ n: h.number, o: odds[i] })).filter((x) => x.o > 1).sort((a, b) => a.o - b.o)[0];
     if (favorite) place("favori-marche-sg", favorite.n);

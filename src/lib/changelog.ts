@@ -23,6 +23,20 @@ export type EntreeChangelog = {
 export const CHANGELOG: readonly EntreeChangelog[] = [
   {
     date: "2026-10-31",
+    titre: "Pronostiqueurs × Marché",
+    changements: [
+      {
+        categorie: "Ajouté",
+        elements: [
+          "Page course : comparaison des sélections de Geny, Paris-Turf, ZEturf, Canalturf, Turfomania et de la presse du PMU avec le marché, en trois catégories : consensus sites + marché, recommandé par les sites mais délaissé par le marché, soutenu par le marché mais négligé par les sites.",
+          "Pour chaque cheval : nombre de sites qui le citent, son rang chez chacun, part des sites qui le retiennent et rang sur le marché ; degré d'accord entre sites pour la course.",
+          "Historique conservé course par course et rendement de chaque catégorie mesuré sur les arrivées réelles (suivi de performance).",
+        ],
+      },
+    ],
+  },
+  {
+    date: "2026-10-31",
     titre: "Vous restez sur la course que vous analysez",
     changements: [
       {

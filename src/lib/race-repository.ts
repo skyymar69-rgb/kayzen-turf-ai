@@ -208,13 +208,16 @@ export async function getRaces(filters?: { date?: string | null; day?: string | 
     throw new ErreurSourceDonnees("lecture des partants", cause);
   }
 
-  const histories = await loadHistories(getSql() as unknown as SqlTag, rows, entriesByRace);
+  const [histories, press] = await Promise.all([
+    loadHistories(getSql() as unknown as SqlTag, rows, entriesByRace),
+    loadPressSelections(rows.map((row) => row.id)),
+  ]);
   const hydratedRaces = rows.flatMap((row) => {
     const entries = entriesByRace.get(row.id);
     // Une course sans partant n'est pas affichable. L'ancien code lui
     // substituait la course de démonstration, qui apparaissait alors dans le
     // programme réel — autant de doublons que de courses vides.
-    return entries?.length ? [mapRace(row, entries, histories)] : [];
+    return entries?.length ? [{ ...mapRace(row, entries, histories), press: press.get(row.id) ?? [] }] : [];
   });
 
   return sortByStartTime(hydratedRaces);
@@ -368,8 +371,11 @@ export async function getRaceById(id?: string | null): Promise<RaceAnalysis | nu
   // Une course sans partant n'est pas affichable : elle vaut 404, pas une
   // page de démonstration.
   if (entries.length === 0) return null;
-  const histories = await loadHistories(getSql() as unknown as SqlTag, [row], new Map([[row.id, entries]]));
-  return mapRace(row, entries, histories);
+  const [histories, press] = await Promise.all([
+    loadHistories(getSql() as unknown as SqlTag, [row], new Map([[row.id, entries]])),
+    loadPressSelections([row.id]),
+  ]);
+  return { ...mapRace(row, entries, histories), press: press.get(row.id) ?? [] };
 }
 
 export async function getPredictions() {
@@ -453,6 +459,35 @@ function mapRace(row: RaceRow, entries: EntryRow[], histories?: Map<string, Past
 }
 
 type PastRunsByHorse = Awaited<ReturnType<typeof fetchHorseHistories>>;
+
+type PressRow = { race_id: string; source: string; ranks: number[]; url: string | null; fetched_at: string };
+
+/**
+ * Sélections des sites de pronostics (table `press_selections`, remplie par
+ * scripts/import-press.mjs). Échec non bloquant : table pas encore créée ou
+ * base lente, la page s'affiche sans le comparateur.
+ */
+async function loadPressSelections(raceIds: string[]): Promise<Map<string, NonNullable<RaceAnalysis["press"]>>> {
+  const out = new Map<string, NonNullable<RaceAnalysis["press"]>>();
+  if (raceIds.length === 0) return out;
+  try {
+    const rows = (await getSql()`
+      select race_id, source, ranks, url,
+             to_char(fetched_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as fetched_at
+        from press_selections
+       where race_id = any(${raceIds})
+    `) as PressRow[];
+    for (const row of rows) {
+      const list = out.get(row.race_id) ?? [];
+      list.push({ source: row.source, ranks: (row.ranks ?? []).map(Number), url: row.url, fetchedAt: row.fetched_at });
+      out.set(row.race_id, list);
+    }
+  } catch (cause) {
+    const code = (cause as { code?: string }).code;
+    if (code !== "42P01") console.error("Sélections des sites illisibles", cause instanceof Error ? cause.message : cause);
+  }
+  return out;
+}
 
 /** Variables du modèle v2 qui ont besoin de l'historique en base. */
 const HISTORY_FEATURES = new Set([

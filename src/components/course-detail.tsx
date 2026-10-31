@@ -16,6 +16,7 @@ import { MagicSquarePanel } from "@/components/course/magic-square";
 import { MarketPanel } from "@/components/course/market-panel";
 import { NonRunners } from "@/components/course/non-runners";
 import { SectionNavBar, SectionNavRail } from "@/components/course/section-nav";
+import { PressPanel } from "@/components/course/press-panel";
 import { SurprisePanel } from "@/components/course/surprise-panel";
 import { PostRacePanel, SimulationPanel } from "@/components/course/side-panels";
 import { TicketShare } from "@/components/course/ticket-share";
@@ -219,6 +220,9 @@ export function CourseDetail({ race, history = EMPTY_HISTORY, signals = NO_SIGNA
                 <RaceSelectionPanel onSelect={select} selectedNumber={selected} selection={selection} signals={signalMap} />
                 <div className={SECTION_SCROLL} id="surprises">
                   <SurprisePanel onSelect={select} selectedNumber={selected} signals={signalMap} vm={vm} />
+                </div>
+                <div className={SECTION_SCROLL} id="pronostiqueurs">
+                  <PressPanel onSelect={select} signals={signalMap} vm={vm} />
                 </div>
                 <FieldTable
                   compare={compare}

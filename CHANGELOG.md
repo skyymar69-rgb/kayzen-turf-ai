@@ -10,6 +10,9 @@ qu'un visiteur peut constater, vit dans `src/lib/changelog.ts` et s'affiche sur
 
 ## [Non publié]
 
+### Ajouté
+- Pronostiqueurs × Marché (`src/lib/press-consensus.ts`, `src/components/course/press-panel.tsx`) : sélections des sites de pronostics (table `press_selections`, `scripts/import-press.mjs`) comparées au marché ; trois catégories, deux alertes, degré d'accord ; signaux `presse-*` au backtest, sélections relevées avant la cote de décision seulement.
+
 ### Modifié
 - Plus aucun changement de course automatique (retour client) : glissement horizontal entre courses supprimé (`SwipeNavigation`, `swipeDirection`) ; la course active de l'accueil est fixée à la première lecture de l'horloge et ne change qu'avec le jour (`use-home-programme.ts`).
 

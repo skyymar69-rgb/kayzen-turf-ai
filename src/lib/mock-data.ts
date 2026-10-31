@@ -20,6 +20,14 @@ const DEMO_TOMORROW = decalerJour(DEMO_TODAY, 1);
 export const raceAnalysis: RaceAnalysis = {
   id: `R1C3-${DEMO_TODAY}`,
   name: "Prix Kayzen Turf Data",
+  // Sélections fictives des sites de pronostics, pour le mode démonstration.
+  press: [
+    { source: "geny", ranks: [4, 8, 2, 11, 6] },
+    { source: "zeturf", ranks: [8, 4, 11, 2, 6] },
+    { source: "canalturf", ranks: [4, 11, 8, 6, 2] },
+    { source: "turfomania", ranks: [11, 4, 8, 2, 6] },
+    { source: "pmu-presse", ranks: [4, 8, 11, 6, 2] },
+  ],
   raceDate: DEMO_TODAY,
   oddsAvailable: true,
   relativeDay: "today",

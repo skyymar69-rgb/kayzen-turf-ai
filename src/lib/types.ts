@@ -174,6 +174,8 @@ export type RaceAnalysis = {
   prize?: number | null;
   /** Dernière relecture du terrain par la boucle live (ISO), `null` si seul l'import l'a écrit. */
   goingUpdatedAt?: string | null;
+  /** Sélections des sites de pronostics, relevées avant le départ (src/lib/press-consensus.ts). */
+  press?: Array<{ source: string; ranks: number[]; url?: string | null; fetchedAt?: string | null }>;
 };
 
 export type BetSimulation = {
