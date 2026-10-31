@@ -83,7 +83,17 @@ jobs:
         # les deux imports quotidiens ; le passage du soir les met à jour.
         if: ${{ github.event_name == 'workflow_dispatch' || github.event.schedule == '30 17 * * *' }}
         timeout-minutes: 30
-        run: npm run model:learn
+        # La sélection complète relit tout l'historique des courses : une fois
+        # par semaine (dimanche) ou à la demande. Les autres soirs, rescoring
+        # seul des courses à venir avec la calibration en place.
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] || [ "$(date -u +%u)" = "7" ]; then
+            npm run model:learn
+          else
+            npm run model:learn -- --rescore-only
+          fi
 
       - name: Update jockey and trainer statistics
         if: ${{ github.event_name == 'workflow_dispatch' || github.event.schedule == '30 17 * * *' }}

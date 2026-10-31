@@ -56,6 +56,7 @@ function parseArgs() {
   const args = process.argv.slice(2);
   return {
     apply: args.includes("--apply"),
+    rescoreOnly: args.includes("--rescore-only"),
     segment: valueAfter(args, "--segment"),
   };
 }
@@ -464,11 +465,14 @@ async function loadPendingEntries(sql) {
       e.market_edge::float as edge
     from races r
     join entries e on e.race_id = r.id
-    where not exists (
-      select 1
-      from results res
-      where res.race_id = r.id
-    )
+    -- Seules les courses à venir comptent pour le site : sans borne, les
+    -- vieilles courses restées sans arrivée étaient relues à chaque passage.
+    where r.race_date >= current_date - 1
+      and not exists (
+        select 1
+        from results res
+        where res.race_id = r.id
+      )
   `;
 }
 
@@ -626,9 +630,23 @@ async function main() {
   await loadLocalEnv();
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required");
 
-  const { apply, segment: onlySegment } = parseArgs();
+  const { apply, rescoreOnly, segment: onlySegment } = parseArgs();
   const sql = neon(process.env.DATABASE_URL);
   await ensureLearningSchema(sql);
+
+  // Rescoring seul (imports de semaine) : les calibrations en place sont
+  // appliquées aux courses à venir sans relire tout l'historique, la lecture
+  // la plus lourde du script pour le quota de transfert Neon. La sélection
+  // complète et le journal d'apprentissage tournent une fois par semaine.
+  if (rescoreOnly) {
+    const pendingEntries = apply ? await loadPendingEntries(sql) : [];
+    for (const [segment, weights] of (await loadActiveCalibrations(sql)).entries()) {
+      if (onlySegment && onlySegment !== segment) continue;
+      const updated = apply ? await applyCalibration(sql, segment, { name: weights.name ?? "calibration en place", weights }, pendingEntries) : 0;
+      log(`${segment} : ${updated} partants rescorés avec la calibration en place`);
+    }
+    return;
+  }
 
   const completedRaces = await loadCompletedRaces(sql);
   log(`${completedRaces.length} courses terminées chargées`);
